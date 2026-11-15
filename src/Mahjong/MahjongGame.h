@@ -25,8 +25,9 @@ namespace BECore::Mahjong {
      *
      * Components reach it through `GetActive()` and change the match only through `GetSession()`. The seed of a match is chosen here
      * (`std::random_device`), never in the rules, which only see it: `StartMatch(seed)` is the seam of a test and of the control API.
-     * A match begun through the session is logged and saved; **one started through the non-const `GetMatch()` / `GetLocalMatch()` is
-     * not**. `GetSettings()`, `GetSeats()`, `GetLevels()`, the language, the hints mode and the animation speed are kept across
+     * A match begun through the session is logged, and saved when a person begins it (`StartMatch`; the match `Start()` deals behind
+     * `Setup` is not, so it cannot overwrite the saved one); **one started through the non-const `GetMatch()` / `GetLocalMatch()` is
+     * neither**. `GetSettings()`, `GetSeats()`, `GetLevels()`, the language, the hints mode and the animation speed are kept across
      * `Reset()` and `StartMatch`. Contracts of each part: `src/Mahjong/CLAUDE.md`.
      */
     class MahjongGame : public IGame {

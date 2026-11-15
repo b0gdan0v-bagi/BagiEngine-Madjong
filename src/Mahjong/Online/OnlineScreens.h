@@ -171,7 +171,8 @@ namespace BECore::Mahjong {
         bool ShowJoin();
         bool ShowRooms(OnlineClient& client, StringView url);
 
-        /// The `Code` only of the `Join` form; the `Name` of any form.
+        /// Opens the `Entry` page for @p field of the page on show: the `Code` only of the `Join` form, the `Name` of any form (`Host`,
+        /// `Join`, `Rooms`).
         bool FocusField(OnlineField field);
         /// Into the focused field: the key @p index of `Pad()`, or one UTF-8 character of the keyboard.
         bool PressKey(size_t index);
@@ -243,6 +244,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] TextEntry& FocusedEntry() {
             return _focus == OnlineField::Name ? _name : _code;
         }
+        /// A form is a page the `Entry` page can be opened from.
         [[nodiscard]] bool IsForm(OnlinePage page) const {
             return page == OnlinePage::Host || page == OnlinePage::Join || page == OnlinePage::Rooms;
         }

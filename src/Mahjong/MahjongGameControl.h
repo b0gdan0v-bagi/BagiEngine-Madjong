@@ -60,7 +60,10 @@ namespace BECore::Mahjong {
      *
      * `get_state` is built from `MakeTableView` (`MahjongStateJson.h`): the view of the person who has to act, else of the first person
      * seat, so a client never sees what a computer player could not. Only in `hand_over` and `match_over` are all four hands public
-     * (`result`). `yourTurn` says that "seat" has actions to choose from; `turn.phase` only says what the hand waits for.
+     * (`result`: the outcome `kind`, `winner`, `winningTile`, `source`, `from`, `loose`, `lastLiveTile`, then every seat's tiles and
+     * `breakdown`, the `scores` and `deltas`). With no person seat (a spectator) `seat`, `seatWind` and `hand` are null, null, [] and
+     * `yourTurn` is false. `perform_action` answers `applied`, `phase`, `version` and, for `next_hand`, `settlement` (`kind`, `winner`,
+     * `scores`, `deltas` of the hand that ended). `yourTurn` says that "seat" has actions to choose from; `turn.phase` only says what the hand waits for.
      * `list_actions` gives `ActionToJson` of the `LegalActions` of the person seat that has to act, `next_hand` in `hand_over`, nothing
      * otherwise; `perform_action` accepts each as listed. `illegal_action` is a well-formed action that is not listed now,
      * `invalid_params` a malformed one (the message names the key). `reset` takes the options of `src/Mahjong/CLAUDE.md` "Control API",

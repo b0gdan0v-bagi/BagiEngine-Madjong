@@ -7,7 +7,17 @@ namespace BECore::Mahjong {
 
     /*
      * The events of a match log as JSON, one object per line (JSON lines), key `event`: the text form of `Game/MatchLog.h`, written by
-     * `MatchLogWriter`. The keys and the version history are in `src/Mahjong/CLAUDE.md`, "Match log".
+     * `MatchLogWriter`. The version history is in `src/Mahjong/CLAUDE.md`, "Match log".
+     *
+     * ```
+     * {"event":"start","version":6,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","levels":[5,5,2,10],"platform":"desktop"|"web"|"unknown","build":"a1b2c3d","gameVersion":"0.1.0","nickname":"Anna"}
+     * {"event":"hand","number":handsPlayed,"east":s,"roundWind":"East","winds":["East",...],"deal":[{"concealed":["1p",...],"bonus":[...]} x4]}
+     * {"event":"action","seat":s,"by":"person"|"computer","action":{...}}
+     * {"event":"settlement","kind":"win"|"drawn","winner":s|null,"east":s,"roundWind":"..","scores":[4],"deltas":[4],"seats":[{"breakdown":{...}} x4]}
+     * {"event":"end","scores":[4],"standings":[seats, best first]}
+     * ```
+     * Tiles are the notation of `Tile.h` (`5p`, `Ew`, `Rd`, `F1`), winds the names of `Wind` (`East` ...), seats the numbers 0..3 and the
+     * `seats` letters of `start` those of the control `reset` (P a person, C a computer).
      *
      * The log is the owner's: the deal lists East's 14 tiles and nothing is hidden, which is why it is not the view of a seat. The
      * `action` is exactly `ActionToJson` and the `breakdown` the one of `BreakdownToJson`.

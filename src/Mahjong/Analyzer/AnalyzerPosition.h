@@ -53,10 +53,11 @@ namespace BECore::Mahjong::Analyzer {
      * | `bonus S <tiles>` | flowers and seasons laid open by seat S; any such line plays with the 144-tile set |
      * | `wall N` | the live tiles left (default: what the named tiles leave, with the loose reserve full) |
      *
-     * Every key but `meld` is given once (`discards`, `calling` and `bonus` once per seat). The counts are taken as written, not
-     * checked against the turn order. Tiles that are not named are unseen: they fill the other hands, then the wall, in a fixed order
-     * (the model needs some consistent fill; it never reaches the analysis, which gets `MakeTableView`). `HandModel::Restore` judges
-     * what can exist, and `legal` comes from the model, not from the text. Nothing is guessed: an error names the line.
+     * Every key but `meld` is given once (`discards`, `calling` and `bonus` once per seat). The number of discards of a seat is its
+     * `discards` tiles, the pending one, and the tiles of it that other seats' melds claim (`from`); it decides `first` of `calling`. The
+     * counts are taken as written, not checked against the turn order. Tiles that are not named are unseen: they fill the other hands,
+     * then the wall, in a fixed order (the model needs some consistent fill; it never reaches the analysis, which gets
+     * `MakeTableView`). `HandModel::Restore` judges what can exist, and `legal` comes from the model, not from the text. Nothing is guessed: an error names the line.
      */
     [[nodiscard]] std::expected<TableView, String> ParsePosition(StringView text);
     // clang-format on
