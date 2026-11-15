@@ -40,6 +40,9 @@ namespace BECore::Mahjong {
      */
     inline constexpr int kDiscardHitPermille = 806;
 
+    /// The discards of the other seats between two draws of the seat (the three others act once).
+    inline constexpr int kOpponentDiscardsPerRound = kSeatCount - 1;
+
     /// A typical winner's score and a typical score of a seat that stands next to it (the losers' pairwise settlement is by the difference).
     struct TypicalScores {
         int winner = 0;
@@ -81,6 +84,16 @@ namespace BECore::Mahjong {
 
     /// `NotWinningValue` at the typical scores of the table (`TypicalScoresOf`).
     [[nodiscard]] int64_t NotWinningValue(int standingScore, bool seatIsEast) noexcept;
+
+    /**
+     * @brief The chance, over `kOwnDrawsProbBase`, that at least one of the `kOpponentDiscardsPerRound` discards of a round is a kind
+     *        the seat wins on: `1 - (1 - q)^k`, `q` the share of one discard (`kDiscardHitPermille` of `share`).
+     *
+     * `share` is the unseen winning copies over the unseen tiles, over `kOwnDrawsProbBase`; one discard hits with `q` (capped at 1) and
+     * the discards of a round are taken as independent. Every product is rounded half up, so the chance is monotone in `share`. 0 for a
+     * `share` of 0.
+     */
+    [[nodiscard]] int64_t DiscardRoundChance(int64_t share) noexcept;
 
     /**
      * @brief The chance, over `kOwnDrawsProbBase`, that nobody else has won after the seat's `draws` next draws: `(1 - h)^draws`, `h` the

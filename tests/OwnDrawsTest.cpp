@@ -3,11 +3,13 @@
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/OwnDraws.h>
+#include <Mahjong/Game/Score.h>
 #include <cmath>
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
+#include <tests/ScoreTestSupport.h>
 
 namespace BECore::Mahjong::Tests {
 
@@ -86,6 +88,34 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(a[i].valueWhenNotWinning, b[i].valueWhenNotWinning) << "entry " << i;
                 EXPECT_EQ(a[i].expected, b[i].expected) << "entry " << i;
             }
+        }
+
+        constexpr OwnDrawsModel kWithDiscardWins{.depth = kDepth, .discardWins = true};
+        constexpr OwnDrawsModel kOnlyDraws{.depth = kDepth};
+
+        /// The chance of winning on a discard and on a draw within `draws` rounds, for a hand that waits on a share `p` of the unseen
+        /// tiles, with nobody else declared: the model of `Waiting` written in doubles.
+        struct WinMasses {
+            double byDiscard = 0;
+            double byDraw = 0;
+        };
+
+        WinMasses ExpectedWinMasses(double p, int draws, bool discardWins) {
+            const double alive = 1.0 - kOpponentWinPerRoundPermille[0] / static_cast<double>(kPermilleBase);
+            const double q = std::min(1.0, kDiscardHitPermille / static_cast<double>(kPermilleBase) * p);
+            const double byDiscardInRound = 1.0 - std::pow(1.0 - q, kOpponentDiscardsPerRound);
+            WinMasses masses;
+            double stay = 1.0;
+            for (int round = 1; round <= draws; ++round) {
+                const double aliveBefore = std::pow(alive, round - 1);
+                if (discardWins) {
+                    masses.byDiscard += aliveBefore * stay * byDiscardInRound;
+                    stay *= 1.0 - byDiscardInRound;
+                }
+                masses.byDraw += aliveBefore * stay * p;
+                stay *= 1.0 - p;
+            }
+            return masses;
         }
 
         // ----- the golden table: values copied from the build before the evaluator was made fast -----
@@ -750,6 +780,112 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(ValueOfHeldHand(held), table[i].held) << spec.how;
             EXPECT_EQ(ValueOfHeldHand(held, 1), table[i].heldWithLooseTile) << spec.how;
         }
+    }
+
+    TEST(OwnDrawsTest, AWinOnADiscardRaisesTheChanceOfAOneWaitHandByTheHandCount) {
+        // The hand of `TheChanceOfAOneWaitHandIsTheChanceOfTheCopiesOverTheDrawsLeft`: a wait on Gd with 3 copies of the 122 unseen tiles,
+        // a wall of 40 tiles (10 rounds), nobody else declared. Each round the three others discard first: one of them is a Gd with the
+        // chance `kDiscardHitPermille` of 3 / 122, and the seat then draws as before.
+        constexpr int kWall = 40;
+        constexpr int kRounds = kWall / kSeatCount;
+        const double p = 3.0 / 122.0;
+        const WinMasses off = ExpectedWinMasses(p, kRounds, false);
+        const WinMasses on = ExpectedWinMasses(p, kRounds, true);
+        const TableView view = MakeView(kTankiHand, "", kWall);
+
+        const Vector<DiscardValue> onlyDraws = ValueDiscards(view, kOnlyDraws);
+        const Vector<DiscardValue> bothWays = ValueDiscards(view, kWithDiscardWins);
+        const DiscardValue* without = Find(onlyDraws, "5p");
+        const DiscardValue* with = Find(bothWays, "5p");
+
+        ASSERT_NE(without, nullptr);
+        ASSERT_NE(with, nullptr);
+        EXPECT_NEAR(without->winChance / static_cast<double>(kOwnDrawsProbBase), off.byDraw, kChanceTolerance);
+        EXPECT_NEAR(with->winChance / static_cast<double>(kOwnDrawsProbBase), on.byDraw + on.byDiscard, kChanceTolerance);
+        EXPECT_GT(with->winChance, without->winChance);
+        EXPECT_GT(with->expected, without->expected);
+    }
+
+    TEST(OwnDrawsTest, AWinOnADiscardOpensTheSetThatHoldsTheTileAndTheMeanIsTheWeightedOne) {
+        // 123p 456s 789m, a pair of 5p and a pair of Gd. Both 5p are lying open too, so the wait is on Gd alone: 2 copies of the 120 unseen
+        // tiles. A Gd by self-draw makes a concealed pung of dragons; on a discard the pung is open (fewer points, no concealed hand).
+        // The mean score of a hand that can win either way lies between the two scores, at the weights of the two chances.
+        constexpr int kWall = 40;
+        constexpr int kRounds = kWall / kSeatCount;
+        const double p = 2.0 / 120.0;
+        const WinMasses masses = ExpectedWinMasses(p, kRounds, true);
+        const TableView view = MakeView("1p 2p 3p 4s 5s 6s 7m 8m 9m 5p 5p Gd Gd Ew", "5p 5p", kWall);
+
+        // Declared with the first discard, as the view says (no discard made); the pile holds no Gd.
+        ScoreInput selfDraw = MakeWinnerInput("1p 2p 3p 4s 5s 6s 7m 8m 9m 5p 5p Gd Gd Gd", "Gd", WinSource::SelfDraw);
+        selfDraw.hand.callingDeclared = true;
+        ScoreInput onDiscard = MakeWinnerInput("1p 2p 3p 4s 5s 6s 7m 8m 9m 5p 5p Gd Gd Gd", "Gd", WinSource::Discard);
+        onDiscard.hand.callingDeclared = true;
+        onDiscard.result.from = kSeat1;
+        const int selfDrawScore = ScoreSeat(selfDraw).score;
+        const int discardScore = ScoreSeat(onDiscard).score;
+        ASSERT_GT(selfDrawScore, discardScore);
+
+        const Vector<DiscardValue> onlyDraws = ValueDiscards(view, kOnlyDraws);
+        const Vector<DiscardValue> bothWays = ValueDiscards(view, kWithDiscardWins);
+        const DiscardValue* without = Find(onlyDraws, "Ew");
+        const DiscardValue* both = Find(bothWays, "Ew");
+
+        ASSERT_NE(without, nullptr);
+        ASSERT_NE(both, nullptr);
+        EXPECT_EQ(without->meanWinScore, selfDrawScore);
+        const double mean = (masses.byDraw * selfDrawScore + masses.byDiscard * discardScore) / (masses.byDraw + masses.byDiscard);
+        EXPECT_NEAR(both->meanWinScore, mean, 1.0);
+        EXPECT_LT(both->meanWinScore, selfDrawScore);
+        EXPECT_GT(both->meanWinScore, discardScore);
+    }
+
+    TEST(OwnDrawsTest, WithTheKnobOffTheValuesAreTheOnesOfOnlyTheDraws) {
+        for (const GoldenSpec& spec : GoldenSpecs()) {
+            const TableView view = GoldenView(spec);
+            ExpectEqual(ValueDiscards(view, OwnDrawsModel{.depth = kDepth}), ValueDiscards(view, kDepth));
+            ExpectEqual(ValueWaits(view, OwnDrawsModel{.discardWins = false}), ValueWaits(view));
+            EXPECT_EQ(ValueOfHeldHand(HeldView(spec), 1, OwnDrawsModel{}), ValueOfHeldHand(HeldView(spec), 1)) << spec.how;
+        }
+    }
+
+    TEST(OwnDrawsTest, AWinOnADiscardIsWorthSomethingToEveryHandThatCanWait) {
+        // Waits and held hands too: the discard wins add to the chance of winning and to the value of a wait with unseen copies.
+        const TableView view = MakeView(kTankiHand);
+
+        const Vector<DiscardValue> off = ValueWaits(view);
+        const Vector<DiscardValue> on = ValueWaits(view, kWithDiscardWins);
+
+        ASSERT_EQ(off.size(), on.size());
+        for (const DiscardValue& wait : on) {
+            const DiscardValue* before = Find(off, ToString(wait.tile).data());
+            ASSERT_NE(before, nullptr);
+            EXPECT_GT(wait.winChance, before->winChance) << ToString(wait.tile).data();
+            EXPECT_LE(wait.winChance, kPerfectChance);
+            EXPECT_GT(wait.expected, before->expected) << ToString(wait.tile).data();
+        }
+        TableView held = view;
+        held.own.RemoveConcealed(T("5p"));
+        EXPECT_GT(ValueOfHeldHand(held, 0, kWithDiscardWins), ValueOfHeldHand(held));
+    }
+
+    TEST(OwnDrawsTest, TwoTablesThatDifferOnlyInHiddenTilesGiveTheSameValuesWithTheDiscardWins) {
+        const char* east = "1p 2p 3p 4s 5s 6s 7m 8m Ew Ew 5p 7p 9s";
+        FixedWallSpec first = SpecOf(east, "2m");
+        FixedWallSpec second = SpecOf(east, "2m Rd Rd Rd");
+        second.hands[kSeat1] = kQuiet3;
+        second.hands[kSeat2] = kQuiet1;
+        second.hands[kSeat3] = kQuiet2;
+        const TableView viewA = MakeTableView(MakeModel(first), kSeat0);
+        const TableView viewB = MakeTableView(MakeModel(second), kSeat0);
+        const OwnDrawsModel model{.depth = kDepth + 1, .discardWins = true};
+
+        const Vector<DiscardValue> a = ValueDiscards(viewA, model);
+
+        ASSERT_FALSE(a.empty());
+        ExpectEqual(a, ValueDiscards(viewB, model));
+        ExpectEqual(ValueWaits(viewA, model), ValueWaits(viewB, model));
+        ExpectEqual(a, ValueDiscards(viewA, model));
     }
 
 }  // namespace BECore::Mahjong::Tests

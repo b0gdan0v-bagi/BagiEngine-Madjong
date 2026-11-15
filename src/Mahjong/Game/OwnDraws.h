@@ -10,6 +10,17 @@ namespace BECore::Mahjong {
     /// The most root candidates `ValueDiscards` rates, in the order of `RateDiscards`.
     inline constexpr int kOwnDrawsMaxCandidates = 6;
 
+    /// What the value counts. The default is the value of slice 1: the seat's own draws only, nothing else.
+    struct OwnDrawsModel {
+        /// The draws the search looks ahead (`ValueDiscards`), clamped to `kOwnDrawsMaxDepth`; the closed-form functions have none.
+        int depth = 0;
+        /// A discard of another seat can win too (`LevelProfile::ownDrawsDiscardWins`): in each round of the closed form of a hand that
+        /// waits, the three opponents discard before the seat draws, and a discard of a winning kind wins with the chance
+        /// `kDiscardHitPermille` of the share of the unseen copies; the win is scored as a win on a discard (the set that holds the tile
+        /// is open, no self-draw lines). Off: only the draw wins, as before.
+        bool discardWins = false;
+    };
+
     /// What one discard is worth from the seat's own draws, as plain data (the hints and the analyzer may show it later).
     struct DiscardValue {
         Tile tile;
@@ -42,11 +53,15 @@ namespace BECore::Mahjong {
      * (`NotWinningValue`) or a drawn hand (0). Where the search stops with a hand that does not wait, it does not win any more.
      *
      * **What it leaves out**, all on purpose: the opponents are the table `Alive` (their number of declarations, no hand is modelled);
-     * a win on a discard is not modelled, only the own draws; the limit is `kDefaultLimit` (the view has none; a lower setting only caps
+     * a win on a discard only with `OwnDrawsModel::discardWins` (and then without the priority between claims or the discards after
+     * the seat's last draw), else only the own draws; the limit is `kDefaultLimit` (the view has none; a lower setting only caps
      * a score); a draw is taken from the whole unseen pool, the opponents' concealed tiles included, as every unseen copy is; the tile
      * of an unchanged draw is not counted as seen or as discarded; a win on the last live tile is not marked.
      */
     [[nodiscard]] Vector<DiscardValue> ValueDiscards(const TableView& view, int depth);
+
+    /// As above with the model: `model.depth` is the depth.
+    [[nodiscard]] Vector<DiscardValue> ValueDiscards(const TableView& view, const OwnDrawsModel& model);
 
     /**
      * @brief The discards that declare the calling hand (the listed ones that leave a waiting hand), rated in the same closed form,
@@ -55,7 +70,7 @@ namespace BECore::Mahjong {
      * For step 2 of the turn: the declaration with the wait that is worth the most. Empty when the view is not a seat's own discard turn
      * or no discard declares.
      */
-    [[nodiscard]] Vector<DiscardValue> ValueWaits(const TableView& view);
+    [[nodiscard]] Vector<DiscardValue> ValueWaits(const TableView& view, const OwnDrawsModel& model = {});
 
     /**
      * @brief The seat's hand as it is held (3n + 1 tiles: in a claim window, or a view made for a claim), in milli-points, in the
@@ -65,6 +80,6 @@ namespace BECore::Mahjong {
      * waiting hand (`RateWaitingKong`, `ComputerClaim.h`): the same arithmetic as `ValueWaits`, so the two choices agree. 0 for a view
      * of no seat.
      */
-    [[nodiscard]] int64_t ValueOfHeldHand(const TableView& view, int extraDraws = 0);
+    [[nodiscard]] int64_t ValueOfHeldHand(const TableView& view, int extraDraws = 0, const OwnDrawsModel& model = {});
 
 }  // namespace BECore::Mahjong

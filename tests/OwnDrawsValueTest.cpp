@@ -1,6 +1,7 @@
 #include <Mahjong/Game/OwnDrawsValue.h>
 #include <Mahjong/Game/Score.h>
 #include <climits>
+#include <cmath>
 #include <cstdlib>
 #include <tests/HandTestSupport.h>
 
@@ -175,6 +176,28 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Alive(4, -1), Alive(4, 0));
         EXPECT_EQ(Alive(4, kMaxDeclaredOpponents + 5), Alive(4, kMaxDeclaredOpponents));
         EXPECT_EQ(Alive(-3, 1), kOwnDrawsProbBase);
+    }
+
+    TEST(OwnDrawsValueTest, ARoundOfDiscardsHitsWithOneMinusTheMissesOfEachDiscard) {
+        // One discard hits with q = kDiscardHitPermille / 1000 of the share; the chance that at least one of the three hits is 1 - (1 - q)^3.
+        // Each of the three products is rounded to a millionth, so the integer result is within a few millionths of the real one.
+        constexpr double kTolerance = 4.0 / kOwnDrawsProbBase;
+        for (const int64_t share : {int64_t{0}, int64_t{1}, kOwnDrawsProbBase / 100, kOwnDrawsProbBase / 4, kOwnDrawsProbBase}) {
+            const double q = std::min(1.0, kDiscardHitPermille / static_cast<double>(kPermilleBase) * static_cast<double>(share) / kOwnDrawsProbBase);
+            const double expected = 1.0 - std::pow(1.0 - q, kOpponentDiscardsPerRound);
+            EXPECT_NEAR(static_cast<double>(DiscardRoundChance(share)) / kOwnDrawsProbBase, expected, kTolerance) << "share " << share;
+        }
+        EXPECT_EQ(DiscardRoundChance(0), 0);
+    }
+
+    TEST(OwnDrawsValueTest, ABiggerShareOfWinningCopiesMeansABiggerChanceOfAHitInTheRound) {
+        int64_t previous = -1;
+        for (int64_t share = 0; share <= kOwnDrawsProbBase; share += kOwnDrawsProbBase / 20) {
+            const int64_t chance = DiscardRoundChance(share);
+            EXPECT_GE(chance, previous) << "share " << share;
+            EXPECT_LE(chance, kOwnDrawsProbBase) << "share " << share;
+            previous = chance;
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests

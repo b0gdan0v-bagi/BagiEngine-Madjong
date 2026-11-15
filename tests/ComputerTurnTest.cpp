@@ -305,10 +305,11 @@ namespace BECore::Mahjong::Tests {
             return model;
         }
 
-        LevelProfile OwnDrawsProfile(int depth, bool pickWait) {
+        LevelProfile OwnDrawsProfile(int depth, bool pickWait, bool discardWins = false) {
             LevelProfile profile = kNormalProfile;
             profile.ownDrawsDepth = depth;
             profile.ownDrawsPickWait = pickWait;
+            profile.ownDrawsDiscardWins = discardWins;
             return profile;
         }
 
@@ -373,6 +374,25 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(decision.action, HandAction::MakeDiscard(waits.front().tile, true)) << "rng seed " << seed;
             EXPECT_EQ(decision.step, TurnStep::Declare);
             EXPECT_TRUE(IsUntouched(rng, seed)) << "rng seed " << seed;
+        }
+    }
+
+    TEST(ComputerTurnTest, TheDiscardWinsKnobPassesTheModelToTheDiscardAndTheDeclarationWithoutDrawing) {
+        const TableView pairs = MakeTableView(PairsModel(), kSeat0);
+        const TableView waiting = MakeTableView(MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew")), kSeat0);
+        const Vector<DiscardValue> discards = ValueDiscards(pairs, OwnDrawsModel{.depth = kOwnDrawsTestDepth, .discardWins = true});
+        const Vector<DiscardValue> waits = ValueWaits(waiting, OwnDrawsModel{.discardWins = true});
+        ASSERT_FALSE(discards.empty());
+        ASSERT_FALSE(waits.empty());
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            MahjongRng discardRng(seed);
+            const TurnDecision discard = DecideTurn(pairs, discardRng, OwnDrawsProfile(kOwnDrawsTestDepth, false, true));
+            EXPECT_EQ(discard.action, HandAction::MakeDiscard(discards.front().tile)) << "rng seed " << seed;
+            EXPECT_TRUE(IsUntouched(discardRng, seed)) << "rng seed " << seed;
+            MahjongRng waitRng(seed);
+            const TurnDecision wait = DecideTurn(waiting, waitRng, OwnDrawsProfile(0, true, true));
+            EXPECT_EQ(wait.action, HandAction::MakeDiscard(waits.front().tile, true)) << "rng seed " << seed;
+            EXPECT_TRUE(IsUntouched(waitRng, seed)) << "rng seed " << seed;
         }
     }
 

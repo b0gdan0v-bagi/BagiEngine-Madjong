@@ -103,7 +103,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
-        static_assert(kProfileFieldCount == 11, "an oracle is no LevelProfile field");
+        static_assert(kProfileFieldCount == 12, "an oracle is no LevelProfile field");
         for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
@@ -182,8 +182,8 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaPlayerTest, TheKnobsTableCoversEveryFieldOfTheProfile) {
-        // Each row sets its own field and no other; between them the rows set all ten fields of `LevelProfile` (an eleventh field
-        // without a row stops the build in ArenaPlayer.cpp, which names every field).
+        // Each row sets its own field and no other; between them the rows set every field of `LevelProfile` (a field without a
+        // row stops the build in ArenaPlayer.cpp, which names every field).
         Array<bool, kProfileFieldCount> moved{};
         for (const ProfileKnob& knob : kProfileKnobs) {
             ASSERT_NE(knob.percent == nullptr, knob.flag == nullptr) << knob.name.data() << ": exactly one member";
@@ -202,6 +202,7 @@ namespace BECore::Mahjong::Arena {
                                                       set.searchMargin != kNormalProfile.searchMargin,
                                                       set.ownDrawsDepth != kNormalProfile.ownDrawsDepth,
                                                       set.ownDrawsPickWait != kNormalProfile.ownDrawsPickWait,
+                                                      set.ownDrawsDiscardWins != kNormalProfile.ownDrawsDiscardWins,
                                                       set.readDanger != kNormalProfile.readDanger,
                                                       set.waitingKongByPoints != kNormalProfile.waitingKongByPoints};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;

@@ -191,34 +191,51 @@ namespace BECore::Mahjong::Tests {
         RecordProperty("SearchSeatSteps", searchSteps);
     }
 
-    TEST(ComputerMatchTest, OneOwnDrawsSeatAmongThreeNormalSeatsPlaysAShortMatchLegally) {
-        MahjongSettings settings;
-        settings.handsPerMatch = kSearchMatchHands;
-        const String where = Format("own-draws match (seed {})", kSearchMatchSeed);
-        Match match;
-        ASSERT_TRUE(match.Start(settings, kSearchMatchSeed).has_value()) << where;
+    namespace {
 
+        /// One seat plays `valued` among three Normal seats to the end of a short match, every action legal.
+        void PlayOwnDrawsMatch(const LevelProfile& valued, const char* name) {
+            MahjongSettings settings;
+            settings.handsPerMatch = kSearchMatchHands;
+            const String where = Format("{} (seed {})", name, kSearchMatchSeed);
+            Match match;
+            ASSERT_TRUE(match.Start(settings, kSearchMatchSeed).has_value()) << where;
+
+            auto playerOf = [&](Seat seat) { return seat == kSearchSeat ? ComputerPlayer(SeatSeed(kSearchMatchSeed, seat), valued) : ComputerPlayer(SeatSeed(kSearchMatchSeed, seat)); };
+            Array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
+
+            MatchTotals totals;
+            MatchAudit audit(settings, where, totals);
+            int steps = 0;
+            int valuedSteps = 0;
+            while (match.GetPhase() == MatchPhase::InHand) {
+                ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
+                ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
+                ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), Format("{} hand {}", where, audit.HandIndex()), steps, valuedSteps));
+                const auto ended = match.EndHand();
+                ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
+                ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));
+            }
+            ASSERT_NO_FATAL_FAILURE(audit.AtEnd(match));
+            EXPECT_EQ(match.HandsPlayed(), kSearchMatchHands) << where;
+            EXPECT_GT(valuedSteps, 0) << "the own-draws seat never acted";
+        }
+
+    }  // namespace
+
+    TEST(ComputerMatchTest, OneOwnDrawsSeatAmongThreeNormalSeatsPlaysAShortMatchLegally) {
         LevelProfile valued = kNormalProfile;
         valued.ownDrawsDepth = kOwnDrawsTestDepth;
         valued.ownDrawsPickWait = true;
-        auto playerOf = [&](Seat seat) { return seat == kSearchSeat ? ComputerPlayer(SeatSeed(kSearchMatchSeed, seat), valued) : ComputerPlayer(SeatSeed(kSearchMatchSeed, seat)); };
-        Array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
+        PlayOwnDrawsMatch(valued, "own-draws match");
+    }
 
-        MatchTotals totals;
-        MatchAudit audit(settings, where, totals);
-        int steps = 0;
-        int valuedSteps = 0;
-        while (match.GetPhase() == MatchPhase::InHand) {
-            ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
-            ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
-            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), Format("{} hand {}", where, audit.HandIndex()), steps, valuedSteps));
-            const auto ended = match.EndHand();
-            ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
-            ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));
-        }
-        ASSERT_NO_FATAL_FAILURE(audit.AtEnd(match));
-        EXPECT_EQ(match.HandsPlayed(), kSearchMatchHands) << where;
-        EXPECT_GT(valuedSteps, 0) << "the own-draws seat never acted";
+    TEST(ComputerMatchTest, OneOwnDrawsSeatThatCountsTheWinsOnADiscardPlaysAShortMatchLegally) {
+        LevelProfile valued = kNormalProfile;
+        valued.ownDrawsDepth = kOwnDrawsTestDepth;
+        valued.ownDrawsPickWait = true;
+        valued.ownDrawsDiscardWins = true;
+        PlayOwnDrawsMatch(valued, "own-draws match with the wins on a discard");
     }
 
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {

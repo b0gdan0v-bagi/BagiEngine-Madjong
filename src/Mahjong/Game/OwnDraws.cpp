@@ -85,9 +85,9 @@ namespace BECore::Mahjong {
         /// The search of one call. Holds the view and the memo; nothing outlives the call.
         class Evaluator {
         public:
-            Evaluator(const TableView& view, int depth, int extraDraws = 0)
-                : _view(view), _depth(depth), _meldCount(MeldCountOf(view)), _meldTiles(CountMeldTiles(view.own.melds)), _root(CountTiles(view.own.concealed)), _east(view.seatWind == Wind::East),
-                  _draws(view.liveCount / kSeatCount + extraDraws) {
+            Evaluator(const TableView& view, int depth, bool discardWins, int extraDraws = 0)
+                : _view(view), _depth(depth), _discardWins(discardWins), _meldCount(MeldCountOf(view)), _meldTiles(CountMeldTiles(view.own.melds)), _root(CountTiles(view.own.concealed)),
+                  _east(view.seatWind == Wind::East), _draws(view.liveCount / kSeatCount + extraDraws) {
                 int declared = 0;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     declared += (seat != view.seat && view.seats[seat].callingDeclared) ? 1 : 0;
@@ -229,8 +229,9 @@ namespace BECore::Mahjong {
                 return ScoreSeat(InputOf(HandOf(counts))).score;
             }
 
-            /// The score of the hand `counts` that wins with a self-draw of `tile`, declared with the discard number `used` of the line.
-            [[nodiscard]] int WinScore(const TileCounts& counts, const TileCounts& drawn, int used, Tile tile) const {
+            /// The score of the hand `counts` that wins with `tile` (a self-draw, or the discard of another seat), declared with the
+            /// discard number `used` of the line.
+            [[nodiscard]] int WinScore(const TileCounts& counts, const TileCounts& drawn, int used, Tile tile, WinSource source) const {
                 const uint8_t id = tile.Id();
                 PlayerHand hand = HandOf(counts);
                 hand.AddConcealed(tile);
@@ -243,47 +244,75 @@ namespace BECore::Mahjong {
                 input.result.kind = ResultKind::Win;
                 input.result.winner = _view.seat;
                 input.result.winningTile = tile;
-                input.result.source = WinSource::SelfDraw;
+                input.result.source = source;
+                // The score does not depend on whose discard it is; any other seat will do.
+                input.result.from = source == WinSource::SelfDraw ? _view.seat : NextSeat(_view.seat);
                 // The copies lying open: the pile and the open melds as the view shows them, and what the line has discarded (the root
                 // hand and the draws of the line, less the hand now).
                 input.visibleWinningTileCopies = _openCopies[id] + _root[id] + drawn[id] - counts[id];
                 return ScoreSeat(input).score;
             }
 
-            /// The closed form of a hand that waits, after `used` draws, over the draws the wall leaves: a draw wins with the chance `p`
-            /// of the unseen winning copies, the hand does not change, and what is left of the chance is another seat's win (the standing
-            /// hand, worth `notWinning`) or a drawn hand.
-            [[nodiscard]] Value Waiting(const TileCounts& counts, const Line& line, int used, const Vector<Tile>& winning, int64_t notWinning) const {
+            /// The unseen winning copies of a hand that waits and the mean score and payoff of a win with one of them, by what the win is
+            /// (a self-draw or a discard of another seat), weighted by the copies.
+            struct WinKinds {
                 int64_t copies = 0;
+                int64_t meanScore = 0;
+                int64_t meanPay = 0;
+            };
+
+            [[nodiscard]] WinKinds MeanWin(const TileCounts& counts, const Line& line, int used, const Vector<Tile>& winning, WinSource source) const {
                 int64_t scoreSum = 0;
                 int64_t paySum = 0;
+                WinKinds kinds;
                 for (const Tile tile : winning) {
                     const int unseen = Unseen(line, tile.Id());
                     if (unseen > 0) {
-                        const int score = WinScore(counts, line.drawn, used, tile);
-                        copies += unseen;
+                        const int score = WinScore(counts, line.drawn, used, tile, source);
+                        kinds.copies += unseen;
                         scoreSum += unseen * static_cast<int64_t>(score);
                         paySum += unseen * WinPayoff(score, _east);
                     }
                 }
-                const int64_t total = UnseenTotal(line);
-                const int64_t chance = (copies > 0 && total > 0) ? RoundedDiv(copies * kOwnDrawsProbBase, total) : 0;
-                const int64_t meanScore = copies > 0 ? RoundedDiv(scoreSum, copies) : 0;
-                const int64_t meanPay = copies > 0 ? RoundedDiv(paySum, copies) : 0;
+                kinds.meanScore = kinds.copies > 0 ? RoundedDiv(scoreSum, kinds.copies) : 0;
+                kinds.meanPay = kinds.copies > 0 ? RoundedDiv(paySum, kinds.copies) : 0;
+                return kinds;
+            }
 
-                int64_t winMass = 0;
-                int64_t stay = kOwnDrawsProbBase;  // the chance that the hand has not won after the draws so far
+            /// The closed form of a hand that waits, after `used` draws, over the draws the wall leaves: a draw wins with the chance `p`
+            /// of the unseen winning copies, the hand does not change, and what is left of the chance is another seat's win (the standing
+            /// hand, worth `notWinning`) or a drawn hand. With `discardWins` each round also starts with the three discards of the
+            /// others, which win with `DiscardRoundChance(p)` (scored as a win on a discard) before the seat draws.
+            [[nodiscard]] Value Waiting(const TileCounts& counts, const Line& line, int used, const Vector<Tile>& winning, int64_t notWinning) const {
+                const WinKinds drawKinds = MeanWin(counts, line, used, winning, WinSource::SelfDraw);
+                const int64_t total = UnseenTotal(line);
+                const int64_t chance = (drawKinds.copies > 0 && total > 0) ? RoundedDiv(drawKinds.copies * kOwnDrawsProbBase, total) : 0;
+                WinKinds discardKinds;
+                int64_t discardChance = 0;
+                if (_discardWins) {
+                    discardKinds = MeanWin(counts, line, used, winning, WinSource::Discard);
+                    discardChance = DiscardRoundChance(chance);
+                }
+
+                int64_t drawMass = 0;
+                int64_t discardMass = 0;
+                int64_t stay = kOwnDrawsProbBase;  // the chance that the hand has not won after the rounds so far
                 for (int draw = used + 1; draw <= _draws; ++draw) {
-                    winMass += ProbTimes(ProbTimes(_alive[draw - 1], stay), chance);
+                    if (_discardWins) {
+                        discardMass += ProbTimes(ProbTimes(_alive[draw - 1], stay), discardChance);
+                        stay = ProbTimes(stay, kOwnDrawsProbBase - discardChance);
+                    }
+                    drawMass += ProbTimes(ProbTimes(_alive[draw - 1], stay), chance);
                     stay = ProbTimes(stay, kOwnDrawsProbBase - chance);
                 }
+                const int64_t winMass = drawMass + discardMass;
                 const int64_t reachedEnd = ProbTimes(_alive[_draws], stay);
                 const int64_t others = eastl::max<int64_t>(0, _alive[used] - winMass - reachedEnd);
 
                 Value value;
                 value.winMass = winMass;
-                value.winScoreMass = winMass * meanScore;
-                value.winPay = ProbTimes(winMass, meanPay);
+                value.winScoreMass = drawMass * drawKinds.meanScore + discardMass * discardKinds.meanScore;
+                value.winPay = ProbTimes(drawMass, drawKinds.meanPay) + ProbTimes(discardMass, discardKinds.meanPay);
                 value.rest = ProbTimes(others, notWinning);
                 return value;
             }
@@ -361,6 +390,7 @@ namespace BECore::Mahjong {
 
             const TableView& _view;
             int _depth = 0;
+            bool _discardWins = false;
             int _meldCount = 0;
             TileCounts _meldTiles{};
             TileCounts _root{};
@@ -407,7 +437,11 @@ namespace BECore::Mahjong {
     }  // namespace
 
     Vector<DiscardValue> ValueDiscards(const TableView& view, int depth) {
-        if (depth < 1 || !IsOwnDiscardTurn(view)) {
+        return ValueDiscards(view, OwnDrawsModel{.depth = depth});
+    }
+
+    Vector<DiscardValue> ValueDiscards(const TableView& view, const OwnDrawsModel& model) {
+        if (model.depth < 1 || !IsOwnDiscardTurn(view)) {
             return {};
         }
         Array<bool, kKindCount> listed{};
@@ -428,7 +462,7 @@ namespace BECore::Mahjong {
             return {};
         }
         const int bestShanten = options.front().shanten;
-        Evaluator evaluator(view, eastl::min(depth, kOwnDrawsMaxDepth));
+        Evaluator evaluator(view, eastl::min(model.depth, kOwnDrawsMaxDepth), model.discardWins);
         Vector<Ranked> ranked;
         for (const DiscardOption& option : options) {
             if (option.shanten > bestShanten + kSearchShantenSlack || static_cast<int>(ranked.size()) >= kOwnDrawsMaxCandidates) {
@@ -441,7 +475,7 @@ namespace BECore::Mahjong {
         return BestFirst(eastl::move(ranked));
     }
 
-    Vector<DiscardValue> ValueWaits(const TableView& view) {
+    Vector<DiscardValue> ValueWaits(const TableView& view, const OwnDrawsModel& model) {
         if (!IsOwnDiscardTurn(view)) {
             return {};
         }
@@ -454,7 +488,7 @@ namespace BECore::Mahjong {
             return a.keep != b.keep ? a.keep < b.keep : a.tile.Id() < b.tile.Id();
         });
         TileCounts counts = CountTiles(view.own.concealed);
-        Evaluator evaluator(view, 0);
+        Evaluator evaluator(view, 0, model.discardWins);
         Vector<Ranked> ranked;
         for (const WaitingDiscard& discard : waiting) {
             --counts[discard.tile.Id()];
@@ -464,11 +498,11 @@ namespace BECore::Mahjong {
         return BestFirst(eastl::move(ranked));
     }
 
-    int64_t ValueOfHeldHand(const TableView& view, int extraDraws) {
+    int64_t ValueOfHeldHand(const TableView& view, int extraDraws, const OwnDrawsModel& model) {
         if (!IsSeat(view.seat)) {
             return 0;
         }
-        Evaluator evaluator(view, 0, eastl::max(0, extraDraws));
+        Evaluator evaluator(view, 0, model.discardWins, eastl::max(0, extraDraws));
         return evaluator.Start(CountTiles(view.own.concealed)).Expected();
     }
 
