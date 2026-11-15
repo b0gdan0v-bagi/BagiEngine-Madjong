@@ -6,12 +6,11 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// Whether `seat` gave the win of `record`: another seat won on the seat's discard or by robbing its kong.
+        /// Another seat won on the seat's discard or by robbing its kong.
         bool IsGaveWin(const HandRecord& record, Seat seat) {
             return IsSeat(record.winner) && record.winner != seat && record.source != WinSource::SelfDraw && record.from == seat;
         }
 
-        /// Adds the seat `seat` of `record` to `tally` as one seat-hand.
         void AddSeat(ArenaTally& tally, const HandRecord& record, Seat seat) {
             ++tally.hands;
             tally.points += record.deltas[seat];
@@ -100,13 +99,11 @@ namespace BECore::Mahjong::Arena {
             return {};
         }
 
-        /// The threads that play seeds: `jobs`, never more than there are seeds.
         int ThreadsFor(const ArenaConfig& config) {
             return std::min(config.jobs, config.count);
         }
 
-        /// The threads each seed thread owns for the worlds of a search decision, itself included: what `jobs` has left over when there
-        /// are fewer seeds than threads, so the seed threads together never use more than `jobs`.
+        /// Counts the seed thread itself, so the seed threads together never use more than `jobs`.
         int WorldThreadsFor(const ArenaConfig& config) {
             return std::max(1, config.jobs / ThreadsFor(config));
         }
@@ -141,7 +138,7 @@ namespace BECore::Mahjong::Arena {
         }
         const size_t focusCount = config.focus.size();
         const size_t seedCount = static_cast<size_t>(config.count);
-        // One slot per (seed, focus player) and one error per seed: a thread writes only the slots of the seeds it took.
+        // A thread writes only the slots of the seeds it took.
         Vector<SeedPlay> plays(seedCount * focusCount);
         Vector<String> errors(seedCount);
         std::atomic<int> nextSeed{0};

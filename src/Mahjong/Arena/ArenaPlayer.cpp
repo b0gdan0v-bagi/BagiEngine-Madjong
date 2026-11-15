@@ -6,8 +6,7 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        // A new field of `LevelProfile` needs a row of `kProfileKnobs`: the binding below names every field, so it stops compiling
-        // when the count changes, and `ArenaPlayerTest` checks that each row sets its own field.
+        // The binding below names every field, so it stops compiling when a field of `LevelProfile` has no row in `kProfileKnobs`.
         constexpr bool ProfileHasKnownFields() {
             [[maybe_unused]] const auto& [skipAcceptance, skipDeclaration, skipClaim, takeValue, searchWorlds, searchCandidates, searchMargin, ownDrawsDepth, ownDrawsPickWait, readDanger,
                                           waitingKongByPoints] = kNormalProfile;
@@ -15,7 +14,6 @@ namespace BECore::Mahjong::Arena {
         }
         static_assert(ProfileHasKnownFields());
 
-        /// The value of `text` as a whole number (an optional minus sign), nullopt when anything else is in it.
         Optional<int> ParseNumber(StringView text) {
             int value = 0;
             const char* const end = text.data() + text.size();
@@ -48,7 +46,6 @@ namespace BECore::Mahjong::Arena {
             return Format("a level {}..{}, easy (1), normal ({}) or random", kMinLevel, kMaxLevel, LevelNumber(ComputerLevel::Normal));
         }
 
-        /// The oracle specs the parser knows: the head of a spec, up to the colon.
         struct OracleSpec {
             StringView name;
             OracleKind kind;
@@ -79,7 +76,6 @@ namespace BECore::Mahjong::Arena {
             return nullptr;
         }
 
-        /// Applies `knob=value` (`part`) to `profile`; the error names the part.
         Optional<String> ApplyKnob(StringView part, LevelProfile& profile, Array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
             if (equals == StringView::npos) {
