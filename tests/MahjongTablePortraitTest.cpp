@@ -5,11 +5,8 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The table in the portrait view (`Table/TableLayout.h`, `TableShape`): the scene picks the view of 720 x 1280 for an output at least as
- * high as it is wide, and the component lays the table out for it, fits it into the window and plays it by click and tap. The fixture's
- * renderer stands for the window (`SetWindow`). In the design window (720 x 1280 at density 1) the view is the output, so a rect of a draw
- * call is a rect of the layout; the fitted windows (a phone, a 3:4 tablet, a square) put bars on a pair of sides and the tests map the
- * layout through `TableFit`.
+ * The fixture's renderer stands for the window (`SetWindow`). In the design window (720 x 1280 at density 1) the view is the output, so a rect of a draw
+ * call is a rect of the layout; the fitted windows (a phone, a 3:4 tablet, a square) put bars on a pair of sides and the tests map the layout through `TableFit`.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -333,7 +330,6 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(claimed, nullptr) << window.label.c_str();
             EXPECT_EQ(claimed->seat, kSeat1);
             EXPECT_EQ(claimed->claimEdge, Edge::Bottom) << "seat 1 is on the right, the claimed tile came from seat 0 below it";
-            // The bar is a strip of `kClaimedEdgeWidth` units along the edge, in the screen rectangle of the slot (the rotated slot's own)
             const Rect edge(claimed->rect.x, claimed->rect.y + claimed->rect.h - kClaimedEdgeWidth, claimed->rect.w, kClaimedEdgeWidth);
             EXPECT_EQ(CountDrawn(window, kClaimedEdge, {edge}), 1) << window.label.c_str();
 
@@ -409,7 +405,6 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_GT(_table->FlightCount(), 0u) << "a discard makes a flight";
 
-        // The same discard and the window turns upright before the next draw: the tiles are in place in the portrait table
         ASSERT_NO_FATAL_FAILURE(StartIn(landscape));
         slot = SlotOf(SlotRole::HandTile, kSeat0, 0);
         ASSERT_NE(slot, nullptr);
@@ -420,7 +415,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_table->FlightCount(), 0u) << "another shape: no flight crosses it";
         ExpectEveryTileInsideTheOutput(portrait, "after the turn");
 
-        // And back: the landscape table is today's again
         SetWindow(*_renderer, landscape);
         Draw();
         EXPECT_EQ(_table->GetLayout().shape, TableShape::Landscape);

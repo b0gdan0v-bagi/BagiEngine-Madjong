@@ -5,9 +5,7 @@
 #include <tests/MahjongTouchTestSupport.h>
 
 /**
- * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix. The
- * helpers of `MahjongTouchTestSupport.h` are tested first (the windows of the matrix, where a canvas lies in a window and in view units
- * of the table, the loop that drops the touch size where a test allows it); the tests of the canvases come with the canvases.
+ * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -130,21 +128,18 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeWorstCaseTableLayout();
         ASSERT_FALSE(layout.slots.empty());
 
-        // The middle of a slot is on the table, whatever else lies there
         const Rect& slot = layout.slots.front().rect;
         const Rect inside{slot.x + slot.w * 0.5f, slot.y + slot.h * 0.5f, 2.0f, 2.0f};
         const TileSlot* found = FirstSlotUnder(inside, layout);
         ASSERT_NE(found, nullptr);
         EXPECT_TRUE(Intersects(inside, found->rect));
 
-        // Rects on the bars of a narrow window lie outside the view: above and below it, and beyond its sides
         EXPECT_EQ(FirstSlotUnder({0.0f, -50.0f, kViewWidth, 40.0f}, layout), nullptr);
         EXPECT_EQ(FirstSlotUnder({0.0f, kViewHeight + 10.0f, kViewWidth, 40.0f}, layout), nullptr);
         EXPECT_EQ(FirstSlotUnder({-50.0f, 0.0f, 40.0f, kViewHeight}, layout), nullptr);
         EXPECT_EQ(FirstSlotUnder({kViewWidth + 10.0f, 0.0f, 40.0f, kViewHeight}, layout), nullptr);
         ExpectClearOfTable({0.0f, kViewHeight + 10.0f, kViewWidth, 40.0f}, layout, "a bar under the table");
 
-        // A rect that only touches a slot is apart from it
         EXPECT_FALSE(Intersects({slot.x + slot.w, slot.y, 10.0f, slot.h}, slot));
         EXPECT_TRUE(Intersects({slot.x + slot.w - 1.0f, slot.y, 10.0f, slot.h}, slot));
     }
@@ -246,7 +241,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         EXPECT_TRUE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, always).empty());
-        // No landscape window of the matrix has small buttons any more (the narrow view makes the 4:3 and 3:2 windows 33 px or more, the wide and the
+        // No landscape window of the matrix has small buttons (the narrow view makes the 4:3 and 3:2 windows 33 px or more, the wide and the
         // landscape one are not below 731 x 411 with a bar), so the `false` (no portrait windows) needs nothing dropped; the portrait window with no
         // bar under the table (1:1 at 480 px: 25.5 px) is the one `ActionsMayBeSmall` names
         EXPECT_TRUE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, never, false).empty());
@@ -562,7 +557,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_LE(buttonOutput.y + buttonOutput.h, dimOutput.y + dimOutput.h + 0.01f) << window.label.c_str();
         });
 
-        // And a click on it reaches the modal canvas, not the button: the choice made so far stays
         Draw();
         ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
         const SeatSetup pending = MahjongHudComponent::GetActive()->PendingSeats();

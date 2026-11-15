@@ -2,11 +2,7 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/ShippedTableLayout.h>
 
-/**
- * The table draws the zones of the active spec every frame (`SetActiveTableLayoutSpec`), so a spec set while the game runs shows at the next
- * draw and no cache keeps the old layout. What reaches the active spec from the file (the poll of the file stamp, the reload of the config)
- * needs the game's `config/`, which the test environment does not mount; `TableLayoutSpecTest` holds the offer of a document (`TableLayoutOfferTest`).
- */
+/** What reaches the active spec from the file (the poll of the file stamp, the reload of the config) needs the game's `config/`, which the test environment does not mount. */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -41,7 +37,7 @@ namespace BECore::Mahjong::Tests {
             Draw();
             const Rect moved = TopHand();
             EXPECT_GT(moved.x, shipped.x + 1.0f);
-            EXPECT_FLOAT_EQ(moved.w, shipped.w);  // the same tiles, the zone moved
+            EXPECT_FLOAT_EQ(moved.w, shipped.w);
 
             SetActiveTableLayoutSpec(&ShippedTableLayoutSpec());
             Draw();

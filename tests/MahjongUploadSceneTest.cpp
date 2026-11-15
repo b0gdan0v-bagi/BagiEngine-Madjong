@@ -11,10 +11,8 @@
 
 /**
  * The glue of the tester upload in the shipped scene (`Components/MahjongUploadComponent.h`, the node `Consent`): where the page cannot post
- * nothing is done; where it can, the question is up exactly while the consent is `Unasked`, the answer is kept in a file and applied at once,
- * and the matches played afterwards reach the poster as pieces that assemble and replay. The poster is a fake that answers 200 to everything,
- * the folder of `upload.txt` a temp folder. The second half is the page `Options`: the rows of the upload (shown only where the page can post)
- * and the pad of the nickname, which is the pad of the online panel.
+ * nothing is done; where it can, the question is up exactly while the consent is `Unasked`. The poster is a fake that answers 200 to everything,
+ * the folder of `upload.txt` a temp folder.
  */
 namespace BECore::Mahjong::Tests {
 

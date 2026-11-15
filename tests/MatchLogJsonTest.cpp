@@ -7,11 +7,7 @@
 #include <set>
 #include <tests/HandTestSupport.h>
 
-/**
- * The JSON form of the match log (`MatchLogJson.h`): every event converts to an object and back, the actions are the control API's, and a
- * malformed line is an error that names the member and the line. The events come from matches played by four computers on a
- * `TableSession` with an in-memory `MatchLog`.
- */
+/** The JSON form of the match log (`MatchLogJson.h`); the events come from matches played by four computers on a `TableSession` with an in-memory `MatchLog`. */
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;
@@ -116,7 +112,6 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(back.has_value()) << "seed " << seed << " event " << index << ": " << back.error().c_str();
                 EXPECT_EQ(*back, event) << "seed " << seed << " event " << index;
 
-                // Through the text of a line too.
                 const auto parsed = ParseJson(DumpJson(EventToJson(event)));
                 ASSERT_TRUE(parsed.has_value());
                 const std::expected<MatchLogEvent, String> viaText = EventFromJson(*parsed);
@@ -201,7 +196,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(back->levels, start.levels);
         EXPECT_EQ(*back, start);
 
-        // A match played at levels logs them, also through the text of the line.
         Match match;
         TableSession session(match);
         MatchLog log;
@@ -256,7 +250,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", 5));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", "5,5,5,5"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", nullptr));
-        // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
         EXPECT_GT(kMatchLogFormatVersion, kMatchLogSeatLevelsVersion);
@@ -323,7 +316,6 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(parsed->front().origin, origin);
             }
         }
-        // `==` of a start looks at the origin.
         MatchLogEvent other = start;
         other.origin.build = "different";
         EXPECT_FALSE(other == start);
@@ -370,7 +362,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", "mainframe"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", "Desktop")) << "the names are lower case";
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", ""));
-        // Versions 0 and 7 are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", 0));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_EQ(kMatchLogFormatVersion, 6);
@@ -392,7 +383,6 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
             EXPECT_EQ(parsed->front().origin.nickname, nickname);
         }
-        // `==` of a start looks at the nickname.
         MatchLogEvent other = start;
         other.origin.nickname = "Boris";
         EXPECT_FALSE(other == start);
@@ -456,7 +446,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, AVersionThreeStartKeepsItsOneLevelAsFourEqualOnes) {
-        // A line as the game wrote it before the level of each seat
+        // A line of version 3, which has one `level` for all seats and no `levels`
         const String line =
             R"({"event":"start","version":3,"seed":41,"settings":{"handsPerMatch":4,"flowers":false,"replayDrawnHand":true,"limit":500,"startingScore":2000},"seats":"PCCC","level":3})";
         const auto json = ParseJson(line);
@@ -528,7 +518,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(status.has_value()) << "stopped at event " << status.error().index;
         EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
 
-        // Only that one name is read as Normal.
         for (const char* bad : {"HARD", "hard "}) {
             EXPECT_FALSE(EventFromJson(With(hard, "level", bad)).has_value()) << "'" << bad << "'";
         }
@@ -600,7 +589,6 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MatchLogJsonTest, AWholeFileIsReadBackAndReplays) {
         const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         String text = TextOf(events);
-        // Blank lines and a CRLF ending are skipped / tolerated.
         const size_t firstBreak = text.find('\n');
         text.insert(firstBreak + 1, "\n   \n");
         text.insert(firstBreak, "\r");
@@ -638,7 +626,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(parsed.error().rfind("line 3: ", 0), 0u) << parsed.error().c_str();
             EXPECT_NE(parsed.error().find(test.expected), String::npos) << test.line << " -> " << parsed.error().c_str();
         }
-        // The first and a late line are named too.
         EXPECT_EQ(ParseMatchLog("{").error().rfind("line 1: ", 0), 0u);
         EXPECT_EQ(ParseMatchLog(Format("{}\n{}\n[]", valid, valid)).error().rfind("line 3: ", 0), 0u);
     }
@@ -705,14 +692,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(end, "standings", Json::array({0, 1, 2, kBadSeat})));
         EXPECT_TRUE(ChangedMemberIsRefused(end, "standings", Json::array({0, 1})));
 
-        // A number above INT64_MAX is refused, not wrapped into a negative one.
         constexpr uint64_t kAboveInt64 = std::numeric_limits<uint64_t>::max();
         EXPECT_TRUE(ChangedMemberIsRefused(settlement, "scores", Json::array({kAboveInt64, 0, 0, 0})));
         EXPECT_TRUE(ChangedMemberIsRefused(settlement, "deltas", Json::array({0, kAboveInt64, 0, 0})));
         EXPECT_TRUE(ChangedMemberIsRefused(end, "scores", Json::array({0, 0, kAboveInt64, 0})));
         EXPECT_TRUE(ChangedMemberIsRefused(end, "standings", Json::array({0, 1, 2, kAboveInt64})));
 
-        // A member that is missing altogether is named too.
         for (const MatchLogEvent* event : {&start, &hand, &action, &settlement, &end}) {
             Json json = EventToJson(*event);
             for (const auto& item : json.items()) {

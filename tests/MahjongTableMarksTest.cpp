@@ -9,13 +9,7 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The marks of the last move on the table (`Components/MahjongTableComponent.h`): the tint on the last discard, the tint on the tile the
- * viewer has just drawn (it stays in its place in the row and is clickable like any other tile), the bar on the claimed tile of an open set
- * and the frame round the hand of a seat that has declared its calling hand. The shipped scene is drawn
- * into a `RecordingRenderer` as big as the view, so a rect of a draw call is a rect of the layout. The fixed hands come from
- * `FixedWall.h` and are laid into the hand in progress. The highlight of a set that was just laid is here too: it is a mark of the last move.
- */
+/** The marks of the last move, of the seats and of the centre panel on the table (`Components/MahjongTableComponent.h`). */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -37,7 +31,7 @@ namespace BECore::Mahjong::Tests {
         /// Seats 0 and 1 wait on the 5p with a pair of winds (seats 2 and 3 wait as `kSeat2Waits` and `kSeat3Waits`).
         constexpr const char* kWaitingHand0 = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Sw Sw";
         constexpr const char* kWaitingHand1 = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Nw Nw";
-        /// Times that a blink period (`kClaimBlinkSeconds` 0.5) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
+        /// Times that a blink period (`kClaimBlinkSeconds`) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
         constexpr float kOffHalf = 0.375f;
         constexpr float kEndOfPeriod = 0.125f;
         /// Seat 1 holds a pair of red dragons and a hand that a pung of them brings no further from winning: it claims (`ComputerClaimTest`).
@@ -580,7 +574,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(shadowOfFirst, shadows.end());
         EXPECT_LT(*shadowOfFirst, CallsOf(kLastDiscardMark).front()) << "shadow, face, then the tint";
 
-        // A computer discards next: the mark leaves the first and lies on the new tile only
         ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
         ASSERT_EQ(Hand().Moves().back().kind, MoveKind::Discard);
         ASSERT_EQ(Hand().Discards().back().seat, kSeat1);
@@ -674,7 +667,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(drawn));
         ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kSeat0));
 
-        // After the discard seat 0 holds no drawn tile: the plain row of 13 and no tint
         ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeDiscard(T("1p"), false)).has_value());
         Draw();
 
@@ -731,7 +723,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, TheLooseTileAfterAKongIsTinted) {
-        // A concealed kong, then the loose tile
         FixedWallSpec own = SpecOf(kThree1pHand, "1p");
         own.loose = "9m";
         HandModel model = MakeModel(own);
@@ -758,7 +749,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, NoPeekingTheCoverTheSpectatorAndAnOpponentShowNoTintOnTheHand) {
-        // Two people: the screen is covered at the start, the hand of seat 0 (14 tiles, one drawn) is backs in a plain row
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Lay(MakeModel(SpecOf(kPlainHand, "5p")));
         Draw();
@@ -775,7 +765,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(session.HandoffPending());
         ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(IndexOf(kSeat0, T("5p"))));
 
-        // A spectator: no person at the table
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         Lay(MakeModel(SpecOf(kPlainHand, "5p")));
         Draw();
@@ -783,7 +772,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat0));
         EXPECT_TRUE(RectsOf(kDrawnTileMark).empty());
 
-        // An opponent that has just drawn: seat 1 is East, the person sits at seat 0
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Lay(MakeModel(SpecOf(kPlainHand, "5p"), kSeat1));
         Draw();
@@ -815,7 +803,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(bars[0].y, expected.y);
         EXPECT_EQ(bars[0].w, expected.w);
         EXPECT_EQ(bars[0].h, expected.h);
-        // The bar is on the face: after the tile, inside it
         const Vector<size_t> calls = CallsOf(kClaimedEdge);
         const Vector<size_t> shadows = CallsOf(kTileShadow);
         const auto shadow =
@@ -928,14 +915,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(bars.size(), 4u);
         ASSERT_NO_FATAL_FAILURE(ExpectFramed(kSeat2));
         ASSERT_NO_FATAL_FAILURE(ExpectFramesInsideTheView());
-        // The bars lie on the border of the padded hand: none inside the hand's own rect
         const Rect hand = BoundsOf(_table->GetLayout(), SlotRole::HandTile, kSeat2);
         for (const Rect& bar : bars) {
             const bool inside = bar.x >= hand.x && bar.y >= hand.y && bar.x + bar.w <= hand.x + hand.w && bar.y + bar.h <= hand.y + hand.h;
             EXPECT_FALSE(inside);
         }
 
-        // The frame stays after another seat's discard
         ASSERT_TRUE(model.Discard(kSeat1, T("8p")).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Discard);
         Lay(model);
@@ -957,7 +942,6 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_NO_FATAL_FAILURE(ExpectFramesInsideTheView());
 
-        // Two declared seats give eight bars
         Lay(UpgradeModel({kSeat2, kSeat3}));
         Draw();
         EXPECT_EQ(RectsOf(kCallingFrame).size(), 8u);
@@ -986,7 +970,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, TheFrameIsPublicSoItShowsUnderTheCoverAndAtTheEndOfTheHand) {
-        // Two people: the screen is covered, and the hand of seat 0 is backs, but the declaration is public
         ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, AllDeclaredModel()));
         TableSession& session = _game->GetSession();
         ASSERT_TRUE(session.HandoffPending());
@@ -998,7 +981,6 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_EQ(RectsOf(kCallingFrame).size(), 16u);
 
-        // Seat 0 wins with the 5p it draws: the hand is over, all four hands face up, the frames stay
         HandModel won = AllDeclaredModel("5p");
         ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
         ASSERT_EQ(won.GetPhase(), Phase::Finished);
@@ -1006,7 +988,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
         EXPECT_EQ(RectsOf(kCallingFrame).size(), 16u);
 
-        // The next hand starts without a declaration, so without a frame
         ASSERT_TRUE(_game->GetSession().NextHand().has_value());
         Draw();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::Playing);
@@ -1045,7 +1026,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(RectsOf(kDeclareMark).empty()) << "hints " << hintsOn;
         }
 
-        // A hand that cannot win this turn: one bar, on the tile that is no part of the shape
         Lay(AllDeclaredModel("Rd"));
         Draw();
         ASSERT_NO_FATAL_FAILURE(ExpectKeepWaitingBarsOn(SafeDiscards()));
@@ -1075,13 +1055,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(Hand().GetHand(kSeat0).callingDeclared);
         EXPECT_TRUE(RectsOf(kKeepsWaitingMark).empty());
 
-        // Declared and on turn: the bar is there
         HandModel model = ViewerDeclaredModel();
         Lay(model);
         Draw();
         ASSERT_EQ(RectsOf(kKeepsWaitingMark).size(), 2u) << "both copies of the 9s";
 
-        // The viewer discards the 9s (the bar is gone with the turn): a computer is to act
         ASSERT_TRUE(model.Discard(kSeat0, T("9s")).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Discard);
         ASSERT_EQ(model.CurrentSeat(), kSeat1);
@@ -1099,7 +1077,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, NoBarUnderTheCoverForASpectatorOrAtTheEndOfTheHandAndTheCoverGoesWithReveal) {
-        // Two people: the screen is covered, the viewer's tiles are backs and nothing says which discards are safe
         ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, AllDeclaredModel("5p")));
         TableSession& session = _game->GetSession();
         ASSERT_TRUE(session.HandoffPending());
@@ -1110,12 +1087,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ExpectKeepWaitingBarsOn(SafeDiscards()));
         EXPECT_FALSE(RectsOf(kKeepsWaitingMark).empty());
 
-        // A spectator (no person at the table) sees no concealed hand
         ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, AllDeclaredModel("5p")));
         ASSERT_EQ(_game->GetSession().Viewer(), kNoSeat);
         EXPECT_TRUE(RectsOf(kKeepsWaitingMark).empty());
 
-        // The hand is over: all hands face up, no choice of a discard left
         HandModel won = AllDeclaredModel("5p");
         ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, won));
@@ -1302,7 +1277,6 @@ namespace BECore::Mahjong::Tests {
             Draw();
             ASSERT_EQ(_table->GetLayout().viewer, viewer);
             ASSERT_NO_FATAL_FAILURE(ExpectBasePlatesInOrder()) << "viewer " << viewer;
-            // The viewer's plate is the one at the bottom of the table, and the four rectangles differ
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (seat != viewer) {
                     EXPECT_LT(PlateOf(seat).y, PlateOf(viewer).y) << "viewer " << viewer << " seat " << seat;
@@ -1332,7 +1306,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, NoTurnIsMarkedAtTheEndOfAHandAndOfTheMatchAndTheDealerStaysOnTheEastOfTheHandShown) {
-        // A hand that seat 0 (East) has won: all hands face up, the turn gone, the dealer where the winds put it
         HandModel won = AllDeclaredModel("5p");
         ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, won));
@@ -1363,7 +1336,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, ThePlateMarksArePublicSoTheyShowUnderTheCoverAfterRevealAndForASpectator) {
-        // Two people, seat 1 is East and to act: the screen is covered, the plates are not
         ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, MakeModel(SpecOf(kPlainHand, "5p"), kSeat1)));
         TableSession& session = _game->GetSession();
         ASSERT_TRUE(session.HandoffPending());
@@ -1379,7 +1351,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(SameRect(PlateOf(kSeat1), bottomBefore)) << "the viewer is the same person after Show";
         ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat1, kSeat1));
 
-        // A spectator: seat 0 is at the bottom (nobody is the viewer), the same marks
         ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, MakeModel(SpecOf(kPlainHand, "5p"), kSeat2)));
         ASSERT_NO_FATAL_FAILURE(ExpectBasePlatesInOrder());
         ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat2, kSeat2));
@@ -1393,7 +1364,6 @@ namespace BECore::Mahjong::Tests {
                                    kAdvisedFrame, kVeil, kTileShadow, kTileShadowSoft, kFeltLip, kSeatPlate, kDealerMark}) {
             EXPECT_FALSE(SameColor(kSeatTurnFrame, other)) << "the tests find a mark by its colour";
         }
-        // The dealer's mark is red: little green and blue, and no colour of the other marks
         EXPECT_LT(kDealerMark.g, kTurnMark.g / 2);
         EXPECT_LT(kDealerMark.b, kTurnMark.b);
         for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kKeepsWaitingMark,
@@ -1483,7 +1453,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, EverySeatPlateHasTheEmblemOfItsSeatAPersonOrAComputerOfItsLevel) {
-        // Seat 1 is the person; the three computers play at levels of their own
         _game->SetLevels(SeatLevels{{{3}, {4}, {7}, {10}}});
         ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, MakeModel(SpecOf(kPlainHand, "9p"), kSeat3)));
         EXPECT_EQ(EmblemCalls().size(), 4u + 1u) << "four pictures and the turn ring of seat 3";
@@ -1539,7 +1508,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(EmblemDraws(seat, kCallingRingCell).empty()) << "nobody has declared, seat " << seat;
         }
 
-        // Seat 2 declares and is not to act; seat 1 is
         HandModel model = OpenPungModel(kSeat1Hand, kSeat2Waits, kSeat3Waits, {kSeat2});
         ASSERT_TRUE(model.GetHand(kSeat2).callingDeclared);
         Lay(model);
@@ -1550,7 +1518,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(EmblemDraws(seat, kTurnRingCell).size(), seat == Hand().CurrentSeat() ? 1u : 0u) << "seat " << seat;
         }
 
-        // Every seat declared and seat 0 (the person) to act: seat 0 shows both rings, the others the calling ring only
         Lay(AllDeclaredModel());
         Draw();
         ASSERT_EQ(Hand().CurrentSeat(), kSeat0);
@@ -1561,7 +1528,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, TheEmblemsArePublicSoTheyShowUnderTheCoverAndForASpectator) {
-        // Two people, seat 1 is East and to act: the screen is covered, the plates and their rings are not
         ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, MakeModel(SpecOf(kPlainHand, "5p"), kSeat1)));
         ASSERT_TRUE(_game->GetSession().HandoffPending());
         ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat1, PersonCell(), true, false));
@@ -1594,7 +1560,6 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_LT(firstEmblem, firstTile);
         EXPECT_GT(firstEmblem, CallsOf(kSeatPlate).front()) << "after a plate base";
-        // The base of each plate is drawn before the emblem of the same plate
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             ASSERT_GE(PanelCallAt(_renderer->calls, PlateOf(seat)), 0) << "seat " << seat;
             const size_t base = static_cast<size_t>(PanelCallAt(_renderer->calls, PlateOf(seat)));
@@ -1624,7 +1589,6 @@ namespace BECore::Mahjong::Tests {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             EXPECT_EQ(PanelCountAt(_renderer->calls, PlateOf(seat)), 1) << "the base of the plate of seat " << seat;
         }
-        // The frame round the hand and the frame on the ring box of the declared seat
         EXPECT_EQ(RectsOf(kCallingFrame).size(), 8u);
         const Rect box = EmblemBox(PlateOf(kSeat2), 1.0f);
         EXPECT_EQ(CountOf(kCallingFrame, Rect(box.x, box.y, box.w, kCallingFrameWidth)), 1);
@@ -1638,7 +1602,6 @@ namespace BECore::Mahjong::Tests {
             SetWindow(*_renderer, window);
             Draw();
             ++windows;
-            // Four pictures, four calling rings and the turn ring of seat 0, each in the ring box of one plate
             const Vector<DrawCall> emblems = EmblemCalls();
             EXPECT_EQ(emblems.size(), 9u) << window.label.c_str();
             const ViewTransform fit = TableFit(window);

@@ -4,10 +4,7 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/ShippedTableLayout.h>
 
-/**
- * The table publishes `MakeTableRegions` of its layout to the `SceneView` canvas of every node in `kRegionNodes` (`PublishRegions`), so that
- * after a draw each of them holds every region at the layout's rectangle, in every shape and profile, and follows a new spec.
- */
+/** The table publishes `MakeTableRegions` of its layout to the `SceneView` canvas of every node in `kRegionNodes` (`PublishRegions`) after each draw. */
 namespace BECore::Mahjong::Tests {
 
     namespace {

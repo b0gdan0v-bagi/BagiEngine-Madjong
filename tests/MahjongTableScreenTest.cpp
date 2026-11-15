@@ -7,9 +7,7 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): the buttons of the component are the buttons of the
- * file with their action and value, the words are keys of the string table, the longest labels fit in every language, both pass the size
- * matrix once per language, and the buttons lie where no tile of any game can.
+ * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): both pass the size matrix once per language, and the buttons lie where no tile of any game can.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -186,7 +184,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(ButtonAction(button), PoolString::Intern(spec.action)) << spec.element;
             EXPECT_EQ(ButtonValue(button), PoolString::Intern(spec.value)) << spec.element;
             EXPECT_EQ(ElementText(button), Format("{{#{}}}", spec.wordKey)) << spec.element << " says a word of the string table";
-            // The pictures of its tiles: `maxTiles` hidden images named after the button, and no more
             int images = 0;
             for (const auto& child : button->children) {
                 EXPECT_NE(child->GetComponent<UIImageComponent>(), nullptr) << spec.element << " has only pictures as children";
@@ -291,7 +288,6 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableScreenTest, EveryActionButtonIsATouchTargetFromTheSmallestWindowThatKeepsTheActionsCanvas) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         const float minTouch = EngineTouchMinimum();
-        // The rule: this window keeps `Actions`, one pixel less does not
         ASSERT_FALSE(NeedsCompactActions(kSmallestActionsWindowWidth, kSmallestActionsWindowHeight, 1.0f, minTouch));
         // One pixel narrower is too small; the window is taller here, so the bar under the table holds the compact row
         ASSERT_TRUE(NeedsCompactActions(kSmallestActionsWindowWidth - 1.0f, 2000.0f, 1.0f, minTouch));
@@ -437,7 +433,6 @@ namespace BECore::Mahjong::Tests {
             }
         });
 
-        // In every narrow window (the touch size is left out where the buttons are small: `ActionsMayBeSmall`)
         ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall);
         for (const MatrixWindow& window : NarrowWindows()) {
             ASSERT_EQ(ShapeOf(window), TableShape::Narrow) << window.label.c_str();
@@ -573,7 +568,6 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(variants[i].overrides[0].height.has_value());
             const float height = static_cast<float>(lines) * kActionButtonHeight + static_cast<float>(lines - 1) * kCompactSpacing;
             EXPECT_FLOAT_EQ(variants[i].overrides[0].height->value, height) << i;
-            // The constants of the rule are the variants of the file
             EXPECT_FLOAT_EQ(kCompactRowVariants[i].maxWidth, variants[i].when.maxWidth) << i;
             EXPECT_FLOAT_EQ(kCompactRowVariants[i].height, variants[i].overrides[0].height->value) << i;
         }

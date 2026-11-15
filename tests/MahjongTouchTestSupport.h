@@ -9,11 +9,8 @@
 #include <tests/MahjongTableTestSupport.h>
 
 /**
- * What the tests of the touch size share (`MahjongTouchSizeTest`, and the screen tests that run a canvas over the size matrix): the
- * windows of the engine's matrix as the game sees them, a canvas laid out in one of them the way `ValidateOnMatrix` does, the rect of an
- * element turned into view units of the table (so it can be compared with the tiles), the worst-case layout of the table, and the
- * matrix loop with the touch size dropped in the windows where the test says a control is allowed to be small. Header only; free
- * functions, they take the canvas from `MahjongTableTestBase::Canvas`.
+ * The windows of the engine's matrix as the game sees them and the loops over them for the touch size (`MahjongTouchSizeTest`, and the screen tests that run a canvas over the size matrix).
+ * Header only; free functions, they take the canvas from `MahjongTableTestBase::Canvas`.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -127,7 +124,7 @@ namespace BECore::Mahjong::Tests {
         return window;
     }
 
-    /// The phones the table is held to: the landscape ones (the two phone windows of the entry, 915 x 330, the worst, and 780 x 300, a
+    /// The phones the table is held to: the landscape ones (915 x 330, the worst, 780 x 300, a
     /// taller one, 851 x 393, and 915 x 330 with the insets of the sides, all at density 2.6: every one of them is wider than 2 : 1, so
     /// the wide view), then two portrait ones (390 x 844 at 3 and 360 x 640 at 2). The matrix holds the wide windows of a monitor (21:9
     /// and 32:9 at several sizes, with and without insets).
@@ -280,7 +277,7 @@ namespace BECore::Mahjong::Tests {
 
     /// Whether `Actions` is the canvas shown in this window at this user scale with buttons under the engine's touch minimum: the rule keeps
     /// it because the bar under the table, less the bottom inset, cannot hold the compact row. In the matrix that is the portrait window of
-    /// 1:1 at 480 px (25.5 px, no bar at all); no landscape window of it has small buttons now that 4:3 and 3:2 are the narrow view.
+    /// 1:1 at 480 px (25.5 px, no bar at all); no landscape window of it has small buttons (4:3 and 3:2 are the narrow view).
     /// Outside it, the near-square narrow window with side insets (610 x 600: the table's 31.6 px, the row above the inset does not fit).
     inline bool ActionsStaysSmall(const MatrixWindow& window, float userScale) {
         return ActionButtonsAreUnderTheMinimum(window) && !IsCompactWindow(window, userScale);

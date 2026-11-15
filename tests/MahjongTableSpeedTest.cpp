@@ -5,11 +5,7 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The speed of the table on the table itself (`Components/MahjongTableComponent.h`, "Pace"; the factors are `Table/AnimationSpeed.h`):
- * the pause of the computers, the length of a flight and the blink and the length of the mark of a set just laid follow
- * `MahjongGame::GetAnimationSpeed()`, and the control API does not wait at any speed.
- */
+/** The pace of the table on the table itself (`Components/MahjongTableComponent.h`, "Pace"; the factors are `Table/AnimationSpeed.h`): the control API does not wait at any speed. */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -64,7 +60,7 @@ namespace BECore::Mahjong::Tests {
             SCOPED_TRACE(SpeedText(speed).data());
             ASSERT_NO_FATAL_FAILURE(StartWithComputerToAct(speed));
             UseFlights();
-            Elapse(ScaledSeconds(kComputerStepSeconds, speed) * (kMostOf + kTheRest));  // the computer discards
+            Elapse(ScaledSeconds(kComputerStepSeconds, speed) * (kMostOf + kTheRest));
             Draw();
             ASSERT_GT(_table->FlightCount(), 0u) << "the discard flies";
 

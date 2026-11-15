@@ -4,12 +4,7 @@
 #include <tests/ComputerTestSupport.h>
 #include <tests/MahjongTouchTestSupport.h>
 
-/**
- * The table in a landscape phone (`TableProfileFor`, `Table/TouchRegime.h`): the component builds its layout with the profile the rule
- * gives the window it is drawn in (the output size of the renderer, the pixel density of the UI environment, the engine's touch minimum),
- * so the viewer's hand is a touch target there and the table of a desktop window is the one it always was. The fixture's renderer stands
- * for the window (`SetWindow`); the windows are those of `MahjongTouchTestSupport.h`.
- */
+/** The fixture's renderer stands for the window (`SetWindow`); the windows are those of `MahjongTouchTestSupport.h`. */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -89,7 +84,6 @@ namespace BECore::Mahjong::Tests {
                 const float y = slot->rect.y + slot->rect.h * 0.5f;
                 EXPECT_FALSE(ClickViewPoint(window, x, y)) << "no canvas takes the click: the table does";
                 if (selects) {
-                    // A hand tile under the touch minimum (the one row of the portrait table in a phone): the first click selects, the second discards
                     ASSERT_TRUE(Hand().Discards().empty()) << window.label.c_str() << " tile " << index;
                     Draw();
                     EXPECT_EQ(_table->SelectedHandIndex(), index) << window.label.c_str();
@@ -147,7 +141,6 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_GT(_table->FlightCount(), 0u) << "a discard makes a flight";
 
-        // The window gets the phone's size and density: a discard and the window change between the draws
         const MatrixWindow phone = PhoneWindows().front();
         ASSERT_NO_FATAL_FAILURE(StartIn(design));
         ASSERT_TRUE(ClickHandTile(0) == false);
@@ -156,7 +149,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_table->GetLayout().profile, TableProfileOf(phone));
         EXPECT_EQ(_table->FlightCount(), 0u) << "another size and profile: the tiles are in place";
 
-        // The same output at another density: only the profile changes
         ASSERT_NO_FATAL_FAILURE(StartIn(design));
         ASSERT_TRUE(ClickHandTile(0) == false);
         MatrixWindow dense = design;
