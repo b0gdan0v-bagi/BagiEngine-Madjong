@@ -7,6 +7,9 @@
 // The shipped theme table is read from the source tree: a game's content is not mounted in the test environment.
 namespace BECore::Mahjong::Tests {
 
+    /// The themes the game ships: a theme taken out of the file, or one added without its parts (a row of `kTileBackSets`, a segment of `Options`), fails by name.
+    inline constexpr Array<const char*, 2> kShippedThemeIds{{"classic", "navy"}};
+
     inline std::filesystem::path ShippedThemesPath() {
         return std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "UIThemes.xml";
     }

@@ -14,9 +14,6 @@ namespace BECore::Mahjong::Tests {
 
         constexpr const char* kClassic = "classic";
 
-        /// The themes the game ships: a theme taken out of the file fails here by name.
-        constexpr Array<const char*, 2> kShippedThemeIds{{"classic", "navy"}};
-
         /// The least Euclidean RGB distance (0..441) between a mark laid over the felt, or over its rim, and the felt itself. The weakest mark of `classic` (`kTurnMark`, a thin
         /// gold over the green) is about 93 from the felt and 106 from the rim, so 60 leaves a margin and still finds a felt that has drifted to the mark's colour.
         constexpr float kMinMarkDistance = 60.0f;

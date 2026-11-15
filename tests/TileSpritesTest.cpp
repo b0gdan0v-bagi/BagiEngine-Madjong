@@ -1,9 +1,11 @@
 #include <Common/EngineEnvironment.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <gtest/gtest.h>
+#include <tests/ShippedThemes.h>
+#include <tests/UiStyleTestSupport.h>
 
 // Read from the source tree (a game's content is not mounted in the test environment); the PNG by its header only: zlib is not linked into the tests, the pixels are checked by `python3
-// tools/make_tiles.py --check`.
+// tools/make_tiles.py --check` (which also holds that no two cells, so no two backs, are the same picture).
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;
@@ -124,6 +126,57 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(back.rect.h, expectedBack.h);
     }
 
+    TEST_F(TileSpritesTest, EverySetHasItsBackAndItsStackWhereTheArithmeticSaysAndTheClassicOnesAreTheFirstCells) {
+        ASSERT_EQ(_sprites.size(), static_cast<size_t>(kDrawnCells));
+        EXPECT_EQ(kTileBackSets[0].backCell, kTileIdCount);
+        EXPECT_EQ(kTileBackSets[0].stackCell, kTileIdCount + 1);
+        EXPECT_EQ(String(kTileBackSets[0].theme), String("classic"));
+        for (const TileBackSet& set : kTileBackSets) {
+            const Sprite* back = nullptr;
+            const Sprite* stack = nullptr;
+            for (const Sprite& sprite : _sprites) {
+                back = sprite.name == BackSpriteName(set) ? &sprite : back;
+                stack = sprite.name == StackSpriteName(set) ? &sprite : stack;
+            }
+            ASSERT_NE(back, nullptr) << set.theme;
+            ASSERT_NE(stack, nullptr) << set.theme;
+            EXPECT_TRUE(SameRect(back->rect, BackRect(set))) << set.theme;
+            EXPECT_TRUE(SameRect(stack->rect, StackRect(set))) << set.theme;
+            EXPECT_TRUE(SameRect(BackRect(set), CellRect(set.backCell))) << set.theme;
+            EXPECT_EQ(set.stackCell, set.backCell + 1) << set.theme;
+        }
+        EXPECT_EQ(BackSpriteName(kTileBackSets[0]), String("Tile_Back"));
+        EXPECT_EQ(StackSpriteName(kTileBackSets[0]), String("Tile_Stack"));
+        EXPECT_EQ(BackSpriteName(BackSetOf("navy")), String("Tile_Back_navy"));
+        EXPECT_EQ(StackSpriteName(BackSetOf("navy")), String("Tile_Stack_navy"));
+    }
+
+    TEST_F(TileSpritesTest, EveryShippedThemeHasASetAndAnUnknownOneGetsTheClassicSet) {
+        for (const char* id : kShippedThemeIds) {
+            EXPECT_EQ(String(BackSetOf(id).theme), String(id)) << "a theme without a row of kTileBackSets draws the classic back";
+        }
+        for (const TileBackSet& set : kTileBackSets) {
+            bool shipped = false;
+            for (const char* id : kShippedThemeIds) {
+                shipped = shipped || String(id) == String(set.theme);
+            }
+            EXPECT_TRUE(shipped) << set.theme << " has cells but no theme";
+        }
+        EXPECT_EQ(&BackSetOf("nope"), &kTileBackSets[0]);
+        EXPECT_EQ(&BackSetOf(""), &kTileBackSets[0]);
+    }
+
+    TEST_F(TileSpritesTest, TheSetsDoNotShareACell) {
+        for (int first = 0; first < kTileBackSetCount; ++first) {
+            for (int second = first + 1; second < kTileBackSetCount; ++second) {
+                EXPECT_NE(kTileBackSets[first].backCell, kTileBackSets[second].backCell);
+                EXPECT_NE(kTileBackSets[first].stackCell, kTileBackSets[second].stackCell);
+                EXPECT_NE(kTileBackSets[first].backCell, kTileBackSets[second].stackCell);
+                EXPECT_NE(kTileBackSets[first].stackCell, kTileBackSets[second].backCell);
+            }
+        }
+    }
+
     TEST_F(TileSpritesTest, TheStackSpriteIsTheSquareOfTheCellAfterTheBack) {
         ASSERT_EQ(_sprites.size(), static_cast<size_t>(kDrawnCells));
         EXPECT_EQ(kStackCell, kBackCell + 1);
@@ -172,7 +225,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TileAtlasTest, TheGridHoldsEveryCellAndTheAtlasSizeIsTheGrid) {
         EXPECT_EQ(kAtlasWidth, kAtlasColumns * kCellWidth);
         EXPECT_EQ(kAtlasHeight, kAtlasRows * kCellHeight);
-        EXPECT_EQ(kDrawnCells, kTileIdCount + 2);
+        EXPECT_EQ(kDrawnCells, kTileIdCount + 2 * kTileBackSetCount);
         EXPECT_EQ(SourceRect(Tile{0}).x, 0.0f);
         EXPECT_EQ(SourceRect(Tile{0}).y, 0.0f);
         // The first cell of the second row and the last drawn one

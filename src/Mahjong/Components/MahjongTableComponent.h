@@ -12,6 +12,7 @@
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TablePalette.h>
 #include <Mahjong/Table/TableRegions.h>
+#include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <chrono>
 
@@ -179,9 +180,10 @@ namespace BECore::Mahjong {
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         void OnApplicationCleanUp();
 
-        /// The felt texture for `renderer`, made on first use and again for another renderer (`GetId()`); null when the renderer gave none.
+        /// The felt texture for `renderer`, made on first use and again for another renderer (`GetId()`) or when the felt colour of the palette
+        /// is not the one it was made with; null when the renderer gave none.
         [[nodiscard]] ITexture* FeltTexture(IRenderer& renderer);
-        /// Reads `_palette` again when the version of the themes moved: one integer compare in a steady frame.
+        /// Reads `_palette` and the back set of the current theme again when the version of the themes moved: one integer compare in a steady frame.
         void RefreshPalette();
         /// Frees the felt texture, with the GPU idle when the renderer is the one that made it.
         void ReleaseFelt();
@@ -292,6 +294,7 @@ namespace BECore::Mahjong {
         ResourceHandle<ITexture> _emblems;               // `Table/EmblemAtlas.h`
         IntrusivePtr<ITexture> _felt;                    // the felt made from pixels (`Table/TableLook.h`); empty when the renderer gave none
         uint64_t _feltRenderer = 0;                      // `IRenderer::GetId()` of the renderer `_felt` was asked of, 0 for none yet
+        Color _feltColor;                                // the felt colour `_felt` was made with
         TablePalette _palette;                           // the colours the table paints in, of the theme at `_paletteVersion`
         uint64_t _paletteVersion = 0;                    // `UIThemes::GetVersion()` that `_palette` was read at; 0 for never
         TableSnapshot _shown;                            // what the last `OnDraw` drew
@@ -302,6 +305,8 @@ namespace BECore::Mahjong {
         float _flightSeconds = kTileFlightSeconds;       // at Normal speed: `Seconds(_flightSeconds)` is the length of a flight
         AnimationSpeed _speed = kDefaultAnimationSpeed;  // the game's speed as of the last update or draw
         ActionButtons _published;                        // what the canvases show; the scene file starts with every button hidden
+        /// The back and the wall stack of the theme at `_paletteVersion` (`RefreshPalette`).
+        const TileBackSet* _backSet = &kTileBackSets[0];
         /// What the buttons were made from: `LegalActions` allocates, and the model moves only through the session, which bumps its version.
         struct ButtonsKey {
             const MahjongGame* game = nullptr;

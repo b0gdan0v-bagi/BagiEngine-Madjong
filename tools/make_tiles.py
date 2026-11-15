@@ -19,7 +19,8 @@ src/Mahjong/Table/TileAtlas.h mirrors them and tests/TileSpritesTest.cpp compare
 
 Atlas: COLUMNS x ROWS cells of CELL_W x CELL_H pixels, RGBA, transparent outside the tiles. Cell index = tile id of Tile.h
 (0..8 dots, 9..17 bamboo, 18..26 characters, 27..30 winds, 31..33 dragons, 34..37 flowers, 38..41 seasons), cell 42 = the back,
-cell 43 = a wall stack seen from above (a STACK_SIZE square in the corner of its cell, the rest transparent).
+cell 43 = a wall stack seen from above (a STACK_SIZE square in the corner of its cell, the rest transparent). Every theme of the game
+has a back and a stack of its own colours (BACK_SETS): classic is cells 42 / 43, navy 44 / 45, cells 46 / 47 stay for a next theme.
 """
 
 import argparse
@@ -27,7 +28,7 @@ import struct
 import sys
 import zlib
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, NamedTuple, Optional
 
 CELL_W = 96
 CELL_H = 128
@@ -38,7 +39,6 @@ ATLAS_H = CELL_H * ROWS
 TILE_ID_COUNT = 42
 BACK_INDEX = TILE_ID_COUNT
 STACK_INDEX = BACK_INDEX + 1
-CELL_COUNT = TILE_ID_COUNT + 2
 STACK_SIZE = 96  # the stack is a square of this many pixels at the top left corner of its cell
 SUPERSAMPLE = 2
 
@@ -52,6 +52,15 @@ STACK_SPRITE = "Tile_Stack"
 
 Color = tuple[int, int, int]
 
+
+class BackColors(NamedTuple):
+    """The colours of a tile back and of the wall stack made of two of them; the ivory sides are the same in every set."""
+
+    face: Color
+    rim: Color  # the thin frame inside the back
+    dark: Color  # the diamond lattice and the line between the two backs of a stack
+    light: Color  # the lit edge along the top of a stack
+
 # ----- palette -----
 OUTLINE: Color = (38, 46, 42)
 SIDE_LIGHT: Color = (226, 216, 186)  # the ivory side next to the face, lit from the top left
@@ -64,10 +73,16 @@ BLUE: Color = (30, 74, 160)
 GREEN: Color = (28, 130, 62)
 DARK_GREEN: Color = (16, 84, 40)
 LIGHT_GREEN: Color = (120, 200, 120)
-BACK_FACE: Color = (22, 120, 104)
-BACK_RIM: Color = (88, 176, 156)
-BACK_DARK: Color = (12, 80, 70)
-BACK_LIGHT: Color = (44, 146, 126)
+CLASSIC_BACK = BackColors((22, 120, 104), (88, 176, 156), (12, 80, 70), (44, 146, 126))
+NAVY_BACK = BackColors((26, 44, 92), (214, 178, 76), (14, 24, 56), (64, 92, 150))  # a deep navy face, a gold rim
+
+# One back and one stack per theme of config/UIThemes.xml, in the cells after the faces: (theme id, back colours, back cell, stack cell).
+# src/Mahjong/Table/TileAtlas.h (kTileBackSets) repeats the cell numbers; the first row is the classic one and answers for an unknown theme.
+BACK_SETS = [
+    ("classic", CLASSIC_BACK, BACK_INDEX, STACK_INDEX),
+    ("navy", NAVY_BACK, BACK_INDEX + 2, STACK_INDEX + 2),
+]
+CELL_COUNT = TILE_ID_COUNT + 2 * len(BACK_SETS)
 
 # The corner index: a glyph of the 5x7 font at INDEX_PIXEL cell units per font pixel with its top left corner at (INDEX_X, INDEX_Y), and
 # below it a sign of INDEX_SIGN_HEIGHT units. The patterns are scaled by ART_SCALE toward the bottom right corner of the face so that they
@@ -492,23 +507,23 @@ def draw_bonus(canvas: Canvas, letter: str, number: int, color: Color) -> None:
 
 # ----- the back -----
 
-def draw_back(canvas: Canvas) -> None:
-    draw_body(canvas, BACK_FACE)
-    canvas.rrect_frame(BODY_FACE[0] + 5, BODY_FACE[1] + 5, BODY_FACE[2] - 5, BODY_FACE[3] - 5, 5, 2, BACK_RIM)
+def draw_back(canvas: Canvas, colors: BackColors = CLASSIC_BACK) -> None:
+    draw_body(canvas, colors.face)
+    canvas.rrect_frame(BODY_FACE[0] + 5, BODY_FACE[1] + 5, BODY_FACE[2] - 5, BODY_FACE[3] - 5, 5, 2, colors.rim)
     # a lattice of diamonds in the middle
     for x in (FACE_CENTER_X - 22, FACE_CENTER_X, FACE_CENTER_X + 22):
         for y in (FACE_CENTER_Y - 33, FACE_CENTER_Y - 11, FACE_CENTER_Y + 11, FACE_CENTER_Y + 33):
-            canvas.polygon([(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)], BACK_DARK)
+            canvas.polygon([(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)], colors.dark)
 
 
 # ----- the wall stack, seen from above -----
 
-# Two tiles side by side, their teal backs up: an ivory edge shows on the right and at the bottom, a soft shade line lies between them.
+# Two tiles side by side, their backs up: an ivory edge shows on the right and at the bottom, a soft shade line lies between them.
 STACK_EDGE = 12.0
 STACK_GAP = 4.0
 
 
-def draw_stack(canvas: Canvas) -> None:
+def draw_stack(canvas: Canvas, colors: BackColors = CLASSIC_BACK) -> None:
     size = float(STACK_SIZE)
     canvas.rrect(0.0, 0.0, size, size, 16.0, OUTLINE)
     canvas.rrect(1.5, 1.5, size - 1.5, size - 1.5, 14.5, SIDE_SHADE)
@@ -516,12 +531,12 @@ def draw_stack(canvas: Canvas) -> None:
     canvas.rrect(1.5, 1.5, size - STACK_EDGE + 4.0, size - STACK_EDGE + 4.0, 14.5, SIDE_LIGHT)
     top = (4.0, 4.0, size - STACK_EDGE, size - STACK_EDGE)
     middle = (top[0] + top[2]) / 2
-    canvas.rrect(top[0], top[1], middle - STACK_GAP / 2, top[3], 9.0, BACK_FACE)
-    canvas.rrect(middle + STACK_GAP / 2, top[1], top[2], top[3], 9.0, BACK_FACE)
-    canvas.line(middle, top[1] + 2.0, middle, top[3] - 2.0, STACK_GAP, BACK_DARK)
+    canvas.rrect(top[0], top[1], middle - STACK_GAP / 2, top[3], 9.0, colors.face)
+    canvas.rrect(middle + STACK_GAP / 2, top[1], top[2], top[3], 9.0, colors.face)
+    canvas.line(middle, top[1] + 2.0, middle, top[3] - 2.0, STACK_GAP, colors.dark)
     for x0, x1 in ((top[0], middle - STACK_GAP / 2), (middle + STACK_GAP / 2, top[2])):
-        canvas.rrect_frame(x0 + 4.0, top[1] + 4.0, x1 - 4.0, top[3] - 4.0, 5.0, 2.0, BACK_RIM)
-        canvas.line(x0 + 9.0, top[1] + 1.8, x1 - 9.0, top[1] + 1.8, 1.6, BACK_LIGHT)
+        canvas.rrect_frame(x0 + 4.0, top[1] + 4.0, x1 - 4.0, top[3] - 4.0, 5.0, 2.0, colors.rim)
+        canvas.line(x0 + 9.0, top[1] + 1.8, x1 - 9.0, top[1] + 1.8, 1.6, colors.light)
 
 
 # ----- the atlas -----
@@ -629,12 +644,14 @@ def draw_face(tile_id: int, template: Canvas, with_index: bool = True) -> Canvas
 def render_cells() -> list[bytearray]:
     template = body_template()
     cells = [draw_face(tile_id, template).downsample() for tile_id in range(TILE_ID_COUNT)]
-    back = Canvas()
-    draw_back(back)
-    cells.append(back.downsample())
-    stack = Canvas()
-    draw_stack(stack)
-    cells.append(stack.downsample())
+    for _theme, colors, back_cell, stack_cell in BACK_SETS:
+        assert len(cells) == back_cell and back_cell + 1 == stack_cell, "BACK_SETS lists the cells in atlas order"
+        back = Canvas()
+        draw_back(back, colors)
+        cells.append(back.downsample())
+        stack = Canvas()
+        draw_stack(stack, colors)
+        cells.append(stack.downsample())
     return cells
 
 
@@ -695,7 +712,15 @@ def decode_png(data: bytes) -> list[bytes]:
 # ----- TextureLibrary.xml -----
 
 def sprite_names() -> list[str]:
-    return [SPRITE_PREFIX + notation(tile_id) for tile_id in range(TILE_ID_COUNT)] + [BACK_SPRITE, STACK_SPRITE]
+    """The names in cell order; the first set is `Tile_Back` / `Tile_Stack`, the others `Tile_Back_<theme>` / `Tile_Stack_<theme>`."""
+    names = [SPRITE_PREFIX + notation(tile_id) for tile_id in range(TILE_ID_COUNT)]
+    for position, (theme, _colors, _back, _stack) in enumerate(BACK_SETS):
+        names += [BACK_SPRITE, STACK_SPRITE] if position == 0 else [f"{BACK_SPRITE}_{theme}", f"{STACK_SPRITE}_{theme}"]
+    return names
+
+
+def stack_cells() -> list[int]:
+    return [stack_cell for _theme, _colors, _back, stack_cell in BACK_SETS]
 
 
 def library_xml() -> str:
@@ -711,7 +736,7 @@ def library_xml() -> str:
     entries = []
     for index, name in enumerate(sprite_names()):
         x, y = cell_origin(index)
-        width, height = (STACK_SIZE, STACK_SIZE) if index == STACK_INDEX else (CELL_W, CELL_H)
+        width, height = (STACK_SIZE, STACK_SIZE) if index in stack_cells() else (CELL_W, CELL_H)
         entries.append((name, TEXTURE_PATH, x, y, width, height))
     for name, texture_path, x, y, width, height in entries + make_icons.sprite_entries():
         lines.append(f'    <sprite name="{name}" texturePath="{texture_path}">')
@@ -750,13 +775,14 @@ def problems_of(rows: list[bytes]) -> list[str]:
             problems.append(f"{names[index]} is not opaque in the middle")
         if alpha_at(rows, x0, y0) != 0 or alpha_at(rows, x0 + CELL_W - 1, y0 + CELL_H - 1) != 0:
             problems.append(f"{names[index]} has no transparent corners")
-    x0, y0 = cell_origin(STACK_INDEX)
     inset = 6  # the corners of the square are rounded; this far in from each corner the stack is solid
-    for dx, dy in ((inset, inset), (STACK_SIZE - 1 - inset, inset), (inset, STACK_SIZE - 1 - inset), (STACK_SIZE - 1 - inset, STACK_SIZE - 1 - inset)):
-        if alpha_at(rows, x0 + dx, y0 + dy) != 255:
-            problems.append(f"{names[STACK_INDEX]} is not opaque inside its square at ({dx}, {dy})")
-    if any(alpha_at(rows, x0 + x, y0 + y) for y in range(CELL_H) for x in range(CELL_W) if x >= STACK_SIZE or y >= STACK_SIZE):
-        problems.append(f"{names[STACK_INDEX]} paints outside its {STACK_SIZE} x {STACK_SIZE} square")
+    for stack_cell in stack_cells():
+        x0, y0 = cell_origin(stack_cell)
+        for dx, dy in ((inset, inset), (STACK_SIZE - 1 - inset, inset), (inset, STACK_SIZE - 1 - inset), (STACK_SIZE - 1 - inset, STACK_SIZE - 1 - inset)):
+            if alpha_at(rows, x0 + dx, y0 + dy) != 255:
+                problems.append(f"{names[stack_cell]} is not opaque inside its square at ({dx}, {dy})")
+        if any(alpha_at(rows, x0 + x, y0 + y) for y in range(CELL_H) for x in range(CELL_W) if x >= STACK_SIZE or y >= STACK_SIZE):
+            problems.append(f"{names[stack_cell]} paints outside its {STACK_SIZE} x {STACK_SIZE} square")
     for index in range(CELL_COUNT, COLUMNS * ROWS):
         if any(cell_bytes(rows, index)[3::4]):
             problems.append(f"the unused cell {index} is not transparent")

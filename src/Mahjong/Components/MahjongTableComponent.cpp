@@ -40,6 +40,9 @@ namespace BECore::Mahjong {
         constexpr float kHoverPlateTallHeight = 92.0f;
 
         constexpr StringView kRevealAction = "MahjongReveal";
+        [[nodiscard]] constexpr bool SameColor(const Color& a, const Color& b) noexcept {
+            return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+        }
         /// The tint of a turned tile: white leaves the atlas as it is (the plain `DrawTexture` has the same default).
         constexpr Color kUntinted{255, 255, 255, 255};
         constexpr Color kPlainFace{238, 230, 205, 255};
@@ -449,16 +452,21 @@ namespace BECore::Mahjong {
         const UIThemes& themes = CoreManager::GetUIThemes();
         if (themes.GetVersion() != _paletteVersion) {
             _palette = MakeTablePalette(themes);
+            _backSet = &BackSetOf(themes.GetTheme().ToStringView());
             _paletteVersion = themes.GetVersion();
         }
     }
 
     ITexture* MahjongTableComponent::FeltTexture(IRenderer& renderer) {
         BE_PROFILE_SCOPE("MahjongTable::FeltTexture");
+        if (_feltRenderer != 0 && !SameColor(_feltColor, _palette.felt)) {
+            ReleaseFelt();  // the frame before may still read the old texture
+        }
         if (renderer.GetId() != _feltRenderer) {
             _felt = {};  // made by another renderer, which has its own way of freeing it
             _feltRenderer = renderer.GetId();
-            // Once per renderer, even when it fails (the flat felt is drawn then)
+            _feltColor = _palette.felt;
+            // Once per renderer and colour, even when it fails (the flat felt is drawn then)
             const FeltPixels pixels = MakeFeltPixels(kFeltTextureWidth, kFeltTextureHeight, _palette.felt);
             _felt = renderer.CreateTexture(pixels.rgba.data(), pixels.width, pixels.height);
         }
@@ -1376,7 +1384,7 @@ namespace BECore::Mahjong {
             const DrawTransform turn{place.rotation, place.pivotX, place.pivotY};
             const bool turned = !turn.IsIdentity();
             if (_atlas) {
-                const Rect source = stack ? StackRect() : face ? SourceRect(*face) : BackRect();
+                const Rect source = stack ? StackRect(*_backSet) : face ? SourceRect(*face) : BackRect(*_backSet);
                 if (turned) {
                     renderer.DrawTransformedTexture(*_atlas, &source, upright.x, upright.y, upright.w, upright.h, kUntinted, turn);
                 } else {
