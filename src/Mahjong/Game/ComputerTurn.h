@@ -36,9 +36,8 @@ namespace BECore::Mahjong {
         return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
     }
 
-    /// Whether a roll of `percent` comes up. What holds: a knob that is off (`percent` not above 0) draws nothing, so it moves no
-    /// stream and Normal's tie-breaks are those of the player before levels existed. A knob that is on draws one number from `rng`,
-    /// so it shifts the later tie-breaks of that player (its play is another play, as a level should be).
+    /// Whether a roll of `percent` comes up. A knob that is off (`percent` not above 0) draws nothing, so it moves no stream; a knob
+    /// that is on draws one number from `rng` and so shifts the later tie-breaks of that player.
     [[nodiscard]] inline bool Roll(MahjongRng& rng, int percent) {
         return percent > 0 && static_cast<int>(rng.Below(kPercentBase)) < percent;
     }
@@ -46,9 +45,8 @@ namespace BECore::Mahjong {
     /// How much the seat wants to keep `tile` (`kKeep...`); it only breaks ties, efficiency decides first.
     [[nodiscard]] int KeepValue(Tile tile, Wind seatWind, Wind roundWind) noexcept;
 
-    /// The unseen copies of the kinds that lower `Shanten(counts, meldCount)` (`ImprovingTiles`): how many tiles of the wall (and of the
-    /// hands) would take a hand of `3n + 1` tiles one step nearer. At shanten 0 these are the unseen copies of the winning tiles of the
-    /// four-sets-and-a-pair shape.
+    /// The unseen copies of the kinds that lower `Shanten(counts, meldCount)` (`ImprovingTiles`) for a hand of `3n + 1` tiles. At
+    /// shanten 0 these are the unseen copies of the winning tiles of the four-sets-and-a-pair shape.
     [[nodiscard]] int AcceptanceOf(const TableView& view, const TileCounts& counts, int meldCount);
 
     /// A discard that leaves the hand waiting: the tile, the unseen copies of the tiles it waits on, its `KeepValue` and its danger
@@ -105,8 +103,8 @@ namespace BECore::Mahjong {
     /// acceptance of the hand without the kong (the four tiles, or the one drawn, out, a meld more); `tile` invalid.
     [[nodiscard]] DiscardRating RateKong(const TableView& view, const TileCounts& counts, const HandAction& action);
 
-    /// Step 3's test: whether the hand without the kong of `action` is no worse than the hand as it is (`current`, its best discard): a lower
-    /// shanten, or the same one (at shanten 0 only with no lower acceptance). The coach judges a person's kong by it.
+    /// Step 3's test: whether the hand without the kong of `action` is no worse than `current`, the hand as it is: a lower shanten, or
+    /// the same one (at shanten 0 only with no lower acceptance). The coach judges a person's kong by it.
     [[nodiscard]] bool KongIsNoWorse(const TableView& view, const TileCounts& counts, const HandAction& action, const DiscardRating& current);
 
     /// The rule of the turn that decided (the numbers of the list in `ChooseTurnAction`).
@@ -131,22 +129,10 @@ namespace BECore::Mahjong {
     /**
      * @brief The action of a seat that has to discard (`Phase::Discard`, `view.currentSeat == view.seat`, `view.legal` not empty).
      *
-     * The steps, the first that applies wins:
-     * 1. `DeclareWin` when it is listed.
-     * 2. The calling hand: of the discards that declare it, the one that leaves the most unseen winning copies (`WinningTiles` of the
-     *    13 tiles that stay); ties by the lowest danger (`profile.readDanger`), then the lowest `KeepValue`, then `rng`. With `profile.skipDeclarationPercent` a roll can skip this
-     *    step for the turn.
-     * 3. A kong (`ConcealedKong`, `UpgradeKong`) when the hand without it is no worse: the best discard of the hand as it is, against
-     *    the hand without the four tiles and one more meld (the fourth tile of an upgrade leaves), the shanten not higher and, for a
-     *    waiting hand, the acceptance not lower.
-     * 4. After the declaration: the discard that keeps the hand waiting with the most unseen winning copies (the tie-breaks as in 2).
-     * 5. Otherwise `BestDiscard` of the concealed tiles (with `profile.readDanger`, the lowest danger of the equal ones); with `profile.skipAcceptancePercent` a roll leaves out the acceptance (the
-     *    lowest shanten, then `KeepValue`, then `rng`).
-     *
-     * `profile` is the level's numbers (`kNormalProfile`: every knob off, no number drawn besides the tie-breaks). With
-     * `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 1 and may replace the choice of steps 2 to 5. Always an element
-     * of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
-     * step 1 to 2 take them whenever the model lists them.
+     * The first rule that applies wins (`TurnStep`; the rules in order: `Game/CLAUDE.md`, "Computer player"). With
+     * `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 1 and may replace the choice of steps 2 to 5.
+     * Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
+     * steps 1 and 2 take them whenever the model lists them.
      *
      * With a `handoff`, a decision that is a search is not played: the run (begun, so the one draw is made) goes into `handoff->run`
      * and `Pass` comes back as a placeholder. Any other decision is answered as without a handoff and leaves `handoff->run` empty.

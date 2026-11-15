@@ -10,7 +10,7 @@
 
 namespace BECore::Mahjong {
 
-    /// The most lines of the winner's score the table shows; a hand with more has the rest summed up as "+n more" in the last line.
+    /// The most lines of the winner's score the table shows; the rest is summed up as "+n more" in the last line.
     inline constexpr int kMaxScoreLines = 16;
 
     /// The most tiles the plate of the winner shows: four kongs and the pair.
@@ -18,13 +18,13 @@ namespace BECore::Mahjong {
 
     /// The cells of one seat's row in the score table.
     struct ScoreRow {
-        /// The seat's name without its wind ("Seat 2", "Seat 1 You", the player's name in a room): the wind has a column of its own.
+        /// The seat's name without its wind: the wind has a column of its own.
         String name;
-        /// The seat's wind in this hand, the one letter the plates of the table show.
+        /// The seat's wind in this hand, as on the plates.
         String wind;
-        /// Its score in the hand ("290"); `-` for a drawn hand.
+        /// Its score in the hand; `-` for a drawn hand.
         String hand;
-        /// The change of its points with the sign ("+1160", "-600"); `-` for a drawn hand.
+        /// The change of its points with the sign; `-` for a drawn hand.
         String change;
         /// Its points after the hand.
         String total;
@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
     struct ScoreTable {
         /// Who won and how ("Seat 2 (South) wins by self-draw"), or "Drawn hand".
         String headline;
-        /// The winner's sum and the winning tile ("Winning tile 4 Dots: 36 points x 8 = 288, score 290"); for a drawn hand "No payments".
+        /// The winner's sum and the winning tile; for a drawn hand "No payments".
         String summary;
         /// The captions of the five columns of `rows`: seat, wind, hand, change, total.
         Array<String, 5> columns;
@@ -42,8 +42,8 @@ namespace BECore::Mahjong {
         Array<ScoreRow, kSeatCount> rows;
         /// The winning seat, `kNoSeat` for a drawn hand: its row is the one that is lit.
         Seat winner = kNoSeat;
-        /// The tiles of the winning hand as the plate shows them: the melds as laid, then the concealed tiles, the winning tile last;
-        /// at most `kMaxWinningTiles`. Empty for a drawn hand. When the caller passes no hand, only `result.winningTile`.
+        /// The winning hand as the plate shows it: melds as laid, then the concealed tiles, the winning tile last; at most `kMaxWinningTiles`.
+        /// Empty for a drawn hand; only `result.winningTile` when the caller passes no hand.
         Vector<Tile> winningTiles;
         /// The winner's lines in the order of the breakdown, at most `kMaxScoreLines`; empty for a drawn hand.
         Vector<String> lines;
@@ -66,25 +66,22 @@ namespace BECore::Mahjong {
         Array<StandingRow, kSeatCount> rows;
     };
 
-    /// "5 Dots", "East Wind", "Red Dragon", "Flower 1", "Season 3"; "No tile" for an invalid one.
-    /// (words from the keys `tile.*`, `suit.*`, `wind.*` of the current language of `strings`)
+    /// "5 Dots", "East Wind", "Flower 1"; "No tile" for an invalid one. The words are the keys `tile.*`, `suit.*`, `wind.*`.
     [[nodiscard]] String TileName(const UIStrings& strings, Tile tile);
 
-    /// A readable name for every kind of line ("Pung", "One suit, no honours", "Thirteen orphans"); never empty.
-    /// The key is `score.kind.<ScoreKind>`.
+    /// A readable name for every kind of line, the key `score.kind.<ScoreKind>`; never empty.
     [[nodiscard]] String ScoreKindName(const UIStrings& strings, ScoreKind kind);
 
-    /// One line of a score: "Pung of 5 Dots: 8", "Win: 20", "One suit, no honours: x8", "Limit: Thirteen orphans".
+    /// One line of a score: "Pung of 5 Dots: 8", "One suit, no honours: x8", "Limit: Thirteen orphans".
     [[nodiscard]] String ScoreLineText(const UIStrings& strings, const ScoreLine& line);
 
     /**
      * @brief The rows of the screen that follows a finished hand.
      *
-     * `result` is `Hand().Result()` (the settlement does not carry the winning tile and the source), `totalsAfter` the points of the
-     * seats once the settlement is applied (`Match::Scores()` plus `deltas`), `who` says who is "You" and what a seat is called. The winds
-     * are those of the hand (`settlement.east`). `winnerHand` is the winner's hand when the caller has it (`Hand().GetHand(winner)`: all
-     * four hands are face up once a hand is over); `winningTiles` is then the whole hand, else the winning tile alone. Tiles the hand
-     * does not know (a display hand in a room) are left out.
+     * `result` is `Hand().Result()` (the settlement carries neither the winning tile nor the source), `totalsAfter` the points once the
+     * settlement is applied (`Match::Scores()` plus `deltas`). The winds are those of the hand (`settlement.east`). `winnerHand` is
+     * `Hand().GetHand(winner)` when the caller has it (all hands are face up once a hand is over); tiles the hand does not know (a
+     * display hand in a room) are left out of `winningTiles`.
      */
     [[nodiscard]] ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who,
                                               const PlayerHand* winnerHand = nullptr);
@@ -93,10 +90,10 @@ namespace BECore::Mahjong {
     [[nodiscard]] StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatWho& who);
 
     /**
-     * @brief The line of the coach's tally under a score table: "Moves like the computer's: 3 of 5 this hand, 9 of 12 in the match".
+     * @brief The line of the coach's tally under a score table ("Moves like the computer's: 3 of 5 this hand, 9 of 12 in the match").
      *
-     * Empty when the match tally has no move (a person made none, or the mode was not Coach). A hand with no move of its own says the
-     * match only (`coach.tally.match`); the standings pass an empty `hand`.
+     * Empty when the match tally has no move. A hand with no move of its own says the match only (`coach.tally.match`); the standings
+     * pass an empty `hand`.
      */
     [[nodiscard]] String FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match);
 

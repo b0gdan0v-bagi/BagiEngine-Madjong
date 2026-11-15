@@ -7,7 +7,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The keys of the three dragons, in tile order.
         constexpr Array<StringView, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
 
         /// Lines about a set or a pair: "Pung of 5 Dots".
@@ -30,7 +29,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The limit hands are the kinds from the first of them on (`ScoreKind` keeps them last).
+        // `IsLimitKind` relies on the limit hands being the last kinds.
         static_assert(ScoreKind::ConcealedPungsOneSuit > ScoreKind::CallingFirstHand, "the limit hands come after every other kind");
         static_assert(ScoreKind::LooseTileFiveDots > ScoreKind::ConcealedPungsOneSuit, "the limit hands are the last kinds");
         static_assert(static_cast<size_t>(ScoreKind::LooseTileFiveDots) + 1 == EnumUtils<ScoreKind>::Count(), "LooseTileFiveDots is the last kind");
@@ -41,12 +40,10 @@ namespace BECore::Mahjong {
 
         constexpr int kTilesPerSet = 3;
         constexpr int kTilesPerKong = 4;
-        /// The cell of a drawn hand where a hand score and a change would stand.
         constexpr StringView kNoCell = "-";
 
         constexpr Array<StringView, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
 
-        /// The winner's tiles for the plate: the melds as laid, the concealed tiles in their order, the winning tile moved to the end.
         Vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {
             Vector<Tile> tiles;
             if (hand == nullptr) {
@@ -84,8 +81,7 @@ namespace BECore::Mahjong {
             return tiles;
         }
 
-        /// 2^doubles, never past the range of a 64-bit number. The clamp only matters for made-up input: a real hand's raw score
-        /// saturates at INT_MAX long before 40 doubles, so the shown multiplier of a real line is exact.
+        /// 2^doubles, kept inside a 64-bit number; the clamp only matters for made-up input (a real score saturates at INT_MAX first).
         int64_t Multiplier(int doubles) noexcept {
             constexpr int kMostDoubles = 40;
             return int64_t{1} << std::clamp(doubles, 0, kMostDoubles);
@@ -215,7 +211,7 @@ namespace BECore::Mahjong {
         StandingsTable table;
         const Array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
-        // The wind is not part of the name here: the match is over and "Seat 3 (East)" would name the next deal
+        // No wind in the name: the match is over and the wind would name the next deal
         int place = 1;
         int tied = 0;
         for (int i = 0; i < kSeatCount; ++i) {

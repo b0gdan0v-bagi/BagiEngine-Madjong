@@ -84,7 +84,6 @@ namespace BECore::Mahjong {
             return StringView(text.c_str(), text.size());
         }
 
-        /// An integer member within [low, high].
         std::expected<int64_t, String> ReadInt(const Json& object, StringView key, int64_t low, int64_t high) {
             const Optional<int64_t> value = GetJsonInt(object, key);
             if (!value) {
@@ -128,7 +127,6 @@ namespace BECore::Mahjong {
             return static_cast<Seat>(*value);
         }
 
-        /// A seat, or null for no seat (`kNoSeat`).
         std::expected<Seat, String> ReadSeatOrNull(const Json& object, StringView key) {
             const Json* member = FindJsonMember(object, key);
             if (member != nullptr && member->is_null()) {
@@ -153,7 +151,6 @@ namespace BECore::Mahjong {
             return ReadWindText(*text, key);
         }
 
-        /// The array member `key`, or the error.
         std::expected<const Json*, String> ReadArray(const Json& object, StringView key, size_t size) {
             const Json* member = FindJsonMember(object, key);
             if (member == nullptr || !member->is_array()) {
@@ -165,7 +162,6 @@ namespace BECore::Mahjong {
             return member;
         }
 
-        /// A tile from the string at `item`, `member` names it in the error.
         std::expected<Tile, String> ReadTileItem(const Json& item, StringView member) {
             if (!item.is_string()) {
                 return Fail(member, "has to hold tiles as strings");
@@ -227,7 +223,6 @@ namespace BECore::Mahjong {
             return scores;
         }
 
-        /// The `levels` of a version 4 `start`: four integers 1..10.
         std::expected<SeatLevels, String> ReadSeatLevels(const Json& object, StringView key) {
             const auto list = ReadArray(object, key, kSeatCount);
             if (!list) {
@@ -246,8 +241,7 @@ namespace BECore::Mahjong {
             return levels;
         }
 
-        /// The `nickname` of a version 6 `start`: absent is none; a string of at most `kMaxMatchLogNicknameBytes` bytes without a control
-        /// character is kept, anything else is refused.
+        /// Absent is none; a string that breaks the limits of `kMatchLogNicknameVersion` is refused, not trimmed.
         std::expected<String, String> ReadNickname(const Json& object) {
             if (FindJsonMember(object, kNicknameKey) == nullptr) {
                 return String();
@@ -268,7 +262,6 @@ namespace BECore::Mahjong {
             return nickname;
         }
 
-        /// The `platform`, `build` and `gameVersion` of a version 5 `start`.
         std::expected<MatchLogOrigin, String> ReadOrigin(const Json& object) {
             const auto platform = ReadString(object, "platform");
             if (!platform) {

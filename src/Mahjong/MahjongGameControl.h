@@ -10,7 +10,7 @@ namespace BECore::Mahjong {
 
     class MahjongGame;
 
-    /// The seed of a `reset` that names none, until the first `reset` that does.
+    /// The seed of a `reset` that names none until a `reset` names one.
     inline constexpr uint32_t kFirstResetSeed = 1;
 
     /// What a client sent to `perform_action`: a seat's action in the hand, or `next_hand` (the settlement of a finished hand).
@@ -31,74 +31,44 @@ namespace BECore::Mahjong {
     /// One number per seat (points, scores, changes).
     [[nodiscard]] Json SeatScoresToJson(const SeatScores& scores);
 
-    /// {"won", "lines": [{"kind", "tile", "points", "doubles"}], "points", "doubles", "raw", "score", "limitHand": kind | null}: the
-    /// breakdown of one seat in `result` of the state.
+    /// The breakdown of one seat in `result` of the state.
     [[nodiscard]] Json BreakdownToJson(const ScoreBreakdown& breakdown);
 
     /// The setup of "PCCC"-style letters (P a person, C a computer), nullopt unless it is exactly four of them; and back.
     [[nodiscard]] Optional<SeatSetup> ReadSeats(const String& letters);
     [[nodiscard]] String SeatsToLetters(const SeatSetup& seats);
 
-    /// An action as the object `list_actions` gives: {"type": "discard", "tile", "declareCalling"}, {"type": "win"},
-    /// {"type": "concealed_kong" | "upgrade_kong", "tile"}, {"type": "claim", "claim": "chow" | "pung" | "kong" | "mahjong", "first" for
-    /// a chow}, {"type": "pass"}.
+    /// An action as the object `list_actions` gives (`type` and the fields of its kind: `src/Mahjong/CLAUDE.md` "Control API").
     [[nodiscard]] Json ActionToJson(const HandAction& action);
 
     /// {"type": "next_hand"}.
     [[nodiscard]] Json NextHandActionToJson();
 
     /**
-     * @brief Reads an action object from a client. Everything about its shape is checked with the helpers of `BECore/Control/Json.h`.
+     * @brief Reads an action object from a client with the checked helpers of `BECore/Control/Json.h`.
      *
-     * `invalid_params` for anything malformed: the object has no `type`, or an unknown one; a tile is missing, is not a string or is not in
-     * the notation; `declareCalling` is not a boolean (absent is false); a claim has an unknown `claim`, or a chow has no `first`. A
-     * well-formed action is not yet a legal one: the adapter checks it against `LegalActions`. The fields a kind ignores are ignored,
-     * so the result equals what `LegalActions` lists (the factories of `HandAction` leave them empty).
+     * `invalid_params` for anything malformed (`declareCalling` absent is false). A well-formed action is not yet a legal one: the
+     * adapter checks it against `LegalActions`. The fields a kind ignores are ignored, so the result equals what `LegalActions` lists.
      */
     [[nodiscard]] std::expected<ControlAction, ControlError> ActionFromJson(const Json& json);
 
     /**
      * @brief The external control API of Mahjong: the state of the table, the actions of the person seats, and a way to act.
      *
-     * A client plays the **person seats** of the game's `TableSession`; after each of its actions the adapter calls `RunComputers()`, so
-     * the computer seats answer at once (the pace of a screen is the table component's business). With no person seat a `reset` and
-     * a `next_hand` play the hand to its end.
+     * A client plays the **person seats** of the game's `TableSession`; after each action the adapter calls `RunComputers()`. With no
+     * person seat a `reset` and a `next_hand` play the hand to its end and the client is a spectator.
      *
-     * State (`get_state`), built from `MakeTableView` so a client never sees what a computer player could not see: the view of the
-     * person who has to act, else of the first person seat. With no person seat at all the client is a spectator: "seat",
-     * "seatWind" and "hand" are empty (null, null, []) and `yourTurn` is false; the hands are in `result` once the hand is over.
-     * ```
-     * {"phase": "playing" | "hand_over" | "match_over",
-     *  "seat": 0 | null, "seatWind": "East" | null, "roundWind": "East", "east": 2,
-     *  "hand": ["1p", "2p", ...],                        the concealed tiles of "seat", sorted
-     *  "turn": {"phase": "discard" | "claim" | "rob_kong" | "finished", "current": 1 | null, "pendingTile": "5p" | null, "yourTurn": true},
-     *  "seats": [{"kind": "person" | "computer", "wind", "score", "concealedCount", "melds": [{"kind": "chow" | "pung" | "kong", "tiles",
-     *              "concealed", "from": seat | null, "fromDiscard", "claimed"}], "concealedKongs", "bonus", "discardCount",
-     *              "calling"} x 4],
-     *  "discards": [{"tile", "seat"}, ...], "wall": live tiles left,
-     *  "level": 1..10, "levels": [1..10 x 4],           `levels` one per seat, a person's seat too; `level` is the level of the
-     *                                                    lowest computer seat (5 when none), for clients that know one level
-     *  "handsPlayed", "handsTotal", "version",
-     *  "result": {...}}                                  only in hand_over and match_over
-     * ```
-     * `melds` of every seat are its open melds; the seat of the view also lists its concealed kongs (`concealed`: true). `yourTurn` says
-     * that "seat" has actions to choose from (`turn.phase` only says what the hand waits for). In `hand_over` the scores are those
-     * before the settlement; `result` has the outcome of the hand (`kind`, `winner`, `winningTile`, `source`, `from`, `loose`,
-     * `lastLiveTile`), for every seat its tiles, melds, bonus tiles and `breakdown` ({`won`, `lines`: [{`kind`, `tile`, `points`,
-     * `doubles`}], `points`, `doubles`, `raw`, `score`, `limitHand`}), and the `scores` and `deltas`. All four hands are public then.
-     *
-     * Actions (`list_actions`, each accepted by `perform_action` as it is): those of `ActionToJson` for the person seat that has to act
-     * (`LegalActions`); {"type": "next_hand"} in `hand_over`; nothing in `match_over` or when a computer has to act. `perform_action`
-     * answers {"applied": the action, "phase", "version"} and, for `next_hand`, "settlement": {`kind`, `winner`, `scores`, `deltas`} of
-     * the hand that ended. `illegal_action` is a well-formed action that is not listed now; `invalid_params` a malformed one.
-     *
-     * `reset` takes {"seed": 0..4294967295, "seats": "PCCC" (four letters P or C), "hands": 8 | 16, "flowers": bool,
-     * "level": 1..10 (all four seats), "levels": [1..10 x 4] (one per seat)}, all optional: what is left out keeps the setting of the
-     * game (the seed: the one of the last `reset`, or 1). The seats, the settings and the levels stay for the next match. A level that
-     * is not a whole number 1..10 (a string too), `levels` that is not an array of four of them, and `level` together with `levels`
-     * are `invalid_params`, which names the key, and nothing changes.
-     * `set_state` is not supported. `no_active_model` before the first match was started and while the game plays in an online room (`MahjongGame::IsOnlineTable()`: the
-     * adapter drives the local match only).
+     * `get_state` is built from `MakeTableView` (`MahjongStateJson.h`): the view of the person who has to act, else of the first person
+     * seat, so a client never sees what a computer player could not. Only in `hand_over` and `match_over` are all four hands public
+     * (`result`: the outcome `kind`, `winner`, `winningTile`, `source`, `from`, `loose`, `lastLiveTile`, then every seat's tiles and
+     * `breakdown`, the `scores` and `deltas`). With no person seat (a spectator) `seat`, `seatWind` and `hand` are null, null, [] and
+     * `yourTurn` is false. `perform_action` answers `applied`, `phase`, `version` and, for `next_hand`, `settlement` (`kind`, `winner`,
+     * `scores`, `deltas` of the hand that ended). `yourTurn` says that "seat" has actions to choose from; `turn.phase` only says what the hand waits for.
+     * `list_actions` gives `ActionToJson` of the `LegalActions` of the person seat that has to act, `next_hand` in `hand_over`, nothing
+     * otherwise; `perform_action` accepts each as listed. `illegal_action` is a well-formed action that is not listed now,
+     * `invalid_params` a malformed one (the message names the key). `reset` takes the options of `src/Mahjong/CLAUDE.md` "Control API",
+     * all optional; anything invalid changes nothing. `set_state` is not supported. `no_active_model` before the first match and while
+     * the game plays in an online room (`MahjongGame::IsOnlineTable()`: the adapter drives the local match only).
      */
     class MahjongGameControl : public IControllableGame {
     public:

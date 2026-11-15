@@ -22,47 +22,29 @@ namespace BECore::Mahjong {
 
     /**
      * @brief The hints of the table (`Table/Hints.h`): the node `Hints` (`config/nodes/MahjongHints.xml`) carries this component and the canvas it
-     *        fills. It reads the game and the viewer's view and never changes the match.
+     *        fills. It reads the game and the viewer's view and never changes the match. What each hint shows and when it applies:
+     *        `src/Mahjong/Components/CLAUDE.md`, "The hints (`MahjongHintsComponent`)".
      *
-     * **The switch.** The page `Options` has the row `HintsRow`: a `UISegmented` bound to the variable `hintsChoice` (`off` | `hints` | `coach`,
-     * Coach includes the hints) whose buttons emit `MahjongSetHints` with that value. The mode lives on the game (`MahjongGame::GetHintsMode()`),
-     * is not part of the settings and takes effect at once (unlike the seats, nothing waits for `Start`). The component ignores the action
-     * while the page is not open (a click that arrives late), accepts only those three ids and sets `hintsChoice` from the game while the page is open and after each
-     * click, so the variable keeps the truth. **In a room** that choice counts only where the host allowed hints (`MahjongGame::HintsActive()` /
-     * `CoachActive()`, the effective mode; a client cannot turn them on against the room), and every hint is worked out from the viewer's view of the
-     * display copy with the server's list of actions as `legal` and nothing else.
+     * **The switch.** `MahjongSetHints` (`off` | `hints` | `coach`) sets the mode of the game (`MahjongGame::GetHintsMode()`) at once, not at
+     * `Start`; the component ignores it while `Options` is not open and any other id, and sets `hintsChoice` from the game, so the variable
+     * keeps the truth. **In a room** the choice counts only where the host allowed hints (`MahjongGame::HintsActive()` / `CoachActive()`), and
+     * every hint is worked out from the viewer's view of the display copy with the server's list of actions as `legal` and nothing else.
      *
-     * **The waiting row.** While `HintsApply` holds (hints on, neither `Setup` nor the rules open, a person at the table, no cover, the hand being played) and
-     * the viewer's hand waits, the canvas shows the caption and a cell per tile (`WaitCell0..12`: the picture `WaitTile<i>`, whose sprite
-     * is `Tile_<notation>`, and the count of the unseen copies in the variable `hintCount<i>`); otherwise it shows nothing. The row is
-     * worked out from `MakeTableView(hand, viewer)` only when the session version, the viewer or the rule `HintsApply` changed, and each
-     * frame pushes only what differs from what is on the canvas. It also shows during the computers' turns.
+     * **Zero allocations in a steady frame.** The waiting row is worked out from `MakeTableView(hand, viewer)` only when the session version,
+     * the viewer or the rule `HintsApply` changed, and each frame pushes only what differs from the canvas; it also shows during the
+     * computers' turns. The advice belongs to the table it was worked out on: a change of `Version()`, a cover, hints off or a pause drop
+     * it, and a new language words it again. The room's line is made again only when its word or the language moved.
      *
-     * **The marks and the advice.** On the viewer's turn the component draws over the hand of the table (it reads the layout of the last
-     * draw of `MahjongTableComponent`, which draws first): a bar under every tile whose discard declares the calling hand
-     * (`DeclaringDiscards`, exactly what the `Declare` switch allows) and, while an opponent has declared, a bar inside the left edge of each hand tile that is safe to
-     * discard (green), risky (amber) or dangerous (red) (`DangerMarks`; an ordinary tile has none). The button `HintButton` (in the nodes `HintsButton` on the table and `ActionsCompact` in the narrow
-     * windows, shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the viewer has actions to choose from.
-     * It is a **switch** (`MahjongHintAdvice`, ignored when the button is not offered; the state is the component's, kept across turns, hands and
-     * matches, not saved): while it is on, both buttons are drawn `selected` and every table the viewer is to act on gets `AdviceFor(view)` worked out
-     * once (`ExplainAdviceFor` names the same action), published as the sentence `AdviceText` in the variable `hintAdvice` for the label `AdviceText`, a
-     * discard that is advised framed on the hand. The advice belongs to the table it was worked out on: any change of the session `Version()`, a cover,
-     * hints off or a pause drop it, the next table the viewer acts on gets its own, and a new language words it again.
+     * **The marks** are drawn over the layout of the last draw of `MahjongTableComponent`, which draws first. `HintButton` is shown by name in
+     * both the nodes `HintsButton` and `ActionsCompact` (the table component swaps the canvases) and is a **switch** (`MahjongHintAdvice`,
+     * ignored when the button is not offered; its state is the component's and is not saved); `ExplainAdviceFor` names the same action as
+     * `AdviceFor(view)`.
      *
-     * **The line of a room.** At the table of a room the label `RoomHintsText` (the region of `AdviceText`) says whether the host allowed hints, and
-     * where to switch them on when the player's own mode is Off; it gives way to the sentence and to the card and is made again only when the word
-     * or the language moved.
-     *
-     * **The card of the coach.** In the mode Coach the sentence is not a label of its own: the advice of the table is the card `CoachCard` of the
-     * node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text and tile pictures, no input), made by `MakeAdviceCard` (the
-     * sentence as its title, the advised move and the next best with their numbers, why in words, the tally). The ledger of the game
-     * (`MahjongGame::GetCoach()`, fed by the session, in a room by the table component's `Perform`) holds the note of the person's last differing move; while it is up the card is the note
-     * (`MakeNoteCard`: the computer's choice and the person's move) instead, exactly while the hints apply, the note is of this hand and of the
-     * viewer. The note stays through the computers' turns (they move within a second of the person's action) and goes with the next accepted
-     * action of the person (the ledger), a left or touch mouse-down that it was up for, a press of `Hint`, the end of the hand, a new match, a
-     * pause, a cover and a change of the mode. The card is made and published only when what it says moved (`CardKey`: the advice or the note,
-     * the language, the tally); every variable of it is emptied when it goes down. The component only reads the ledger and clears it. **It never
-     * acts:** it performs no action, moves no version and the control API does not know it.
+     * **The card of the coach.** The ledger of the game (`MahjongGame::GetCoach()`) holds the note of the person's last differing move; while it
+     * is up for this hand and viewer the card is the note (`MakeNoteCard`), else the advice (`MakeAdviceCard`). The note stays through the
+     * computers' turns (they move within a second of the person's action). The card is published only when what it says moved (`CardKey`) and
+     * every variable of it is emptied when it goes down. The component only reads the ledger and clears it. **It never acts:** it performs no
+     * action, moves no version and the control API does not know it.
      */
     class MahjongHintsComponent : public IComponent {
         BE_CLASS(MahjongHintsComponent)
@@ -73,7 +55,6 @@ namespace BECore::Mahjong {
         void OnAttached() override;
         void OnDraw() override;
 
-        /// The attached component, if any; the game assumes a single one.
         static MahjongHintsComponent* GetActive() noexcept {
             return s_active;
         }
@@ -84,15 +65,13 @@ namespace BECore::Mahjong {
             return _key.applies && tile.IsValid() ? _dangers[tile.Id()] : DangerMark::None;
         }
 
-        /// The view of @p viewer on the table on screen, the one thing every hint is worked out from: `MakeTableView` of the displayed hand (in a
-        /// room a display copy: the viewer's own tiles and what lies open, the other hands counts only). A display hand lists no action, so in a
-        /// room `legal` is the server's list (`ListHandActions`) and nothing else is added; none while the link is down (`Reconnecting`).
+        /// The view of @p viewer on the table on screen, the one thing every hint is worked out from: `MakeTableView` of the displayed hand. A
+        /// display hand lists no action, so in a room `legal` is the server's list and nothing else; none while the link is down.
         [[nodiscard]] static TableView ViewOf(const MahjongGame& game, Seat viewer);
 
     private:
         void OnAction(const InputEvents::ActionEvent& event);
         void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
-        /// Sets the variable `hintsChoice` to the flag of the game.
         static void PublishChoice(const MahjongGame& game);
 
         /// What the hints depend on: when it is equal to the last frame's, nothing needs to be worked out again.
@@ -106,11 +85,8 @@ namespace BECore::Mahjong {
         /// The view of the viewer when the hints apply and the viewer is to act with something to choose from, else nullopt.
         [[nodiscard]] static Optional<TableView> ViewToAdvise(const MahjongGame* game);
 
-        /// Works the row, the marks and the button out again when the table changed (else keeps them).
         void Refresh(const MahjongGame* game, const Key& key);
-        /// Puts the difference between the row and the canvas on the canvas.
         void PushWaitingRow();
-        /// Works the advice of the viewer's table out (the switch is on and the button offered).
         void Advise(const MahjongGame& game, const Key& key);
         /// The button (offered, switched on) and the sentence of the advice, which is a label of its own unless `coach`.
         void PushAdvice(bool coach);
@@ -120,7 +96,6 @@ namespace BECore::Mahjong {
         void PushCoach(MahjongGame* game, const Key& key);
         /// The card of the coach: the note when it is up, else the advice in the mode Coach, else nothing; made again only when its key moved.
         void PushCard(MahjongGame* game, bool coach);
-        /// Puts `card` into the variables and the elements of `CoachCard` and shows the plate while `open`.
         void PublishCard(const HintCard& card, bool open);
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;

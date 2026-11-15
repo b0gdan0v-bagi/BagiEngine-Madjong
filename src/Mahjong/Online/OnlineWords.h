@@ -7,29 +7,28 @@
 
 namespace BECore::Mahjong {
 
-    /// Codes the client of a room can meet beyond the room protocol's own (`RoomErrors`, `RoomClientErrors`, `RoomClientCloseReasons`): the game's `invalid_params`, the
-    /// reasons a server closes a connection with and the reasons of a `left`.
+    /// Codes the client can meet beyond those of `RoomErrors`, `RoomClientErrors` and `RoomClientCloseReasons`.
     namespace OnlineCodes {
         inline constexpr StringView kInvalidParams = "invalid_params";
         inline constexpr StringView kTooManyFailedJoins = "too_many_failed_joins";
         inline constexpr StringView kServerFull = "server_full";
-        /// The server closes a connection in no room that sent nothing it counts (a `ping` is none) for its idle time: a list the player left on screen.
+        /// The server closes a connection in no room that sent nothing it counts (a `ping` is none) for its idle time: a list left on screen.
         inline constexpr StringView kIdle = "idle";
-        /// The reasons of a `left` that the room itself sends (the hub closed the room, or a finished game ran out its time).
+        /// Reasons of a `left` that the room itself sends.
         inline constexpr StringView kRoomClosed = "room_closed";
         inline constexpr StringView kRoomFinished = "room_finished";
     }  // namespace OnlineCodes
 
-    /// One code and the key of `config/UIStrings.xml` that says it. Where the player can do nothing different, several codes share a key.
+    /// Where the player can do nothing different, several codes share a key of `config/UIStrings.xml`.
     struct OnlineCodeWord {
         StringView code;
         StringView key;
     };
 
-    /// The key of a code no table below lists (a newer server): its text has the placeholder `{code}`; every other `online.error.*` key has none.
+    /// For a code the table does not list (a newer server): the only `online.error.*` text with a placeholder, `{code}`.
     inline constexpr StringView kOnlineUnknownKey = "online.error.unknown";
 
-    /// Every code the client can show, with its key. A code that the server or the client gains later is added here, with its words in both languages.
+    /// A code that the server or the client gains later is added here, with its words in both languages.
     inline constexpr OnlineCodeWord kKnownOnlineCodes[] = {
         // the room protocol (`RoomErrors`)
         {RoomErrors::kBadMessage, "online.error.server"},
@@ -80,26 +79,22 @@ namespace BECore::Mahjong {
     /// Whether @p code is shown at all: `stale_action` only is not (the fresh view follows and the table is right again).
     [[nodiscard]] bool IsSilentOnlineCode(StringView code);
 
-    /// The keys for a view the client will not read: another `format` (it needs a newer or an older game) and a view that is broken.
+    /// For a view the client will not read: another `format` (it needs a newer or an older game), and a broken view.
     inline constexpr StringView kOnlineViewFormatKey = "online.error.viewFormat";
     inline constexpr StringView kOnlineBadViewKey = "online.error.badView";
 
-    /// What the client is doing while it has no room to show.
     inline constexpr StringView kOnlineConnectingKey = "online.status.connecting";
     inline constexpr StringView kOnlineReconnectingKey = "online.status.reconnecting";
-    /// The `Rooms` page: the first answer has not come, and an answer that lists no open room.
     inline constexpr StringView kOnlineBrowsingKey = "online.status.browsing";
     inline constexpr StringView kOnlineNoRoomsKey = "online.rooms.empty";
 
-    /// The line the host reads in the lobby about the setting he made: hints and the coach allowed in the room, or not.
+    /// The host's line about his hints setting; the guest's line is `kOnlineWaitHostKey` with the host's choice when the lobby says it.
     inline constexpr StringView kOnlineLobbyHintsAllowedKey = "online.lobby.hintsAllowed";
-    /// The guest's line of the lobby: waiting for the host, with the host's choice about hints when the lobby says it.
     inline constexpr StringView kOnlineWaitHostKey = "online.waitHost";
     inline constexpr StringView kOnlineWaitHostHintsAllowedKey = "online.waitHost.hintsAllowed";
     inline constexpr StringView kOnlineWaitHostHintsOffKey = "online.waitHost.hintsOff";
     inline constexpr StringView kOnlineLobbyHintsOffKey = "online.lobby.hintsOff";
 
-    /// The lobby's copy button by what it did, and the Paste key of the code pad.
     inline constexpr StringView kOnlineCopyKey = "online.copy";
     inline constexpr StringView kOnlineCopiedKey = "online.copied";
     inline constexpr StringView kOnlineCopyFailedKey = "online.copyFailed";
@@ -109,7 +104,7 @@ namespace BECore::Mahjong {
     inline constexpr StringView kOnlinePasteEmptyKey = "online.paste.empty";
     inline constexpr StringView kOnlinePasteRefusedKey = "online.paste.refused";
 
-    /// The text of @p key in the current language. Only `online.error.unknown` has a placeholder (`{code}`, filled with @p arg).
+    /// Only `online.error.unknown` has a placeholder, filled with @p arg.
     [[nodiscard]] String OnlineNoticeText(const UIStrings& strings, StringView key, StringView arg = {});
 
     /**

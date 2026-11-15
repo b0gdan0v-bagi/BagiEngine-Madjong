@@ -21,30 +21,14 @@ namespace BECore::Mahjong {
     inline constexpr StringView kDefaultLanguage = "en";
 
     /**
-     * @brief Concrete IGame for mahjong: it owns the match (`Game/Match.h`), the rules of classic Chinese mahjong for four seats, and
-     *        the `TableSession` over it (`Game/TableSession.h`), which every front end drives.
+     * @brief The `IGame` of mahjong: it owns the `Match` and the `TableSession` over it, which every front end drives.
      *
-     * Activates "MahjongScene" when started. Auto-registered into AbstractFactory<IGame> via the BE_CLASS reflection machinery, no
-     * hand-written registrar. The rules are plain C++ under Game/; the scene glue in Components/ reaches the match through
-     * GetActive()->GetMatch() and plays it through GetActive()->GetSession().
-     *
-     * `Start()` and `Reset()` begin a new match with a seed from `std::random_device`: the randomness is chosen here, outside the rules,
-     * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match). A match is begun with
-     * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
-     * seat 0 a person, the others computers) and the level of each seat `GetLevels()` (`kDefaultLevel`, Normal, all four); all three are kept
-     * across `Reset()`. `AsControllable()` hands out the control adapter, which drives the match through the session. The seat choice of
-     * a new game is the panel `Setup` of the scene (`IsSetupOpen`), the page `Options` is `IsOptionsOpen`, the pages of the
-     * rules are `IsRulesOpen`. The language of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to
-     * `CoreManager::GetUIStrings()` at every start. `GetHintsMode()` is the switch of the hints (`Off | Hints | Coach`, default Hints, kept for the
-     * session, changed on the page `Options`). Every match begun through the session is written down by the `MatchLogWriter` the game owns
-     * (`GetMatchLog()`); a match started through the non-const `GetMatch()` / `GetLocalMatch()` is not.
-     *
-     * **Saving** (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the session's sink is a `MatchRecorder` that keeps the events of the
-     * match begun by `StartMatch` (and passes every one on to the match log writer), and `FlushSave()` writes the `match` slot (and the
-     * `settings` slot, the choices of `Setup`) when something changed; `MahjongHudComponent` calls it once per frame (a `SceneUpdateEvent`) and `Stop()` calls it, so a burst
-     * of computer steps is one write. `Start()` reads the prefs and offers a saved match that replays (`CanContinue()`, taken by
-     * `ContinueMatch()`); the background match it deals otherwise is not recorded, so it cannot overwrite the saved one. A browser whose
-     * storage is not remembered (`NotRemembered`: a private window) is saving off: nothing is written or read, and `Continue` is not offered.
+     * Components reach it through `GetActive()` and change the match only through `GetSession()`. The seed of a match is chosen here
+     * (`std::random_device`), never in the rules, which only see it: `StartMatch(seed)` is the seam of a test and of the control API.
+     * A match begun through the session is logged, and saved when a person begins it (`StartMatch`; the match `Start()` deals behind
+     * `Setup` is not, so it cannot overwrite the saved one); **one started through the non-const `GetMatch()` / `GetLocalMatch()` is
+     * neither**. `GetSettings()`, `GetSeats()`, `GetLevels()`, the language, the hints mode and the animation speed are kept across
+     * `Reset()` and `StartMatch`. Contracts of each part: `src/Mahjong/CLAUDE.md`.
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -55,34 +39,32 @@ namespace BECore::Mahjong {
         PoolString GetName() const override;
         PoolString GetSceneName() const override;
 
-        /// The adapter of the external control API (`MahjongGameControl.h`): a client plays the person seats of the session.
+        /// The adapter of the control API (`MahjongGameControl.h`).
         IControllableGame* AsControllable() override;
 
-        /// Applies the saved choices of `Setup` and opens the panel over a match: the saved one when there is one that replays
-        /// (`CanContinue()`), else a new random one that is not saved (the panel's `Start` begins the one that is).
+        /// Applies the saved choices of `Setup` and opens the panel over a match: the saved one when it replays (`CanContinue()`), else a
+        /// random one that is not saved (the panel's `Start` begins the one that is).
         void Start() override;
         /// Writes what changed (`FlushSave()`).
         void Stop() override;
         void Reset() override;
 
-        /// Writes the match in progress and the choices of `Setup` to the save folder (`MatchSaveDirectory()`) when they differ from what
-        /// was written last; the end of a match deletes the match slot. Cheap when nothing changed, so a frame hook can call it.
+        /// Writes the match in progress and the choices of `Setup` when they differ from what was written last. Cheap when nothing
+        /// changed, so a frame hook can call it (one write for a burst of computer steps). `src/Mahjong/Save/CLAUDE.md`.
         void FlushSave();
 
-        /// Whether `Start()` found a saved match and put it on the table behind `Setup`. Cleared by `ContinueMatch()`, by any new match
-        /// and by the panel closing.
+        /// Whether `Start()` put a saved match on the table behind `Setup`. Cleared by `ContinueMatch()`, any new match and the panel closing.
         bool CanContinue() const {
             return _canContinue;
         }
         /// Closes `Setup` (and the rules) and plays the saved match on. Ignored, false, when `CanContinue()` is not true.
         bool ContinueMatch();
 
-        /// Whether what the game saves is there at the next visit: saving is on and the storage keeps it (false with saving off for any
-        /// reason: no folder, a folder that cannot be made, a browser that does not remember). The storage state is read at `Start()`.
+        /// Whether what the game saves is there at the next visit: false with saving off for any reason (no folder, a browser that does
+        /// not remember). Read at `Start()`.
         [[nodiscard]] bool SavesAreRemembered() const;
 
-        /// The match the table shows: the display copy of the room's table while `IsOnlineTable()`, else the local one (`GetLocalMatch()`).
-        /// Started by `Start()` / `Reset()` / `StartMatch`, `NotStarted` before the game is first started.
+        /// The match the table shows: the display copy of the room's table while `IsOnlineTable()`, else the local one.
         Match& GetMatch() {
             return _onlineTable ? _displayMatch : _match;
         }
@@ -90,8 +72,8 @@ namespace BECore::Mahjong {
             return _onlineTable ? _displayMatch : _match;
         }
 
-        /// The session over the match the table shows: seat setup, computer players, viewer, state version. Drive the match through it.
-        /// While `IsOnlineTable()` it is the display session (remote mode: nothing is played through it, `Game/TableSession.h`).
+        /// The session over the match the table shows. While `IsOnlineTable()` it is the display session (remote mode: nothing is played
+        /// through it, `Game/TableSession.h`).
         TableSession& GetSession() {
             return _onlineTable ? _displaySession : _session;
         }
@@ -99,8 +81,7 @@ namespace BECore::Mahjong {
             return _onlineTable ? _displaySession : _session;
         }
 
-        /// The match and the session of this machine's own game, whatever the table shows: what the save, the match log, the upload and the
-        /// control API see. Unchanged while a room's table is shown.
+        /// This machine's own match and session, whatever the table shows: what the save, the match log, the upload and the control API see.
         Match& GetLocalMatch() {
             return _match;
         }
@@ -114,32 +95,29 @@ namespace BECore::Mahjong {
             return _session;
         }
 
-        /// Whether the table shows a room's game: the client has a table in the `Game` stage, or frozen in `Reconnecting`. The state of the last
-        /// `SyncOnlineTable()`, so it moves at one place of the frame. While it holds `Setup` and the online panel are closed and the control
-        /// API answers `no_active_model`; when it ends (`Leave`, the room gone, a view of another format) `Setup` opens over the local game as it was.
+        /// Whether the table shows a room's game (a table in the `Game` stage, or frozen in `Reconnecting`). It is the state of the last
+        /// `SyncOnlineTable()`, so it moves at one place of the frame. While it holds the control API answers `no_active_model`; when it
+        /// ends `Setup` opens over the local game as it was.
         bool IsOnlineTable() const {
             return _onlineTable;
         }
-        /// Brings the display pair up to date with the client (`Online/OnlineMirror.h`). `MahjongOnlineComponent` calls it right after
-        /// `GetOnline().Update()`; it does work only when `OnlineClient::Version()` moved.
+        /// Brings the display pair up to date with the client (`Online/OnlineMirror.h`); called right after `GetOnline().Update()`, works
+        /// only when `OnlineClient::Version()` moved.
         void SyncOnlineTable();
-        /// Whether the table of a room has just ended with a word of the client to say (the room is gone, another device took the seat, a view of
-        /// another format): `Setup` and the online panel are open, and the panel shows that notice instead of clearing it. True once.
+        /// Whether a room's table has just ended with a word of the client to say: the online panel is open and shows it. True once.
         bool TakeRoomEndNotice() {
             const bool due = _roomEndNotice;
             _roomEndNotice = false;
             return due;
         }
 
-        /// The writer of the match log (`MatchLogWriter.h`): every match begun through the session is written to a file of its own;
-        /// `Path()` is the file of the current (or last) match.
+        /// The writer of the match log (`MatchLogWriter.h`); `Path()` is the file of the current (or last) match.
         const MatchLogWriter& GetMatchLog() const {
             return _log;
         }
 
-        /// The recorder of the match for the tester upload (`MatchUpload.h`), in the session's sink chain between the save recorder and the
-        /// log writer. Off until a sink, a match id source (set here) and a consent of `Granted` are given: with the defaults nothing is
-        /// buffered or sent. The glue that has the real sink and the consent UI sets them through this.
+        /// The recorder of the match for the tester upload (`MatchUpload.h`). Off until a sink and a consent of `Granted` are given: with
+        /// the defaults nothing is buffered or sent.
         MatchUploader& GetUpload() {
             return _upload;
         }
@@ -147,8 +125,7 @@ namespace BECore::Mahjong {
             return _upload;
         }
 
-        /// The tester's choice about sending the matches (`UploadPrefs.h`): a plain member. The upload component of the scene fills it from
-        /// the file and keeps the file in step; the Options components read it. The game itself does nothing with it.
+        /// The tester's choice about sending the matches (`UploadPrefs.h`): a plain member; the game itself does nothing with it.
         UploadPrefs& GetUploadPrefs() {
             return _uploadPrefs;
         }
@@ -171,8 +148,8 @@ namespace BECore::Mahjong {
             _seats = seats;
         }
 
-        /// How well each seat plays in the next match (`Game/ComputerLevel.h`), one level per seat; default Normal. All four are kept, also
-        /// those of seats a person plays: only computer seats use theirs, and a seat that turns computer again keeps its level.
+        /// The level of each seat in the next match (`kDefaultLevel`). All four are kept, also those of person seats, so a seat that turns
+        /// computer again keeps its level.
         const SeatLevels& GetLevels() const {
             return _levels;
         }
@@ -184,17 +161,14 @@ namespace BECore::Mahjong {
             _levels = UniformLevels(level);
         }
 
-        /// Begins a new match through the session with `GetSettings()`, `GetSeats()`, `GetLevels()` and `seed` (one seed is one match, the first hand
-        /// included). `BadSettings`, and nothing changes, for settings that are not playable. A match that began closes the setup panel.
+        /// Begins a match through the session with `GetSettings()`, `GetSeats()`, `GetLevels()` and `seed` (one seed is one match). Nothing
+        /// changes for settings that are not playable (`BadSettings`). A match that began closes the setup panel.
         MatchStatus StartMatch(uint32_t seed);
 
-        /// `StartMatch` with a seed from `std::random_device`; a refusal (it cannot happen with the default settings) is logged and
-        /// returned.
+        /// `StartMatch` with a seed from `std::random_device`; a refusal is logged and returned.
         MatchStatus StartRandomMatch();
 
-        /// Whether the panel that asks which seats are people is open (`MahjongHudComponent` shows it). `Start()` opens it over the match
-        /// that it begins; every new match (`StartMatch`, a control `reset`) and a control action close it; the HUD button opens it.
-        /// While it is open the table is not played: no click is taken and no computer steps.
+        /// Whether the panel `Setup` is open. Every new match and every control action close it. While it is open the table is not played.
         bool IsSetupOpen() const {
             return _setupOpen;
         }
@@ -203,12 +177,11 @@ namespace BECore::Mahjong {
         }
         void CloseSetup() {
             _setupOpen = false;
-            _optionsOpen = false;  // a start or a control action leaves every page
+            _optionsOpen = false;
             _canContinue = false;  // whoever closes the panel has moved on from the offer
         }
 
-        /// Whether the page `Options` (language, hints, speed) is open over the table (the HUD button opens it). `CloseSetup()` closes it
-        /// too, so every start, `Continue` and every accepted control action do.
+        /// Whether the page `Options` is open over the table. `CloseSetup()` closes it too.
         bool IsOptionsOpen() const {
             return _optionsOpen;
         }
@@ -219,9 +192,7 @@ namespace BECore::Mahjong {
             _optionsOpen = false;
         }
 
-        /// Whether the rules screen (the modal pages `Rules` of the scene, `Table/RulesText.h`) is open. The button `Rules` of the HUD and that of `Options` open it; a
-        /// new match (`StartMatch`, a control `reset`) and every control action close it. While it is open the table is not played, like
-        /// under `Setup`.
+        /// Whether the rules screen (`Table/RulesText.h`) is open. A new match and every control action close it.
         bool IsRulesOpen() const {
             return _rulesOpen;
         }
@@ -232,9 +203,8 @@ namespace BECore::Mahjong {
             _rulesOpen = false;
         }
 
-        /// Whether the online panel (the pages of `Online/OnlineScreens.h`) is open over `Setup`. It is a flag of its own: `CloseSetup()` (every
-        /// start and control action) does not close it, so closing the panel gives the player `Setup` and its `Continue` offer back; `Start()` and
-        /// `Stop()` close it.
+        /// Whether the online panel (`Online/OnlineScreens.h`) is open over `Setup`. `CloseSetup()` does not close it, so closing the panel
+        /// gives the player `Setup` and its `Continue` offer back; `Start()` and `Stop()` close it.
         bool IsOnlineOpen() const {
             return _onlineOpen;
         }
@@ -245,24 +215,22 @@ namespace BECore::Mahjong {
             _onlineOpen = false;
         }
 
-        /// Whether a modal panel (`Setup`, the page `Options`, the rules or the online panel) covers the table: no click is taken, no computer
-        /// steps, no hint is shown.
+        /// Whether a modal panel covers the table: no click is taken, no computer steps, no hint is shown.
         bool IsTablePaused() const {
             return _setupOpen || _optionsOpen || _rulesOpen || _onlineOpen;
         }
 
-        /// The client of the online play, made on first use with `SetOnlineSettings` (the defaults: the real transport). It lives as long as
-        /// the game: the screens and the table of a room read it, and `Update()` is called by the component once per frame.
+        /// The client of the online play, made on first use. It lives as long as the game, so the screens and the table of a room read the
+        /// same one.
         OnlineClient& GetOnline();
         const OnlineClient* FindOnline() const {
             return _online.get();
         }
-        /// The settings of the client (a test gives it a transport of its own). False, and nothing changes, once the client exists.
+        /// The seam for a test transport. False, and nothing changes, once the client exists.
         bool SetOnlineSettings(RoomClientSettings settings);
 
-        /// What `Start()` read of the `online` slot, and what the game keeps since: the name the player chose (empty: none) and the session to
-        /// offer `Return` for (`IsValid()` false: none). The session is the one of the slot until the client's own moves (`SessionRevision()`),
-        /// then the client's, so it follows `Leave` and a room that is gone. **The token is a secret**: it is read here to be handed to
+        /// The name the player chose (empty: none) and the session to offer `Return` for (`IsValid()` false: none): the one of the `online`
+        /// slot until the client's own moves, then the client's. **The token is a secret**: it is read here to be handed to
         /// `OnlineClient::Resume` and nowhere else.
         const OnlineValues& StoredOnline() const {
             return _storedOnline;
@@ -270,22 +238,20 @@ namespace BECore::Mahjong {
         /// Remembers the player's name; saved by `FlushSave()` when it differs.
         void SetOnlineName(StringView name);
 
-        /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
+        /// The language of the words, an id of `config/UIStrings.xml`.
         PoolString GetLanguage() const {
             return _language;
         }
         /// Picks the language and applies it to the string table. False, and nothing changes, for a language the table does not have.
         bool SetLanguage(PoolString language);
 
-        /// What the hints of the table do (`Table/Coach.h`): nothing, the hints (`Table/Hints.h`: the tiles the hand waits for, the discards
-        /// that declare, the advice), or the hints and the coach's notes. Hints by default, kept across `Reset()`, `StartMatch` and `New
-        /// game`, takes effect at once. It is no rule, so it is not in the settings, and the control API does not know it. A change drops
-        /// the note and the tally of the coach (`GetCoach()` is enabled exactly while the mode is Coach).
+        /// The player's own choice of hints (`Table/Coach.h`), no rule: the control API does not know it. A change drops the note and the
+        /// tally of the coach (`GetCoach()` is enabled exactly while the mode is Coach).
         HintsMode GetHintsMode() const {
             return _hintsMode;
         }
         void SetHintsMode(HintsMode mode);
-        /// The hints are on: Hints and Coach (so every hint rule is the same in both).
+        /// Hints and Coach (every hint rule is the same in both).
         bool HintsOn() const {
             return _hintsMode != HintsMode::Off;
         }
@@ -296,9 +262,8 @@ namespace BECore::Mahjong {
         bool CoachOn() const {
             return _hintsMode == HintsMode::Coach;
         }
-        /// The mode that applies at the table on screen: the player's own choice outside a room; in a room `Off` unless the room allows hints
-        /// (`OnlineTable::hintsAllowed`, the host's decision), else the player's choice. The three above stay the player's own choice (the Options
-        /// page, the saved choices); everything that decides whether a hint is on screen asks `HintsActive()` / `CoachActive()`.
+        /// The mode at the table on screen: the player's choice outside a room; in a room `Off` unless the host allowed hints
+        /// (`OnlineTable::hintsAllowed`). What decides whether a hint is on screen asks `HintsActive()` / `CoachActive()`, not the three above.
         HintsMode EffectiveHintsMode() const {
             return _onlineTable && !_online->Table().hintsAllowed ? HintsMode::Off : _hintsMode;
         }
@@ -308,24 +273,20 @@ namespace BECore::Mahjong {
         bool CoachActive() const {
             return EffectiveHintsMode() == HintsMode::Coach;
         }
-        /// The note and the tally of the coach for the table on screen: the local game's (fed by the session while the mode is Coach and one person
-        /// sits at the table), or, while `IsOnlineTable()`, the room's own ledger, fed by `MahjongTableComponent` with the player's accepted actions
-        /// and enabled exactly while `CoachActive()`; the two never mix. It starts afresh when a room's table starts or ends or the room's
-        /// setting changes.
+        /// The coach's ledger for the table on screen: the local game's, or, while `IsOnlineTable()`, the room's own (fed by
+        /// `MahjongTableComponent`); the two never mix. The room's starts afresh when a table starts or ends or the room's setting changes.
         const CoachLedger& GetCoach() const {
             return _onlineTable ? _roomCoach : _coach;
         }
         CoachLedger& GetCoach() {
             return _onlineTable ? _roomCoach : _coach;
         }
-        /// The keys of the ledger of `GetCoach()` for the hand on screen (`HandKeyOf(context)`; `startCount` is the match). Locally the session's
-        /// own `Context()`. In a room the display session's `StartCount()` moves with every hand, so the match is a count of the game (one per
-        /// table of a room) and the hand adds that start count.
+        /// The keys of the ledger of `GetCoach()` for the hand on screen. In a room the display session's `StartCount()` moves with every
+        /// hand, so the match is a count of the room's tables and the hand adds that start count.
         MoveContext CoachContext() const;
 
-        /// The speed of the table (`Table/AnimationSpeed.h`): the pause of the computers, the flights and the marks of a claim, at once.
-        /// Normal by default, kept across `Reset()`, `StartMatch` and `New game`, saved with the other choices. It is no rule, so it is not
-        /// in the settings, and the control API neither knows it nor waits for it.
+        /// The pace of the table (`Table/AnimationSpeed.h`), saved with the other choices. No rule: the control API neither knows it nor
+        /// waits for it.
         AnimationSpeed GetAnimationSpeed() const {
             return _animationSpeed;
         }
@@ -337,27 +298,25 @@ namespace BECore::Mahjong {
         static MahjongGame* GetActive();
 
     private:
-        /// Puts the stored language into the string table; an empty table (or one without the language) is left alone.
+        /// An empty table, or one without the language, is left alone.
         void ApplyLanguage() const;
 
-        /// `StartMatch` with `record` saying whether the match is kept for the save.
+        /// `StartMatch` with `record`: whether the match is kept for the save.
         MatchStatus BeginMatch(uint32_t seed, bool record);
         MatchStatus BeginRandomMatch(bool record);
-        /// The folder the store opens: `MatchSaveDirectory()`, or none while the storage is not remembered (nothing is saved or offered).
+        /// None while the storage is not remembered: nothing is saved or offered.
         const std::filesystem::path& SaveDirectory() const;
-        /// The saved choices of `Setup` into the game; one warning for a slot that cannot be used.
         void ApplySavedPrefs();
-        /// The `online` slot into `_storedOnline`; one warning for a slot that cannot be used.
         void ApplySavedOnline();
-        /// The client's session into `_storedOnline` once its revision moved; marks the slot to be written.
+        /// Marks the slot to be written.
         void FollowOnlineSession();
-        /// The table of a room goes live: the panels over the table close (the offer of `Continue` stays).
+        /// The panels over the table close; the offer of `Continue` stays.
         void EnterOnlineTable();
-        /// The room's ledger follows `CoachActive()`: enabled exactly then, dropped with @p restart (a table starts or ends).
+        /// The room's ledger is enabled exactly while `CoachActive()`, dropped with @p restart.
         void SyncRoomCoach(bool restart);
-        /// The table of a room is gone: the display pair is forgotten, and, with @p openSetup, `Setup` opens over the local game.
+        /// The display pair is forgotten; with @p openSetup `Setup` opens over the local game.
         void LeaveOnlineTable(bool openSetup);
-        /// The saved match onto the table; false (one warning unless nothing is saved or it is finished) when it cannot be.
+        /// False (one warning unless nothing is saved or it is finished) when the saved match cannot be put on the table.
         bool ResumeSavedMatch();
 
         Match _match;

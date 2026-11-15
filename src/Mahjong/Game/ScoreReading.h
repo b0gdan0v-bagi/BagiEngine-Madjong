@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
      *
      * The winner's reading has four sets and a pair. For a seat that does not win the sets are the ones that stand (melds, and the
      * kinds held three or four times in the concealed tiles as concealed pungs) and `pair` is the best scoring pair, invalid when none
-     * scores. Several readings of one hand are possible; `ScoreSeat` scores each and keeps the best.
+     * scores. `ScoreSeat` scores each reading of a hand and keeps the best.
      */
     struct Reading {
         Vector<ReadingSet> sets;
@@ -28,15 +28,13 @@ namespace BECore::Mahjong {
     /**
      * @brief Every reading of the hand of `input`, never empty.
      *
-     * - The winner: the melds are sets as they are (`ReadingSet::concealed` is the meld's flag, so a claimed or an upgraded set is
-     *   open); the concealed tiles go through `Decompose` and every decomposition is a candidate. When the win came from a discard or
-     *   a robbed kong the set that holds the winning tile is a claimed set, open, and the winning tile may sit in several sets or the
-     *   pair of one decomposition: each placement is a reading of its own. A self-draw gives one reading per decomposition, every set
-     *   of the concealed tiles concealed. Four equal concealed tiles that were never declared a kong decompose as a pung and a single.
+     * - The winner: the melds are sets as they are; every `Decompose` of the concealed tiles is a candidate. When the win came from a
+     *   discard or a robbed kong the set that holds the winning tile is open, and the tile may sit in several sets or the pair of one
+     *   decomposition: each placement is a reading of its own. A self-draw gives one reading per decomposition, all concealed. Four
+     *   equal concealed tiles that were never declared a kong decompose as a pung and a single.
      * - A winner whose hand is not four sets and a pair (seven pairs, thirteen orphans, or a test input that is no win) is read like a
      *   seat that does not win.
-     * - A seat that does not win: one reading from what stands, see `Reading`. Chows in the concealed tiles score nothing and are not
-     *   looked for.
+     * - A seat that does not win: one reading from what stands, see `Reading`; chows are not looked for.
      */
     [[nodiscard]] Vector<Reading> BuildReadings(const ScoreInput& input);
 
@@ -61,7 +59,6 @@ namespace BECore::Mahjong {
         return set.kind == MeldKind::Kong;
     }
 
-    /// How many sets of `reading` `isWanted` accepts.
     [[nodiscard]] inline int CountSets(const Reading& reading, bool (*isWanted)(const ReadingSet&)) noexcept {
         int count = 0;
         for (const ReadingSet& set : reading.sets) {
@@ -70,40 +67,33 @@ namespace BECore::Mahjong {
         return count;
     }
 
-    /// The tile of the wind `wind` (the numbering of `Wind` and of the winds of `Tile` is the same).
     [[nodiscard]] constexpr Tile WindTile(Wind wind) noexcept {
         return Tile::FromWind(static_cast<int>(wind));
     }
 
-    /// Appends a line to `breakdown` (the one way the line families make lines).
     inline void AddLine(ScoreBreakdown& breakdown, ScoreKind kind, Tile tile, int points, int doubles) {
         breakdown.lines.push_back({kind, tile, points, doubles});
     }
 
-    /// How the tiles of a hand lie in the suits: the one-suit doubles and the limit hand of concealed pungs read it (bonus tiles are not
-    /// looked at).
+    /// How the tiles of a hand lie in the suits (bonus tiles are not looked at): read by the one-suit doubles and the limit hands.
     struct SuitSummary {
-        /// The suit of the suit tiles when there is just one; with `mixed` the last suit seen; `TileSuit::None` only when there is no
-        /// suit tile.
+        /// The suit when there is just one; with `mixed` the last suit seen; `TileSuit::None` only when there is no suit tile.
         TileSuit suit = TileSuit::None;
         bool mixed = false;
         bool honours = false;
 
-        /// Suit tiles of one suit only (honours allowed).
         [[nodiscard]] bool IsOneSuit() const noexcept {
             return suit != TileSuit::None && !mixed;
         }
-        /// Suit tiles of one suit and no honour.
         [[nodiscard]] bool IsOneSuitNoHonours() const noexcept {
             return IsOneSuit() && !honours;
         }
     };
 
-    /// The suits of every tile the seat holds: the concealed tiles and the tiles of the melds (a chow lies in one suit, so its first tile
-    /// tells).
+    /// Over the concealed tiles and the melds (a chow lies in one suit, so its first tile tells).
     [[nodiscard]] SuitSummary SummariseSuits(const PlayerHand& hand) noexcept;
 
-    /// The points of a pair: `kPairPoints` for each of dragons, the own wind and the round wind it is (0 for any other tile).
+    /// `kPairPoints` for each of dragons, the own wind and the round wind the pair is (0 for any other tile).
     [[nodiscard]] int PairPoints(Tile pair, Wind seatWind, Wind roundWind) noexcept;
 
 }  // namespace BECore::Mahjong

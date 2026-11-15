@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
         constexpr int kConcealedKongTiles = kCopiesPerTile;
 
         /// The danger number (`Danger`) of every kind, all 0 unless `readDanger` and some opponent has declared: one table per decision,
-        /// and the one place the knob is looked at, so a knob that is off or a table with no declared opponent compares exactly as before.
+        /// and the one place the knob is looked at, so with no knob or no declared opponent every danger compares equal.
         using DangerRanks = Array<int, kKindCount>;
 
         DangerRanks DangerRanksOf(const TableView& view, bool readDanger) {
@@ -225,8 +225,8 @@ namespace BECore::Mahjong {
             return HandAction::MakeDiscard(best.tile);
         }
 
-        /// The step a searched choice stands for: the rule whose kind of action it is (the search picks among the candidates of those
-        /// rules; the advice never searches, so this only has to be defined).
+        /// The step a searched choice stands for: the rule whose kind of action it is (the advice never searches, so this only has to
+        /// be defined).
         TurnStep StepOfSearched(const TableView& view, const HandAction& action) noexcept {
             if (action.kind == ActionKind::ConcealedKong || action.kind == ActionKind::UpgradeKong) {
                 return TurnStep::Kong;

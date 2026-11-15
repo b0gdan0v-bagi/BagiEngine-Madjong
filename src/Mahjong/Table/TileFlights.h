@@ -8,21 +8,18 @@
 namespace BECore::Mahjong {
 
     /**
-     * The tiles that arrive somewhere new fly there: a discard to its place in the pile, a claimed tile into the new set, the tiles of a
-     * kong, a draw from the wall into the hand. Plain C++, no scene, no renderer and no model object: the table component keeps a
-     * `TableSnapshot` of the frame it drew last, makes one of the frame it draws now and `PlanFlights` says which slots of the new layout
-     * did not exist and where the tile came from. A flight carries no tile identity of its own: the component draws the slot's own face
-     * at an interpolated rectangle (`FlightRect`) and turn (`FlightPlacement`), so a flight shows nothing the slot itself does not.
+     * The tiles that arrive somewhere new fly there: a discard to the pile, a claimed tile into the new set, the tiles of a kong, a draw
+     * from the wall into the hand. The table component keeps a `TableSnapshot` of the frame it drew last and makes one of the frame it
+     * draws now; `PlanFlights` says which slots are new and where the tile came from. A flight carries no tile identity: the component
+     * draws the slot's own face at an interpolated rectangle (`FlightRect`) and turn (`FlightPlacement`), so a flight shows nothing the
+     * slot itself does not (no peeking).
      */
 
-    /// How long one flight lasts, in seconds. Well inside the pace of the computers (`kComputerStepSeconds` in the table component, which
-    /// `MahjongTableFlightTest` holds it to), so the pace does not change.
+    /// Well inside the pace of the computers (`kComputerStepSeconds` in the table component), so a flight never changes the pace.
     inline constexpr float kTileFlightSeconds = 0.3f;
-    /// The curve of a flight: fast at the start, settling into the place.
     inline constexpr EaseType kTileFlightEase = EaseType::CubicOut;
 
-    /// The tile at `part` of a meld as laid: a chow runs up from its first tile, a pung and a kong repeat it. The one definition of the
-    /// table: the component draws it and the planner names the tile that flies.
+    /// The tile at `part` of a meld as laid. The one definition: the component draws it and the planner names the tile that flies by it.
     [[nodiscard]] Tile MeldTileAt(const Meld& meld, int part) noexcept;
 
     /// What a slot of a layout is, without its rectangle: the same key in two layouts names the same thing on the table.
@@ -43,11 +40,11 @@ namespace BECore::Mahjong {
         }
     };
 
-    /// What the table showed in one frame, as far as flights need it: the layout and the public facts (plus the concealed tiles of the
-    /// hands that were face up, to find the slot a tile of such a hand leaves).
+    /// What the table showed in one frame, as far as flights need it: the layout, the public facts and the concealed tiles of the hands
+    /// that were face up (to find the slot a tile leaves).
     struct TableSnapshot {
         TableLayout layout;
-        /// Per seat its concealed tiles in order (slot `HandTile` `i` is tile `i`); empty when that hand was not face up (a row of backs).
+        /// Per seat its concealed tiles in order; empty when that hand was not face up (a row of backs).
         Array<Vector<Tile>, kSeatCount> openHand;
         /// `Discards()` by entry (the seat of an entry is that of its `DiscardTile` slot).
         Vector<Tile> pile;
@@ -57,45 +54,40 @@ namespace BECore::Mahjong {
         Seat drawSeat = kNoSeat;
         /// The index of the drawn tile in the concealed tiles of `drawSeat`: the viewer's drawn tile, an opponent's last slot.
         int drawIndex = -1;
-        /// The seat that won on a discard (the hand is finished, `WinSource::Discard`) and holds the winning tile, `kNoSeat` otherwise
-        /// (no win yet, a self-draw, a robbed kong: those have no pile slot to fly from). Never set together with `drawSeat`: a hand that
-        /// is finished has no tile just drawn.
+        /// The seat that won on a discard and holds the winning tile, `kNoSeat` otherwise (a self-draw or a robbed kong has no pile slot
+        /// to fly from). Never set together with `drawSeat`.
         Seat winSeat = kNoSeat;
         /// The index of the winning tile in the sorted concealed tiles of `winSeat`: the last copy of that kind.
         int winIndex = -1;
     };
 
-    /// One slot of the new layout that flies, and the rectangle it flies from (in the view units of the old layout, which is the new
-    /// one's: a plan is made only for the same viewer and view size).
+    /// One slot of the new layout that flies, and the rectangle it flies from; a plan is made only for the same viewer and view size, so
+    /// the two layouts share view units.
     struct TileFlight {
         SlotKey key;
         Rect from;
-        /// The turn of the slot the tile leaves (`TileSlot::rotation` of the old slot that `from` is the rectangle of).
+        /// The turn of the slot the tile leaves.
         float fromRotation = 0.0f;
     };
 
     /**
      * @brief The slots of `after` that are new since `before` and where each comes from.
      *
-     * - A pile slot past the part of the pile both frames share (compared by seat and tile) flies from the discarder's hand.
-     * - A meld tile whose (seat, meld, part) was not in `before` flies. The claimed tile (the slot with a `claimEdge`; its discarder is
-     *   in `newMoves`, else in the meld) comes from the old pile slot when that entry left the pile, else, when the discard and the
-     *   claim fall into one batch, from the discarder's hand. The other new tiles come from the owner's hand (a concealed kong: all four
-     *   tiles; an upgraded kong: its one new tile).
-     * - A draw (`after.drawSeat` is a seat, the wall lost tiles, and `before` shows the wall) flies the hand slot `drawIndex` from the
-     *   last wall stack of `before`.
-     * - A mahjong on a discard (`after.winSeat` is a seat, `before.winSeat` is not) flies the hand slot `winIndex` of the winner from the
-     *   pile slot of the last entry of `before`'s pile when that entry is gone from `after`'s pile; no such pile slot (the discard and the
-     *   win fall into one batch), no flight. The other tiles of the winner's hand do not fly.
-     * - A tile that leaves a hand comes from the slot of the first unused copy of it in the face-up hand of its seat (`openHand`), else
-     *   from the middle hand slot of its seat in `before` (no identity: a hand of backs); no hand slot in `before`, no flight for that tile.
+     * - A pile slot past the part of the pile both frames share flies from the discarder's hand.
+     * - A new meld tile flies. The claimed tile (the slot with a `claimEdge`) comes from the old pile slot when that entry left the pile,
+     *   else, when the discard and the claim fall into one batch, from the discarder's hand (`newMoves` names the discarder). The others
+     *   come from the owner's hand.
+     * - A draw flies the hand slot `drawIndex` from the last wall stack of `before`.
+     * - A mahjong on a discard flies the winner's hand slot `winIndex` from the last pile slot of `before` when that entry is gone from
+     *   `after`'s pile; with the discard and the win in one batch there is no flight.
+     * - A tile that leaves a hand comes from the slot of the first unused copy of it in the face-up hand (`openHand`), else from the middle
+     *   hand slot of its seat (a hand of backs has no identity); no hand slot in `before`, no flight.
      *
      * Empty when `before` has no slots, the viewer or the view size differ, or nothing is new. In the order of the slots of `after`.
      */
     [[nodiscard]] Vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, Span<const HandMove> newMoves);
 
-    /// How a tile is handed to a draw: the unturned rectangle, the turn in degrees clockwise and the pivot (`DrawTransform`); the tile
-    /// covers the screen rectangle it was made from when the turn is a quarter or three quarters.
+    /// How a tile is handed to a draw: the unturned rectangle, the turn in degrees clockwise and the pivot (`DrawTransform`).
     struct TilePlacement {
         Rect upright;
         float rotation = 0.0f;
@@ -111,7 +103,7 @@ namespace BECore::Mahjong {
      *
      * The centre follows `FlightRect`; the size runs from the unturned size of the source to that of `to`; the turn runs from
      * `fromRotation` to `to.rotation` the shorter way round (0 and 270 meet through 315). At 0 the placement is that of the source slot,
-     * at 1 exactly that of `to` (no jump at the landing); two slots with one turn give the `FlightRect` of today.
+     * at 1 exactly that of `to`: no jump at the landing.
      */
     [[nodiscard]] TilePlacement FlightPlacement(const TileFlight& flight, const TileSlot& to, float progress);
 

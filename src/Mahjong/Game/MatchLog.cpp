@@ -76,8 +76,7 @@ namespace BECore::Mahjong {
         if (events.empty() || events.front().kind != MatchLogKind::Start) {
             return std::unexpected(At(0, ReplayProblem::NoStart));
         }
-        // A log written before a window settled early (as soon as no seat still to decide could beat the best claim) holds the
-        // decisions of the seats that were still asked then: after the decision that settles the window now, they are skipped.
+        // An older log holds the decisions of seats that a window now settles without asking: skip them after the deciding one.
         bool windowJustSettled = false;
         for (size_t index = 0; index < events.size(); ++index) {
             const MatchLogEvent& event = events[index];

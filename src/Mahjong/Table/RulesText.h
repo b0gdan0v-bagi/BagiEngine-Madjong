@@ -8,16 +8,13 @@
 namespace BECore::Mahjong {
 
     /**
-     * The rules screen (the nodes `Rules` and `RulesAction`, `config/nodes/MahjongRules.xml` and `MahjongRulesAction.xml`): the pages of text and tile pictures that
-     * explain the game, as plain data. Pure like `ScoreText` / `MoveText`: no scene, no renderer, the component only puts the page into
-     * variables. Every word is a key `rules.*` of `config/UIStrings.xml`; **every number a page prints is a `{placeholder}`** that is
-     * filled from the named constants of the rules (`kDealtTiles`, `kWinningHandTiles`, `kLooseTiles`, ...), so a rule that changes in the
-     * code changes on the page (the test `RulesTextTest` fails on a digit in any `rules.*` text). The words of the buttons come from
-     * `WordOf`, so a page names a button as the table shows it in each language.
+     * The rules screen (the nodes `Rules` and `RulesAction`): the pages of text and tile pictures that explain the game, as plain data.
+     * No scene, no renderer: the component only puts the page into variables. Every word is a key `rules.*` of `config/UIStrings.xml`;
+     * **every number a page prints is a `{placeholder}`** filled from the named constants of the rules, so a rule that changes in the
+     * code changes on the page. The words of the buttons come from `WordOf`, so a page names a button as the table shows it.
      *
-     * A page is a title, up to `kRulesMaxLines` lines of prose (one label each, up to two rows of text), up to `kRulesMaxItems` short items
-     * (shown in two columns) and up to `kRulesMaxTileRows` rows of up to `kRulesMaxRowTiles` tile pictures. The screen is a plate of a
-     * fixed height and cannot scroll, so a page that does not fit (`PageHeight`) is split in two; a font is never made smaller.
+     * The screen is a plate of a fixed height and cannot scroll, so a page that does not fit (`PageHeight`) is split in two; a font is
+     * never made smaller.
      */
 
     /// What one page may hold; the scene file has exactly that many elements (`MahjongRulesTest` compares).
@@ -29,21 +26,20 @@ namespace BECore::Mahjong {
     /// The longest line of prose in code points, after the numbers and the words of the buttons are put in (two rows of text on the plate).
     inline constexpr size_t kRulesMaxLineLength = 160;
 
-    /// The plate of the screen in view units (the scene file repeats them; `MahjongRulesTest` compares): the height of the plate and of
-    /// what is shown inside it, the gap between the blocks and the padding. The blocks are the title, the pager, the lines, the items
-    /// and the tile rows; a block that a page does not use is hidden and takes no room.
+    /// The plate of the screen in view units; the scene file repeats them. The blocks are the title, the pager, the lines, the items and
+    /// the tile rows; a block that a page does not use is hidden and takes no room.
     inline constexpr int kRulesPlateHeight = 588;
     inline constexpr int kRulesPlatePadding = static_cast<int>(kModalPadding);
     inline constexpr int kRulesBlockGap = static_cast<int>(kModalGap);
     inline constexpr int kRulesInnerHeight = kRulesPlateHeight - 2 * kRulesPlatePadding;
     inline constexpr int kRulesTitleHeight = static_cast<int>(kModalTitleHeight);
     inline constexpr int kRulesPagerHeight = 28;
-    /// A line is a label of two rows of the 18 font (a row of that font is 23.5 units high, so two rows need 47). In the scene the lines are children of the plate itself (a stack that hides what a
-    /// page does not use needs no fixed height that way), so they are `kRulesLineGap` = the gap of the plate apart.
+    /// A line is a label of two rows of the 18 font (a row is 23.5 units high, so two need 47). In the scene the lines are children of the plate itself, so a stack that hides what
+    /// a page does not use needs no fixed height; they are the gap of the plate apart.
     inline constexpr int kRulesLineHeight = 48;
     inline constexpr int kRulesLineGap = kRulesBlockGap;
-    /// An item is one row of the 18 font in half of the plate's width (the scene has a row of two labels per `kRulesItemColumns` items, so
-    /// a row with no item takes no room); the rows are `kRulesItemGap` = the gap of the plate apart.
+    /// An item is one row of the 18 font in half of the plate's width (the scene has a row of two labels per `kRulesItemColumns` items,
+    /// so a row with no item takes no room); the rows are the gap of the plate apart.
     inline constexpr int kRulesItemHeight = 28;
     inline constexpr int kRulesItemGap = kRulesBlockGap;
     inline constexpr int kRulesItemColumns = 2;
@@ -66,15 +62,14 @@ namespace BECore::Mahjong {
     /// How many pages the rules have.
     [[nodiscard]] int RulesPageCount() noexcept;
 
-    /// The page `page` (0-based) of the rules in the current language of `strings`. An index out of range gives an empty page, never a crash.
+    /// The page `page` (0-based) of the rules; an index out of range gives an empty page.
     [[nodiscard]] RulesPage FormatRulesPage(const UIStrings& strings, int page);
 
     /// "Page 3 of 13" (key `rules.pager`, `{n}` is `page + 1`, `{total}` the number of pages); the page is clamped into the range.
     [[nodiscard]] String RulesPagerText(const UIStrings& strings, int page);
 
-    /// The height in view units that a page needs inside the plate: the blocks it uses (the title and the pager always, the lines, the items
-    /// in `kRulesItemColumns` columns, each tile row) with `kRulesBlockGap` between them. A page whose height is above `kRulesInnerHeight`
-    /// does not fit the plate. Language-free: it counts the elements, not the rows of text a line needs.
+    /// The height in view units that a page needs inside the plate; above `kRulesInnerHeight` it does not fit. Language-free: it counts
+    /// the elements, not the rows of text a line needs.
     [[nodiscard]] int PageHeight(const RulesPage& page) noexcept;
 
 }  // namespace BECore::Mahjong

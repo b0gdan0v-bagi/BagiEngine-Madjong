@@ -6,20 +6,17 @@
 
 namespace BECore::Mahjong {
 
-    /// What happened at a table, in the order a match is played: it starts, a hand is dealt, a seat acts, a hand is settled, the match ends.
     CORE_ENUM(MatchLogKind, uint8_t, Start, Hand, Action, Settlement, End)
 
     /**
      * @brief One thing that happened in a match, as plain data. `kind` says which members are meant; the others keep their defaults.
      *
-     * - `Start`: `seed`, `settings`, `seats` (who plays what), the `levels` of the seats (one per seat, also the seats a person
-     *   plays) and the `origin` (platform, build, game version); the first event of a match.
-     * - `Hand`: a hand was dealt: `number` (hands counted so far), `east`, `roundWind`, `winds` and the dealt tiles of every seat
-     *   (`concealed`, East's 14 included, and the `bonus` tiles already laid open). Nothing is hidden: the log is the owner's.
-     * - `Action`: `seat` did `action`, a `person` or a `computer` (`by`). Only accepted actions are logged.
-     * - `Settlement`: the hand was settled (`settlement`, the same `HandSettlement` `Match::History()` keeps); the next `Hand` or `End`
-     *   follows it.
-     * - `End`: the last hand is settled: the final `scores` and the `standings` (seats best first).
+     * - `Start`: the first event of a match; `levels` has one per seat, also the seats a person plays.
+     * - `Hand`: the dealt tiles of every seat (`concealed`, East's 14 included, and the `bonus` tiles already laid open). Nothing is
+     *   hidden: the log is the owner's.
+     * - `Action`: only accepted actions are logged.
+     * - `Settlement`: the same `HandSettlement` `Match::History()` keeps.
+     * - `End`: the final `scores` and the `standings` (seats best first).
      *
      * `operator==` compares the members of the kind; for a `Settlement` the kind, winner, east, round wind, scores and deltas (the
      * breakdowns are for the reader of the log and are not part of what replays).
@@ -57,7 +54,7 @@ namespace BECore::Mahjong {
         bool operator==(const MatchLogEvent& other) const;
     };
 
-    /// The `Hand` event of the hand `match` has just dealt: what the session logs, and what a replay compares the log's `Hand` with.
+    /// The `Hand` event of the hand `match` has just dealt: what the session logs, and what a replay compares the log's with.
     [[nodiscard]] MatchLogEvent MakeHandEvent(const Match& match);
 
     /// The `End` event of a match whose last hand was just settled: the final scores and standings.
@@ -99,7 +96,6 @@ namespace BECore::Mahjong {
               EndMismatch          // the final scores or standings, or the match is not over at `End`
     )
 
-    /// The first event of a log that the match disagrees with.
     struct ReplayError {
         size_t index = 0;
         ReplayProblem problem = ReplayProblem::NoStart;
@@ -107,26 +103,23 @@ namespace BECore::Mahjong {
 
     using ReplayStatus = std::expected<void, ReplayError>;
 
-    /// True for a `Claim` or `Pass` while `match` has no claim window open. A window now settles as soon as no seat still to decide
-    /// could beat the best claim; a log written before that holds the decisions of the seats asked after it, and a reader of a log
-    /// skips them (`ReplayMatchLog` does, right after the decision that settled the window).
+    /// True for a `Claim` or `Pass` while `match` has no claim window open. A window settles as soon as no seat still to decide could
+    /// beat the best claim, but an older log holds the decisions of the seats asked after it: a reader of a log skips them
+    /// (`ReplayMatchLog` does, right after the decision that settled the window).
     [[nodiscard]] bool IsDecisionOfASettledWindow(const Match& match, const HandAction& action);
 
     /**
-     * @brief Plays `events` on `match`: `Match::Start(settings, seed)`, `Hand().Apply(seat, action)` for every `Action`, `EndHand()`
-     *        for every `Settlement`. No computer players are needed: the actions are in the log.
+     * @brief Plays `events` on `match` (`Start`, `Apply` for every `Action`, `EndHand` for every `Settlement`). No computer players are
+     *        needed: the actions are in the log, so the `levels` of a `Start` are read by nobody here.
      *
-     * The `Hand`, `Settlement` and `End` events are checked against what the match makes of the actions before them (the deal, the
-     * settlement, the final scores), so a log that was changed, or made by other rules, stops at the first event that disagrees. A
-     * second `Start` begins a new match on `match`. The `levels` of a `Start` are not needed (the computers' choices are in the `Action`
-     * events), so it is read by nobody here. An empty log is `NoStart` at index 0. A log may lack its `Hand` and `End` events: what
-     * is missing is not checked.
+     * The `Hand`, `Settlement` and `End` events are checked against what the match makes of the actions before them, so a log that
+     * was changed, or made by other rules, stops at the first event that disagrees. A second `Start` begins a new match on `match`. An
+     * empty log is `NoStart` at index 0. A log may lack its `Hand` and `End` events: what is missing is not checked.
      *
-     * With an `echo` every event that was applied is passed on in order, exactly as `TableSession` emits them live: the `Start`
-     * and then the `Hand` the match dealt, each `Action`, each `Settlement` (the one the match made, with its breakdowns) and then
-     * the next `Hand` or the `End`. The `Hand` and `End` events of the log itself are checked but not echoed (the match makes them
-     * again), so a log with and a log without them echo the same events. Events reach the echo before a later event is found wrong:
-     * validate on a scratch match first when a failure must leave no trace.
+     * With an `echo` every event that was applied is passed on in order, exactly as `TableSession` emits them live. The `Hand` and
+     * `End` events of the log itself are checked but not echoed (the match makes them again), so a log with and a log without them
+     * echo the same events. Events reach the echo before a later event is found wrong: validate on a scratch match first when a
+     * failure must leave no trace.
      */
     [[nodiscard]] ReplayStatus ReplayMatchLog(const Vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo = nullptr);
 

@@ -87,18 +87,10 @@ namespace BECore::Mahjong {
     /**
      * @brief The action of a seat that has to decide a window (`Phase::Claim` or `Phase::RobKong`, `view.legal` holds `Pass`).
      *
-     * The first that applies wins:
-     * 1. `Mahjong` whenever it is listed (the only claim of `Phase::RobKong`).
-     * 2. `Pass` when the hand waits (`Shanten` 0 with the 13 tiles it holds): it stays concealed and takes mahjong only. With
-     *    `profile.waitingKongByPoints` a kong that keeps the wait is taken when `RateWaitingKong` says it is worth more.
-     * 3. Otherwise each listed pung, kong and chow is rated with `RateClaim` (shanten `s1`, acceptance `a1`; the shanten of the hand as
-     *    it is is `s0`). A claim is acceptable when `s1 < s0`, or when `s1 == s0` for a pung or kong of a value tile (`IsValueTile`:
-     *    a dragon, the own wind, the round wind; it scores a double). Of the acceptable ones: the lowest `s1`, then the highest `a1`,
-     *    then `ClaimRank` (a kong, a pung, a chow), then `rng`. With `profile.takeValueClaimsAtEqualShanten` off the equal-shanten
-     *    case does not count. With `profile.skipClaimPercent` a roll passes the claim that was chosen.
-     * 4. No acceptable claim: `Pass`.
-     *
-     * With `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 2 and may replace the choice of steps 3 and 4.
+     * The first rule that applies wins (`ClaimStep`; the rules in order: `Game/CLAUDE.md`, "Computer player"). With `profile.searchWorlds`
+     * above 0 the search (`ComputerSearch.h`) runs after step 2 and may replace the choice of steps 3 and 4. A claim is acceptable
+     * when `RateClaim` lowers the shanten, or keeps it for a pung or kong of a value tile (`IsValueTile`) while
+     * `profile.takeValueClaimsAtEqualShanten`; with `profile.skipClaimPercent` a roll passes the claim that was chosen.
      *
      * No defence: every loser pays the winner the same, so a discard that wins for another seat costs the discarder nothing extra.
      * Always an element of `view.legal` (`Pass` is, for a seat that has not decided).

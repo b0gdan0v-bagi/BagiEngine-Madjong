@@ -57,9 +57,8 @@ namespace BECore::Mahjong {
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
         constexpr float kPlainMarkInset = 0.25f;
 
-        /// Whose concealed tiles are drawn face up: all of them once the hand is over and while no seat is a person (a watched match),
-        /// otherwise those of the viewer (or of none). `seat` is the viewer alone, whom every mark that follows the viewer is for: a
-        /// spectator and the cover have none, so no such mark is drawn then, however many hands are face up.
+        /// Whose concealed tiles are drawn face up: all once the hand is over and while no seat is a person (a watched match), else the
+        /// viewer's. `seat` is the viewer alone, whom the marks that follow the viewer are for: a spectator and the cover have none.
         struct Faces {
             bool all = false;
             Seat seat = kNoSeat;
@@ -76,15 +75,13 @@ namespace BECore::Mahjong {
         PoolString ActionsCompactNode() {
             return "ActionsCompact"_intern;
         }
-        /// The node of the button `HintButton` of the hints on the table: shown with `Actions`, hidden where `ActionsCompact` is shown (which
-        /// holds a `HintButton` of its own, the last button of its row)
+        /// The node of the hints' button: shown with `Actions`; `ActionsCompact` holds a `HintButton` of its own.
         PoolString HintsButtonNode() {
             return "HintsButton"_intern;
         }
 
-        /// The canvas on the node `nodeName`; null when the scene has none. The action buttons are on two nodes, `Actions` on the table and
-        /// `ActionsCompact` on the bar under it, where the first would be too small to touch and the bar holds the row at its height there
-        /// (`NeedsCompactActions`); they hold the same elements by name, and exactly one is shown. A frame looks each canvas up once.
+        /// The canvas on the node `nodeName`; null when the scene has none. `Actions` and `ActionsCompact` hold the same elements by name and
+        /// exactly one is shown (`NeedsCompactActions`), so a frame looks both canvases up once.
         IntrusivePtr<UICanvasComponent> FindCanvasOf(Scene& scene, PoolString nodeName) {
             for (const auto& child : scene.GetRootNode().GetChildren()) {
                 if (child->GetName() == nodeName) {
@@ -188,19 +185,19 @@ namespace BECore::Mahjong {
             return faces;
         }
 
-        /// Whether the table is played now: it is not played while the seat choice (`Setup`) or the rules are open over it.
+        /// Whether the table is played now: not while a screen is open over it (`IsTablePaused()`).
         bool TableIsLive(const MahjongGame& game) {
             return !game.IsTablePaused();
         }
 
-        /// In a room the person to act is the viewer, and only while the server lists an action for it (a frozen table, in `Reconnecting`, lists none that can be sent).
+        /// In a room the person to act is the viewer, and only while the server lists an action for it (a frozen table in `Reconnecting` lists none).
         bool ServerListsActions(const MahjongGame& game) {
             const OnlineClient* client = game.FindOnline();
             const TableSession& session = game.GetSession();
             return client != nullptr && client->Stage() == OnlineStage::Game && !client->Table().actions.empty() && session.Actor() == session.Viewer();
         }
 
-        /// Whether a person is to act and may: the table is being played, the actor is a person and no cover is up. In a room: the server lists an action for the viewer.
+        /// Whether a person is to act and may; in a room, when the server lists an action for the viewer.
         bool PersonActs(const MahjongGame& game) {
             const TableSession& session = game.GetSession();
             if (!TableIsLive(game) || session.GetPhase() != SessionPhase::Playing || session.HandoffPending()) {
@@ -209,7 +206,7 @@ namespace BECore::Mahjong {
             return game.IsOnlineTable() ? ServerListsActions(game) : session.ActorIsPerson();
         }
 
-        /// Whether a computer is to act and may: the table is being played and the actor is a computer. Never in a room: the server plays its computers.
+        /// Whether a computer is to act and may. Never in a room: the server plays its computers.
         bool ComputerActs(const MahjongGame& game) {
             const TableSession& session = game.GetSession();
             return !game.IsOnlineTable() && TableIsLive(game) && session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson();
@@ -220,8 +217,8 @@ namespace BECore::Mahjong {
             return phase == Phase::Claim || phase == Phase::RobKong;
         }
 
-        /// The index of the last copy of `tile` in the sorted `concealed` tiles (`AddConcealed` sorts equal tiles together and the tile that
-        /// was added last, a drawn or a won one, is the last of them).
+        /// The index of the last copy of `tile` in the sorted `concealed` tiles: `AddConcealed` sorts equal tiles together and the tile added
+        /// last, a drawn or a won one, is the last of them.
         int LastCopyIndex(const Vector<Tile>& concealed, Tile tile) {
             for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
                 if (concealed[static_cast<size_t>(i)] == tile) {
@@ -282,8 +279,8 @@ namespace BECore::Mahjong {
             return Rect();
         }
 
-        /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the face-up hands, the pile, the open
-        /// sets, the wall and the tile that was just drawn (for an opponent only that it was, never which: its slot is the last of its backs).
+        /// What the flights need besides the layout (`TableSnapshot`): the face-up hands, the pile, the open sets, the wall and the tile just
+        /// drawn (for an opponent only that there was one, never which: its slot is the last of its backs).
         void FillSnapshot(TableSnapshot& snapshot, const HandModel& hand, const Faces& faces, Seat bottom) {
             BE_PROFILE_SCOPE("MahjongTable::FillSnapshot");
             for (const DiscardEntry& entry : hand.Discards()) {
@@ -307,8 +304,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The input of the layout of `hand` for `viewer`, written over `input` whose lists keep their capacity (the table is laid out every
-        /// frame; a fresh input would allocate the melds and the pile each time)
+        /// The input of the layout of `hand` for `viewer`, written over `input` so that its lists keep their capacity.
         void FillInput(TableInput& input, const HandModel& hand, Seat viewer) {
             BE_PROFILE_SCOPE("MahjongTable::FillInput");
             input.viewer = viewer;
@@ -326,7 +322,7 @@ namespace BECore::Mahjong {
             input.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
         }
 
-        /// `snapshot` emptied for the next draw, the capacity of its lists kept, so refilling it every frame does not allocate
+        /// `snapshot` emptied for the next draw with the capacity of its lists kept.
         void ClearSnapshot(TableSnapshot& snapshot) {
             TableSnapshot cleared;
             cleared.layout.slots = eastl::move(snapshot.layout.slots);
@@ -344,8 +340,7 @@ namespace BECore::Mahjong {
             snapshot = eastl::move(cleared);
         }
 
-        /// The size of the view the scene draws in now (the active view: the design of the shape the output's aspect gives); the design size of
-        /// the landscape table before the scene has a view.
+        /// The size of the view the scene draws in now (the active view); the landscape design size before the scene has a view.
         struct ViewSize {
             float width = kViewWidth;
             float height = kViewHeight;
@@ -355,9 +350,8 @@ namespace BECore::Mahjong {
             return known ? ViewSize{scene.GetViewWidth(), scene.GetViewHeight()} : ViewSize{};
         }
 
-        /// The profile the window the table is drawn in gets (`TableProfileFor`): the output size of the renderer, the density of the window
-        /// and the touch minimum of the engine, as `PublishScreen` reads them for the action buttons, and the active view (a portrait view
-        /// gets the desktop profile).
+        /// The profile of the window the table is drawn in (`TableProfileFor`), read from the same numbers as `PublishScreen` reads for the
+        /// action buttons.
         TableProfile CurrentTableProfile(const ViewSize& view) {
             const IRenderer& renderer = *CoreManager::GetRenderer();
             const UIEnvironment& environment = CoreManager::GetUIEnvironment();
@@ -385,7 +379,7 @@ namespace BECore::Mahjong {
             renderer.DrawFilledRect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width, color);
         }
 
-        /// The first capacity of the scratch lists of a panel: a base with its shadow, tint and frame is a few hundred vertices, a few thousand indices (`UIBoxMesh` has the most one call can add)
+        /// The first capacity of the scratch lists of a panel: above what a base with its shadow, tint and frame needs (`UIBoxMesh` has the most one call can add).
         constexpr size_t kPanelVertexReserve = 1536;
         constexpr size_t kPanelIndexReserve = 6144;
 
@@ -401,9 +395,8 @@ namespace BECore::Mahjong {
             return bar.h > 2.0f * inset ? Rect(bar.x, bar.y + inset, bar.w, bar.h - 2.0f * inset) : bar;
         }
 
-        /// The emblem of a seat in its ring box, then the turn ring and the calling ring over it (white cells of the atlas, tinted by the palette
-        /// roles); both rings can show together. Without the atlas the calling ring falls back to a frame on the box (the turn is the plate's own
-        /// frame then), and a person or a computer has no picture.
+        /// The emblem of a seat in its ring box, then the turn ring and the calling ring over it (both can show together). Without the atlas
+        /// the calling ring falls back to a frame on the box; the turn is the plate's own frame then.
         void DrawEmblem(IRenderer& renderer, ITexture* atlas, const Rect& box, SeatKind kind, ComputerLevel level, bool turn, bool calling, float unit) {
             const auto drawCell = [&](int cell, const Color& tint) {
                 const Rect source = EmblemRect(cell);
@@ -437,7 +430,7 @@ namespace BECore::Mahjong {
 
     void MahjongTableComponent::ReleaseFelt() {
         if (_felt) {
-            // A frame in flight may still read the texture: the GPU has to be idle before it is freed (and a texture of another renderer is not ours to wait for)
+            // A frame in flight may still read the texture: the GPU has to be idle before it is freed, unless another renderer made it
             const auto& renderer = CoreManager::GetRenderer();
             if (renderer && renderer->GetId() == _feltRenderer) {
                 renderer->WaitIdle();
@@ -448,7 +441,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::OnApplicationCleanUp() {
-        // The texture is a GPU object and components outlive the renderer: it goes when the application cleans up, before the renderer is destroyed
+        // A GPU object must go before the renderer is destroyed, and components outlive the renderer
         ReleaseFelt();
     }
 
@@ -457,7 +450,7 @@ namespace BECore::Mahjong {
         if (renderer.GetId() != _feltRenderer) {
             _felt = {};  // made by another renderer, which has its own way of freeing it
             _feltRenderer = renderer.GetId();
-            // Made once per renderer, even when it fails (the flat felt is drawn then)
+            // Once per renderer, even when it fails (the flat felt is drawn then)
             const FeltPixels pixels = MakeFeltPixels(kFeltTextureWidth, kFeltTextureHeight);
             _felt = renderer.CreateTexture(pixels.rgba.data(), pixels.width, pixels.height);
         }
@@ -623,8 +616,6 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         Scene& scene = GetScene();
 
-        // The canvas of the buttons: `Actions` while its buttons are touch targets, else `ActionsCompact` (the same buttons by name); the
-        // button of the hints goes with them: `HintsButton` where `Actions` is, its copy in `ActionsCompact` where that is
         const WindowNumbers numbers = ReadWindow();
         const UILayoutContext& window = numbers.context;
         const ViewSize view = ActiveViewSize(scene);
@@ -647,7 +638,7 @@ namespace BECore::Mahjong {
             if (now.shown != before.shown) {
                 UICanvasComponent::SetElementVisibleByName(scene, PoolString::Intern(spec.element), now.shown);
             }
-            // The tiles pictured on the button: one element with a `UIImageComponent` per tile, hidden in the file, shown exactly while the button shows that tile
+            // The tile pictures of a button are elements hidden in the file, shown exactly while the button shows that tile
             for (int t = 0; t < spec.maxTiles; ++t) {
                 const bool showNow = now.shown && t < now.tileCount;
                 const bool showBefore = before.shown && t < before.tileCount;
@@ -672,8 +663,7 @@ namespace BECore::Mahjong {
         _published = buttons;
         vars.Set("declareNext"_intern, _declareNext ? kDeclareOn : kDeclareOff);
 
-        // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one; the sentence is
-        // looked up again when the language changed under it
+        // The label `Hint` shows exactly while a button is hovered; its sentence is looked up again when the language changes
         const UIStrings& strings = CoreManager::GetUIStrings();
         _hoveredButton = compact ? std::nullopt : HoveredButton(actionsCanvas, buttons);
         const StringView hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : StringView{};
@@ -686,7 +676,6 @@ namespace BECore::Mahjong {
             UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
         }
 
-        // The cover of a hot seat: a modal canvas, shown exactly while the screen waits for the next person
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
         if (handoff) {
             const Seat actor = game->GetSession().Actor();
@@ -702,8 +691,8 @@ namespace BECore::Mahjong {
         if (_touchSeen) {
             return true;
         }
-        // The window of the last draw, not the renderer's output now: in the editor the table is drawn into the viewport's target, and an
-        // input event or the scene update sees the whole editor window, so the regime would be on at a click and off a moment later
+        // The window of the last draw, not the renderer's output now: in the editor the table is drawn into the viewport's target while an
+        // input event sees the whole editor window, so the regime would be on at a click and off a moment later
         if (_drawnSmallHandTile.has_value()) {
             return *_drawnSmallHandTile;
         }
@@ -724,7 +713,7 @@ namespace BECore::Mahjong {
     bool MahjongTableComponent::SelectionHolds(const MahjongGame& game) const {
         const TableSession& session = game.GetSession();
         const HandModel& hand = game.GetMatch().Hand();
-        // A selection belongs to one discard turn of one person: a claim window, the cover, the pause and the end of the hand drop it
+        // A selection belongs to one discard turn of one person
         if (!_selected || !PersonActs(game) || hand.GetPhase() != Phase::Discard || session.Version() != _selectedVersion || SeenHandOf(game) != _selectedHand || TurnOf(game) != _selectedTurn) {
             return false;
         }
@@ -750,7 +739,7 @@ namespace BECore::Mahjong {
                 _selected.reset();
                 break;
             case TapAction::Select:
-                // Only a discard turn has a tile to pick; a claim window has none to raise
+                // A claim window has no tile to raise
                 if (hand.GetPhase() == Phase::Discard) {
                     _selected = outcome.index;
                     _selectedTile = hand.GetHand(session.Actor()).concealed[static_cast<size_t>(outcome.index)];
@@ -784,7 +773,7 @@ namespace BECore::Mahjong {
         const Optional<int> hit = HitHandTile(_shown.layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
         const Seat actor = game->GetSession().Actor();
         const PlayerHand& held = game->GetMatch().Hand().GetHand(actor);
-        // The layout is the last frame's: it has to be of this hand
+        // The layout is the last frame's: it must be of this hand
         if (hit && (_shown.layout.viewer != actor || *hit < 0 || *hit >= static_cast<int>(held.concealed.size()))) {
             return;
         }
@@ -896,8 +885,7 @@ namespace BECore::Mahjong {
             }
         }
         _movesSeen = moves.size();
-        // A claim window settled since the last frame: when a claim lost in it, the winner and the losers are marked for a while (a pass is no
-        // claim, so a window that nobody claimed in or that all passed marks nothing)
+        // A pass is no claim: a window that nobody claimed in marks nothing
         if (const Optional<ClaimWindowResult>& window = match.Hand().LastClaimWindow(); window && window->serial != _windowSeen) {
             _windowSeen = window->serial;
             _lostLeft = 0.0f;
@@ -923,7 +911,7 @@ namespace BECore::Mahjong {
             EndFlights();
             return;
         }
-        // Nothing new is the common frame: no move since the last draw, no tile drawn from the wall and no win (a win is no move)
+        // The common frame: no move since the last draw, no tile drawn from the wall and no win (a win is no move)
         const Vector<HandMove>& moves = hand.Moves();
         const Span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
         const bool newWin = _shown.winSeat != kNoSeat && before.winSeat == kNoSeat;
@@ -935,7 +923,6 @@ namespace BECore::Mahjong {
             EndFlights();  // the running flights end at their targets: their slots are drawn in place from now on
             _flights = eastl::move(planned);
         }
-        // The set that was just laid blinks once its tiles have landed: not while one of them is in the air
         if (news.setLaid) {
             _highlightWaits = eastl::any_of(_flights.begin(), _flights.end(),
                                             [&](const TileFlight& flight) { return flight.key.role == SlotRole::MeldTile && flight.key.seat == _highlightSeat && flight.key.index == _highlightMeld; });
@@ -1071,7 +1058,7 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         const UIStrings& strings = CoreManager::GetUIStrings();
         const PoolString name = "selectedTileText"_intern;
-        // The label `SelectedTile` of the node `Hud` is shown exactly while a tile is selected (this is its only owner)
+        // This component is the only owner of the label `SelectedTile` of the node `Hud`
         if (tile.IsValid() != _selectedLabelShown) {
             _selectedLabelShown = tile.IsValid();
             UICanvasComponent::SetElementVisibleByName(GetScene(), "SelectedTile"_intern, _selectedLabelShown);
@@ -1236,7 +1223,7 @@ namespace BECore::Mahjong {
         BeginPanelMesh();
         const float pixelsPerUnit = renderer.GetViewTransform().scale;
         const UICorners corners = PanelCorners(unit);
-        // The order of `UIElement::DrawBoxIn`: the shadow, the fill, the border, the highlight; then the marks of the turn over them
+        // The order of `UIElement::DrawBoxIn`, with the marks of the turn over it
         const UIShadowSpec shadow{0.0f, kShadowOffsetY * unit, kShadowBlur * unit, 0.0f, kSeatPlateShadow};
         UIBoxMesh::AppendShadow(_panelVertices, _panelIndices, rect, corners, shadow, pixelsPerUnit);
         UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, corners, kSeatPlate, UIGradientSpec{UIGradientDirection::Vertical, kSeatPlateDeep}, pixelsPerUnit);
@@ -1272,35 +1259,30 @@ namespace BECore::Mahjong {
         PollTableLayoutSpec();
         _drawnSmallHandTile = SmallHandTileNow();
         IRenderer& renderer = *CoreManager::GetRenderer();
-        // The active view: the design of one of the four shapes (`Scene::Draw` picked it before this draw)
         const ViewSize view = ActiveViewSize(GetScene());
         const float viewWidth = view.width;
         const float viewHeight = view.height;
-        // The felt is one soft picture over the view; without a texture (the backend refused it, a test renderer) it is the flat colour. It is
-        // a vignette and a grain of 3 levels, so over the tall portrait view the vignette is an ellipse and the grain about 3:1 taller than
-        // wide: not visible (a portrait texture of its own is for a look that says it is)
+        // Stretched over whichever view is active, the vignette and the grain hide the change of aspect (a portrait texture of its own is for
+        // a look that asks for it); the flat colour without a texture (the backend refused it, a test renderer)
         if (ITexture* felt = FeltTexture(renderer)) {
             renderer.DrawTexture(*felt, nullptr, 0.0f, 0.0f, viewWidth, viewHeight);
         } else {
             renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
         }
-        // The layout is built in design units (those of the shape of the view) and scaled to the view, so what is measured in units here is
-        // scaled the same way
+        // The layout is built in design units and scaled to the view: widths measured in units here are scaled the same way
         const float unit = LayoutScale(viewWidth, viewHeight);
         const float rim = kRimWidth * unit;
         renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, rim, kFeltRim);
         renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, kFeltRim);
         renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
         renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
-        // The lip on the inner side of the rim: four bars, the side ones between the top and the bottom one
         const float lip = kFeltLipWidth * unit;
         renderer.DrawFilledRect(rim, rim, viewWidth - 2.0f * rim, lip, kFeltLip);
         renderer.DrawFilledRect(rim, viewHeight - rim - lip, viewWidth - 2.0f * rim, lip, kFeltLip);
         renderer.DrawFilledRect(rim, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
         renderer.DrawFilledRect(viewWidth - rim - lip, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
 
-        // The two snapshots trade places: `_previous` is what the last draw drew, `_shown` the one before it, emptied and refilled below with
-        // the capacity it has (no snapshot is made new, so a table at rest draws without the heap)
+        // The two snapshots trade places and one is refilled in place, so a table at rest draws without the heap
         eastl::swap(_previous, _shown);
         ClearSnapshot(_shown);
         const TableSnapshot& before = _previous;
@@ -1331,8 +1313,7 @@ namespace BECore::Mahjong {
         FillSnapshot(_shown, hand, faces, bottom);
         PlanBatch(before, news, hand);
         const TableLayout& layout = _shown.layout;
-        // The two tiles of the viewer's hand that the offered chow takes (the hovered one; the only one when a single chow is on offer) are
-        // framed in place: only in a hand that is face up and while the viewer is the person to act (so not under the cover)
+        // The two tiles an offered chow takes are framed only in a face-up hand of the person to act (so not under the cover)
         Array<int, 2> chowIndex{-1, -1};
         if (IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.seat == bottom) {
             _chowTakes = ChowTilesTaken(_published, hand.PendingTile(), _hoveredButton);
@@ -1346,21 +1327,20 @@ namespace BECore::Mahjong {
                 }
             }
         }
-        // The selected tile (a tap in the touch regime) is the viewer's own and drawn raised, in a hand that is face up
+        // The selected tile is the viewer's own and drawn raised, in a face-up hand
         if (_selected && IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.seat == bottom) {
             _drawnSelected = _selected;
         }
         PublishSelectedText(_drawnSelected ? _selectedTile : Tile{});
-        // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
-        // nothing marks it (and the layout is the same plain row either way)
+        // The drawn tile is tinted only in a face-up hand: under the cover and for a spectator nothing marks it
         const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom ? DrawnIndexOf(hand, bottom) : -1;
 
-        // The discards that keep a declared hand waiting: only on the viewer's own turn in a hand that is face up (the guard is cheap, the
-        // view is made only when it can say something); not tied to the hints switch
+        // The keeps-waiting bars, not tied to the hints switch: only on the viewer's own turn in a face-up hand, the guard before the
+        // view because the view allocates
         Array<bool, kTileIdCount> keepsWaiting{};
         if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
             hand.GetHand(bottom).callingDeclared) {
-            // The view allocates: the bars are worked out again only when the session moved (the same key as the buttons)
+            // The same key as the buttons: the bars are worked out again only when the session moved
             const ButtonsKey key{game, game->IsOnlineTable(), session.Version(), session.StartCount(), bottom};
             if (_keepsKey != key) {
                 TableView view = MakeTableView(hand, bottom);
@@ -1375,16 +1355,13 @@ namespace BECore::Mahjong {
             _keepsKey.reset();
         }
 
-        // The winds that score for the viewer, marked on its own face-up tiles while the hand is played: under the cover and for a spectator
-        // nothing marks them (the winds are read from the model only then)
+        // The wind marks follow the viewer: under the cover and for a spectator nothing marks them, and the winds are read only then
         const bool windMarks = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom;
         const Wind seatWind = windMarks ? hand.SeatWind(bottom) : Wind::East;
         const Wind roundWind = windMarks ? hand.RoundWind() : Wind::East;
 
-        // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. `stack` draws the wall
-        // stack seen from above (its own cell, a plain back without the atlas) instead of a tile. A turned tile (a side seat, or a tile in
-        // the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not turned is the
-        // plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
+        // A face or the back (nullopt) placed as `place` says, from the atlas else a plain rectangle; `stack` draws the wall stack seen from
+        // above instead. A turned tile gets the unturned rectangle and the turn about the pivot; else `place.upright` is the screen rectangle.
         const auto drawFace = [&](const TilePlacement& place, Optional<Tile> face, bool stack = false) {
             const Rect& upright = place.upright;
             const DrawTransform turn{place.rotation, place.pivotX, place.pivotY};
@@ -1412,8 +1389,7 @@ namespace BECore::Mahjong {
                 fill(Rect{upright.x + insetX, upright.y + insetY, upright.w - 2.0f * insetX, upright.h - 2.0f * insetY}, PlainMarkColor(*face));
             }
         };
-        // The shadow under a tile (not under a wall stack), two layers: the wide faint one, then the tight one at the offset; the frame of
-        // a pending discard lies over both, so the gold is even
+        // Two layers, drawn under the marks so the gold frame of a pending discard lies even over both
         const auto drawShadow = [&](const Rect& rect) {
             const float margin = kShadowSoftMargin * unit;
             renderer.DrawFilledRect(rect.x + kShadowOffset * unit - margin, rect.y + kShadowOffset * unit - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin, kTileShadowSoft);
@@ -1424,8 +1400,8 @@ namespace BECore::Mahjong {
             drawFace(place, face);
         };
 
-        // The centre panel (public data only, like the plates): its ground, the light on the edge that faces the seat whose turn it is (none
-        // unless the session plays) and the mark of the dealer in the dealer's cell (East of the hand shown, as for the plates)
+        // The centre panel and the seat plates read public data only, so they show under the cover and for a spectator; the dealer is East
+        // of the hand shown
         const Seat turnSeat = TurnSeat(session, hand);
         const Rect& panel = layout.zones.centerPanel;
         DrawPanel(renderer, panel, unit, false);
@@ -1441,10 +1417,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
-        // plate of the seat whose turn it is the gold tint and frame, on the dealer's (East of the hand shown: the same at the end of the
-        // match as in the hand) the bar of the dealer, then the emblem of the seat with its rings (the turn ring while it is the seat's turn,
-        // the calling ring while its hand is declared); the last claim window's blink and frame go over all of it
+        // The blink and frame of the last claim window go over the plate, its dealer bar and its emblem
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Rect& box = layout.zones.seatPlates[seat];
             DrawPanel(renderer, box, unit, seat == turnSeat);
@@ -1452,10 +1425,8 @@ namespace BECore::Mahjong {
                 const Rect bar = InsetAlong(Rect(box.x, box.y, box.w, kDealerMarkHeight * unit), corner);
                 renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kDealerMark);
             }
-            // The same public reads as `MakeSeatPlates` (kind, level, turn, declared hand), without its words: no string is made per frame
+            // The same public reads as `MakeSeatPlates`, without its words: no string is made per frame
             DrawEmblem(renderer, _emblems.Get(), EmblemBox(box, unit), session.KindOf(seat), session.LevelOf(seat), seat == turnSeat, hand.GetHand(seat).callingDeclared, unit);
-            // The last claim window (public): the plate of the seat that won it blinks as a set just laid does, the plate of each seat whose
-            // claim lost has a frame
             if (_lostLeft > 0.0f) {
                 if (seat == _lostWinner && BlinkIsOn(Seconds(kClaimLostSeconds) - _lostLeft, Seconds(kClaimBlinkSeconds))) {
                     DrawPanelTint(renderer, box, unit, kClaimHighlight);
@@ -1466,8 +1437,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        // The rack under the viewer's hand (public: the seat at the bottom, face up or not): the dark plate, the lighter body on it with the
-        // dark edge left on three sides. It ends at the rim, which the hand's own padding would reach.
+        // The rack under the bottom seat's hand is public, face up or not; it ends at the rim, which the hand's own padding would reach
         if (IsSeat(bottom)) {
             const Rect bounds = BoundsOf(layout, SlotRole::HandTile, bottom);
             if (bounds.w > 0.0f) {
@@ -1486,8 +1456,7 @@ namespace BECore::Mahjong {
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);
             }
         }
-        // The set that was just laid blinks behind its tiles: on at the moment it is laid (its tiles have landed), then half a period on and
-        // half off; nothing while a tile of it is in the air
+        // Nothing while a tile of the set is in the air
         if (_highlightLeft > 0.0f && !_highlightWaits) {
             const Rect bounds = BoundsOfMeld(layout, _highlightSeat, _highlightMeld);
             if (bounds.w > 0.0f && BlinkIsOn(Seconds(kClaimHighlightSeconds) - _highlightLeft, Seconds(kClaimBlinkSeconds))) {
@@ -1495,8 +1464,7 @@ namespace BECore::Mahjong {
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
             }
         }
-        // A declared calling hand is public: a frame round the hand of each seat that has declared it, under the tiles (it reads the flag
-        // only, so it shows under the cover and at the end of the hand too)
+        // Public: reads the flag only, so it shows under the cover and at the end of the hand too
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             if (!hand.GetHand(seat).callingDeclared) {
                 continue;
@@ -1506,7 +1474,6 @@ namespace BECore::Mahjong {
                 DrawFrame(renderer, Padded(bounds, kActingMargin * unit), kCallingFrameWidth * unit, kCallingFrame);
             }
         }
-        // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it
         Array<bool, kTileIdCount> cannotDeclare{};
         if (_declareNext) {
             cannotDeclare.fill(true);
@@ -1516,8 +1483,7 @@ namespace BECore::Mahjong {
                 }
             }
         }
-        // The frame on the discard that waits tells a person that a claim is open for them: only the viewer who is asked sees it (a window
-        // that only computers may claim in shows nothing, and nothing shows while the screen is covered)
+        // Only the viewer who is asked sees the frame: a window that only computers may claim in shows nothing
         bool claimPending = false;
         if (session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty() && IsSeat(faces.seat)) {
             claimPending = hand.AwaitsClaim(faces.seat);
@@ -1525,7 +1491,6 @@ namespace BECore::Mahjong {
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
         const int lastDiscard = LastDiscardEntry(hand);
 
-        // The bar along the top edge of a hand tile that is the own wind (left half the seat's colour, right half the round's when it is both)
         const auto drawWindMark = [&](const Rect& rect, WindMark mark) {
             if (mark == WindMark::None) {
                 return;
@@ -1540,8 +1505,7 @@ namespace BECore::Mahjong {
             renderer.DrawFilledRect(rect.x, rect.y, rect.w, bar, mark == WindMark::Seat ? kSeatWindMark : kRoundWindMark);
         };
 
-        // One slot at the screen rectangle `rect` placed as `place`: its own, or where it is in the air; the face turns as `place` says and
-        // every mark of the slot follows the screen rectangle
+        // The face turns as `place` says, every mark of the slot follows the screen rectangle `rect`
         const auto drawSlot = [&](const TileSlot& slot, const Rect& rect, const TilePlacement& place) {
             const PlayerHand& held = hand.GetHand(slot.seat);
             switch (slot.role) {
@@ -1597,8 +1561,7 @@ namespace BECore::Mahjong {
             }
         };
 
-        // A slot whose tile is in the air is drawn once, in the second pass, over everything else; a flight whose slot the layout no longer
-        // has is ignored
+        // A slot whose tile is in the air is drawn in the second pass; a flight whose slot the layout no longer has is ignored
         const auto flightOf = [&](const TileSlot& slot) -> const TileFlight* {
             for (const TileFlight& flight : _flights) {
                 if (flight.key.Matches(slot)) {

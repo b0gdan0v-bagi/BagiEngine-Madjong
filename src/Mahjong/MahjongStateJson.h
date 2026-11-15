@@ -8,7 +8,8 @@
 namespace BECore::Mahjong {
 
     /// What differs between the two users of the table state: the control API (`MahjongGameControl`, over a `TableSession`) and the
-    /// online view (`MahjongSeatedGame`, over a `Match` alone). Pointers are borrowed for the call.
+    /// online view (`MahjongSeatedGame`, over a `Match` alone). They share the keys, so a change here is a change of the wire format
+    /// (the "A view" bullet of `src/Mahjong/Online/CLAUDE.md`). Pointers are borrowed for the call.
     struct StateJsonContext {
         const Match& match;
         /// The phase of the session, or `PhaseOfMatch(match)` for a user with no `TableSession`.
@@ -23,8 +24,7 @@ namespace BECore::Mahjong {
         const SeatLevels* levels = nullptr;
     };
 
-    /// The phase a session reports, by the rule of `TableSession::GetPhase`: a match that is not in a hand is over, a finished hand is
-    /// waiting for its settlement.
+    /// The phase by the rule of `TableSession::GetPhase`, for a user with no session.
     [[nodiscard]] SessionPhase PhaseOfMatch(const Match& match) noexcept;
 
     /// "playing" | "hand_over" | "match_over".
@@ -36,15 +36,15 @@ namespace BECore::Mahjong {
     /// What a finished hand came to, all four hands open: the `result` of the state.
     [[nodiscard]] Json ResultToJson(const HandModel& hand);
 
-    /// The settlement `next_hand` answers: the outcome and the money, not the breakdowns (they were in `result`).
+    /// The settlement `next_hand` answers: the outcome and the money, not the breakdowns (they are in `result`).
     [[nodiscard]] Json SettlementToJson(const HandSettlement& settlement);
 
     /// One entry of `seats`. `view` is the view of `context.viewSeat` (of any seat for a spectator, whose own tiles are not read); the
     /// melds of the viewing seat are its own, with the concealed kongs. Reads of the other hands: their size only.
     [[nodiscard]] Json SeatToJson(const StateJsonContext& context, const TableView& view, Seat seat);
 
-    /// The whole state object of the control API (`MahjongGameControl`) from `view`; keys and values as documented there, `kind`,
-    /// `level` and `levels` only when the context has them. `result` is added when `context.phase` is not `Playing`.
+    /// The whole state object from `view`; `kind`, `level` and `levels` only when the context has them, `result` when `context.phase` is
+    /// not `Playing`.
     [[nodiscard]] Json TableStateToJson(const StateJsonContext& context, const TableView& view);
 
 }  // namespace BECore::Mahjong

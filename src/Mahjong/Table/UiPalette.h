@@ -5,49 +5,29 @@
 namespace BECore::Mahjong {
 
     /**
-     * The look of the game in numbers: the palette, the type scale and the spacing grid. The scene and its node files (`config/SceneConfig.xml`, `config/nodes/`) write the colours of
-     * `kUiPalette` as text (`r,g,b,a`) and the sizes of `kFontScale` (`fontSize`), and every position and size on the grid of
-     * `kGridUnit`; `MahjongUiStyleTest` holds the file to all three, so a stray colour, size or number fails. The colours of the table
-     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent`, the marks of the hints (`kDeclareMark`, `kAdvisedFrame`, the danger marks) by `MahjongHintsComponent`, and none is in the file; the
-     * modal numbers below are the anatomy that the file's screens follow and the tests of the screens check.
+     * The look of the game in numbers: the palette, the type scale and the spacing grid. The scene file writes the colours of `kUiPalette`
+     * as text, the sizes of `kFontScale` and every position and size on the grid of `kGridUnit`; `MahjongUiStyleTest` holds it to all three.
+     * The roles are in `config/CLAUDE.md` ("UI style"): a new control takes the role of what it does, never a new literal. The colours
+     * from `kFelt` to `kAdvisedFrame` are painted by the components (`MahjongTableComponent`, `MahjongHintsComponent`) and are not in the
+     * file.
      *
-     * Roles, not colours, are the rule: a new control takes the role of what it does.
-     * - The table: the felt (the picture of `Table/TableLook.h`, `kFelt` as its base and the flat fallback) with a `kFeltRim` round the view
-     *   and a thin lighter `kFeltLip` inside it; no plate under the discard blocks or the wall ring, a two-layer shadow (`kTileShadowSoft`, `kTileShadow`) under each tile, the viewer's hand on a
-     *   wooden rack (`kHandRack` with the darker edge `kHandRackLip`, brown, never gold). A mark on the table is the
-     * gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`, `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the
-     * frame of a seat plate whose claim lost `kClaimLostFrame`, the frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat:
-     * `kSeatTurnFrame` with the tint `kTurnMark`, and the turn light of the centre panel `kPanelTurnLight`) and nothing else on the table is gold (the dealer mark `kDealerMark`, of a seat plate and
-     * of the centre panel, is red); `kVeil` dims a tile that cannot be discarded now. The two winds that score for the viewer are marked on its hand tiles in blue (`kSeatWindMark`, the own
-     * seat wind) and violet (`kRoundWindMark`, the round wind), the one mark of the hand that is not gold, so it stays apart from every gold mark.
-     * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
-     *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
-     * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
-     *   an own turn and the segments, `danger` passes.
-     * - The text: white, `textMuted` for captions, `accent` for marks and the first place.
-     * - The skin of a box (`config/CLAUDE.md`, "UI style"): the role colour is the **top** of a vertical gradient and its `<role>Deep` the bottom (the four button roles, and `surface`,
-     *   `surfaceRaised`, `header`, `hudPanel` for panels). `frame` is the border of a panel, `frameLight` the border of a button, `shadow` the colour of the one soft shadow of a raised thing,
-     *   `highlight` the line along the top edge, `outline` the dark outline of a headline in the display font, `glowPrimary` the glow of a selected segment or a primary button.
-     *   `winnerRow` is the fill of the winner's row in the score table, a dim gold-brown inside a gold `accent` border (the plate is a modal, so `accent` is allowed as on any modal): the standings
-     * light a first place the same way. `placeBadge` is the fill of the round-cornered badge with the place number in the standings. Nothing of the skin is gold: a screen over the table (`Actions`,
-     * `Hud`, `Hints*`, `HudMenu`) uses none, gold stays the marks of the table and the `accent` text of a modal.
+     * **Gold is the table's family of marks**, and nothing else on the table is gold; the wind bars, the danger marks and the dealer mark
+     * are roles of their own. `kClaimLostFrame`, `kSeatTurnFrame` and `kPanelTurnLight` each have an alpha of their own, because the tests find a mark by its colour.
      */
 
     /// The table.
     inline constexpr Color kFelt{22, 92, 62, 255};
     inline constexpr Color kFeltRim{10, 46, 32, 255};
-    /// The rim is this wide on every side of the view (the tiles keep `kEdge` of the layout from the edge, so the rim does not grow).
+    /// The rim is this wide on every side of the view.
     inline constexpr float kRimWidth = 8.0f;
-    /// A thin line on the inner side of the rim, `kFeltLipWidth` units wide; under every tile.
+    /// A thin line on the inner side of the rim, under every tile.
     inline constexpr Color kFeltLip{54, 128, 92, 255};
     inline constexpr float kFeltLipWidth = 2.0f;
-    /// The shadow of a tile has two layers, both under the tile: the tight `kTileShadow` at an offset and the wider, fainter `kTileShadowSoft`
-    /// round it. Neither is a mark.
+    /// The two layers of a tile's shadow, both under the tile: the tight one at an offset, the fainter one round it. Neither is a mark.
     inline constexpr Color kTileShadow{0, 0, 0, 70};
     inline constexpr Color kTileShadowSoft{0, 0, 0, 34};
-    /// The rack under the viewer's hand (public data: the bottom seat, whoever sits there): the darker `kHandRackLip` is the whole plate,
-    /// `kRackPadding` units past the hand, and the lighter `kHandRack` lies on it with `kHandRackLipWidth` units of the lip left on the
-    /// left, right and bottom, so the plate reads as raised. Wood, nowhere near the gold of a mark; it lies under every tile and mark.
+    /// The rack under the viewer's hand (the bottom seat, whoever sits there): the darker lip is the whole plate, the lighter colour lies
+    /// on it with the lip left on three sides, so it reads as raised. Wood, nowhere near the gold of a mark; under every tile and mark.
     inline constexpr Color kHandRack{92, 62, 42, 255};
     inline constexpr Color kHandRackLip{52, 34, 24, 255};
     inline constexpr float kRackPadding = 4.0f;
@@ -58,72 +38,61 @@ namespace BECore::Mahjong {
     inline constexpr Color kPendingFrame{255, 214, 80, 200};
     /// A tint over the face of the last discard (not a frame, so it stays apart from `kPendingFrame`, which shows besides it).
     inline constexpr Color kLastDiscardMark{255, 214, 80, 110};
-    /// A tint over the face of the tile the viewer has just drawn, in its place in the sorted hand (a different alpha from the tint of
-    /// the last discard, which lies in the pile and never on the hand).
+    /// A tint over the face of the tile the viewer has just drawn, in its place in the sorted hand.
     inline constexpr Color kDrawnTileMark{255, 214, 80, 130};
-    /// The bar along the edge of the claimed tile of an open set that faces the seat it came from, `kClaimedEdgeWidth` units wide.
+    /// The bar along the edge of the claimed tile of an open set that faces the seat it came from.
     inline constexpr Color kClaimedEdge{255, 214, 80, 255};
     inline constexpr float kClaimedEdgeWidth = 4.0f;
-    /// Behind the set that was just laid, blinking: it lasts `kClaimHighlightSeconds` and is on for the first half of each
-    /// `kClaimBlinkSeconds`.
+    /// Behind the set that was just laid, blinking: on for the first half of each `kClaimBlinkSeconds`, for `kClaimHighlightSeconds`.
     inline constexpr Color kClaimHighlight{255, 214, 80, 120};
     inline constexpr float kClaimHighlightSeconds = 2.0f;
     inline constexpr float kClaimBlinkSeconds = 0.5f;
-    /// Round the seat plate of a seat whose claim lost to a better one in the last claim window (four bars of `kSeatTurnFrameWidth` units on
-    /// the border of the plate); the plate of the seat that won the window blinks in `kClaimHighlight`. Both last `kClaimLostSeconds`: the
-    /// time and the blink of the set just laid, so the two signs of one window end together. The alpha is its own, so a test finds the
-    /// frame by its colour.
+    /// Round the plate of a seat whose claim lost to a better one in the last claim window; the plate of the seat that won blinks in
+    /// `kClaimHighlight`. Both last as long as the set just laid is highlighted, so the two signs of one window end together.
     inline constexpr Color kClaimLostFrame{255, 214, 80, 180};
     inline constexpr float kClaimLostSeconds = kClaimHighlightSeconds;
-    /// Round the hand of a seat that has declared its calling hand (public), four bars of `kCallingFrameWidth` units on the border of the
-    /// padded rectangle of the hand, behind the tiles; it stays while the declaration stands.
+    /// Round the hand of a seat that has declared its calling hand (public), behind the tiles; it stays while the declaration stands.
     inline constexpr Color kCallingFrame{255, 214, 80, 160};
     inline constexpr float kCallingFrameWidth = 3.0f;
-    /// A bar inside the bottom edge of a tile of the viewer's declared hand whose discard leaves the hand waiting (`KeepsWaitingDiscards`), on the
-    /// viewer's turn: `kKeepsWaitingBarHeight` units high, the full width of the tile. Inside the tile, so it stays apart from the `kDeclareMark`
-    /// bar of the hints (under the tile), which shows only before the declaration.
+    /// A bar inside the bottom edge of a tile of the viewer's declared hand whose discard leaves the hand waiting (`KeepsWaitingDiscards`).
+    /// Inside the tile, so it stays apart from the `kDeclareMark` bar of the hints (under the tile).
     inline constexpr Color kKeepsWaitingMark{255, 214, 80, 220};
     inline constexpr float kKeepsWaitingBarHeight = 6.0f;
-    /// A bar along the top edge of a tile of the viewer's hand that is the own seat wind (`kSeatWindMark`) or the round wind (`kRoundWindMark`; `WindMarkOf`), `kWindMarkBarHeight`
-    /// units high, the full width of the tile; a tile that is both has the left half in the first and the right half in the second. Inside the tile, at the edge the
-    /// bars of the hints and of the keeps-waiting mark do not use. Not gold: they say what the tile is worth, not what to do.
+    /// A bar along the top edge of a hand tile that is the own seat wind or the round wind (`WindMarkOf`); a tile that is both has the left
+    /// half in the first and the right half in the second. At the edge the hints' bars do not use. Not gold: they say what the tile is
+    /// worth, not what to do.
     inline constexpr Color kSeatWindMark{90, 180, 255, 255};
     inline constexpr Color kRoundWindMark{200, 140, 255, 255};
     inline constexpr float kWindMarkBarHeight = 6.0f;
-    /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
+    /// Over a tile that cannot be discarded now (the next discard has to declare the calling hand).
     inline constexpr Color kVeil{0, 0, 0, 140};
-    /// The danger marks of the hints (`MahjongHintsComponent`, `DangerMarks`): a bar `kDangerMarkWidth` units wide inside the left edge of a hand tile
-    /// while an opponent has declared. Each is a role of its own and none is gold, a wind bar or the dealer's red: `kSafeMark` (green) says the tile
-    /// is safe to discard, `kRiskyMark` (amber, with no gold in its colour) that it is risky, `kDangerMark` (red, not `kDealerMark`) that it is dangerous.
+    /// The danger marks of the hints (`DangerMarks`): a bar inside the left edge of a hand tile while an opponent has declared. Each is a
+    /// role of its own, none gold, a wind bar or the dealer's red.
     inline constexpr Color kSafeMark{70, 200, 110, 255};
     inline constexpr Color kRiskyMark{255, 140, 30, 255};
     inline constexpr Color kDangerMark{235, 40, 70, 255};
     inline constexpr float kDangerMarkWidth = 5.0f;
-    /// The hints (`MahjongHintsComponent`), marks on the viewer's hand and so in the gold family: a bar under a tile whose discard declares
-    /// the calling hand, and the frame on the tile the computer would discard (the two differ in shape and in alpha).
+    /// The hints' marks on the viewer's hand, in the gold family: a bar under a tile whose discard declares the calling hand, and the
+    /// frame on the tile the computer would discard (they differ in shape and in alpha).
     inline constexpr Color kDeclareMark{255, 214, 80, 255};
     inline constexpr Color kAdvisedFrame{255, 214, 80, 230};
 
-    /// The seat plates (the table paints them; the words on them are labels of the node `SeatPlates`): the base is a rounded framed panel (`kSeatPlateCorner` below) whose fill starts at the
-    /// `hudPanel` colour (a test holds them equal), the plate of the seat whose turn it is gets the tint `kTurnMark` over it and a frame `kSeatTurnFrame` of `kSeatTurnFrameWidth` units on its border
-    /// (the gold family); the emblem on the plate has the turn ring tinted `kSeatTurnFrame` and, while the hand is declared, the calling ring tinted `kCallingFrame` (no new gold), the dealer a bar
-    /// `kDealerMark` of `kDealerMarkHeight` units along the top edge: a mark that is neither gold nor a plate (the wind bars of the viewer's hand are the other). The frame has an alpha of its own, so
-    /// no other gold mark is drawn in its colour (the tests find a mark by colour).
+    /// The seat plates (the table paints them; the words are labels of the node `SeatPlates`): the fill starts at the `hudPanel` colour
+    /// (a test holds them equal); the plate of the seat whose turn it is gets the tint `kTurnMark` and the frame `kSeatTurnFrame`, the emblem's
+    /// turn and calling rings are tinted `kSeatTurnFrame` and `kCallingFrame` (no new gold), the dealer gets a red bar along the top edge.
     inline constexpr Color kSeatPlate{10, 30, 22, 170};
     inline constexpr Color kSeatTurnFrame{255, 214, 80, 240};
     inline constexpr float kSeatTurnFrameWidth = 4.0f;
     inline constexpr Color kDealerMark{200, 70, 60, 255};
     inline constexpr float kDealerMarkHeight = 6.0f;
 
-    /// The centre panel (the table paints it; the words are labels of the node `CenterPanel`): the ground is the panel of the seat plates, the light
-    /// of the turn a bar `kPanelTurnLightWidth` units thick along the edge of the panel that faces the seat whose turn it is (the gold family) and the
-    /// dealer a bar `kDealerMarkHeight` units thick (red, as on the plates) on the inner boundary of the dealer's cell. Both have an alpha of their
-    /// own, so the tests find them by colour among the marks of the plates.
+    /// The centre panel (the table paints it; the words are labels of the node `CenterPanel`): its ground is the plates' panel, the turn
+    /// light a gold bar along the edge that faces the seat to play, the dealer a red bar on the inner boundary of the dealer's cell.
     inline constexpr Color kPanelTurnLight{255, 214, 80, 250};
     inline constexpr float kPanelTurnLightWidth = 4.0f;
     inline constexpr Color kPanelDealerMark{200, 70, 60, 250};
 
-    /// The HUD and the seat plates keep this far clear of a discard block and of the wall ring, in view units (a rule of geometry: no plate is painted there).
+    /// The HUD and the seat plates keep this far clear of a discard block and of the wall ring, in view units.
     inline constexpr float kPlatePadding = 4.0f;
 
     /// The colours of the scene file, by role (`kUiPaletteNames` holds the role of each, in the same order).
@@ -155,8 +124,8 @@ namespace BECore::Mahjong {
         {255, 255, 255, 60},   // highlight
         {16, 18, 26, 255},     // outline
         {90, 200, 120, 160},   // glowPrimary
-        {84, 74, 36, 255},     // winnerRow
-        {70, 84, 128, 255},    // placeBadge
+        {84, 74, 36, 255},     // winnerRow: the winner's row (a modal plate, so a gold `accent` border is allowed); a first place in the standings the same
+        {70, 84, 128, 255},    // placeBadge: the badge with the place number
     }};
     // clang-format off
     inline constexpr Array<const char*, kUiPaletteSize> kUiPaletteNames{{
@@ -191,21 +160,19 @@ namespace BECore::Mahjong {
     }};
     // clang-format on
 
-    /// The type scale: small (the hint, the winner's lines, captions), body (the HUD, rows, ordinary buttons), title (the headline of a
-    /// screen, its main button). No other `fontSize` in the scene file.
+    /// The type scale: small, body, title. No other `fontSize` in the scene file.
     inline constexpr Array<int, 3> kFontScale{{18, 22, 28}};
 
-    /// The families of the text (`TextConfig.xml` of the engine): the display font of headlines and scores (with an outline of `kTextOutlineWidth` units in the `outline` role) and the
-    /// text font, whose bold (`kFontWeightBold`) is the text of a button. A family is not a size: `kFontScale` stays the only sizes.
+    /// The families of the text (`TextConfig.xml` of the engine): the display font of headlines and scores (outlined in the `outline`
+    /// role) and the text font, whose bold is the text of a button. A family is not a size: `kFontScale` stays the only sizes.
     inline constexpr const char* kFontFamilyDisplay = "Russo One";
     inline constexpr const char* kFontFamilyText = "PT Sans";
     inline constexpr int kFontWeightRegular = 400;
     inline constexpr int kFontWeightBold = 700;
     inline constexpr int kTextOutlineWidth = 2;
 
-    /// The scale of the skin: corner radii of rows, chips and segments (`kCornerSmall`), of buttons and the header band (`kCornerMiddle`) and of plates and cards
-    /// (`kCornerLarge`), all on the grid; a round button has half its side. One border width; one soft shadow for a raised thing (`kShadowOffsetY`, `kShadowBlur`, no spread; rows have none) written
-    /// `0,4,8,0,shadow`. `MahjongUiStyleTest` holds the scene file to them.
+    /// The scale of the skin (`config/CLAUDE.md`, "UI style"): three corner radii by kind of box, one border width, one soft shadow for a
+    /// raised thing and none for a row. `MahjongUiStyleTest` holds the scene file to them.
     inline constexpr int kCornerSmall = 8;
     inline constexpr int kCornerMiddle = 12;
     inline constexpr int kCornerLarge = 16;
@@ -214,20 +181,18 @@ namespace BECore::Mahjong {
     inline constexpr int kShadowOffsetY = 4;
     inline constexpr int kShadowBlur = 8;
 
-    /// The motion of a screen (`UICanvasComponent` `transition*` fields of the modal canvases and of the end screens' plates; `engine/.claude/rules/ui-transitions.md`): a show takes
-    /// `kMotionShowSeconds`, a hide the shorter `kMotionHideSeconds`, both with the ease `kMotionEase` (an `EaseType` name), a fade, and for a card that stands in the middle of the window also a rise
-    /// from `kMotionScaleFrom` of its size about the centre (no slide). A plate that must keep its rect for the cover test (`HandOver`, `HandOverAction`, `RulesAction`) fades only. The state bound
-    /// plates (hints, `HudMenu`, the action buttons, the move line, the hover plate) have none: they come and go every few seconds and a fade there is latency. `MahjongUiStyleTest` holds the scene
-    /// file to these numbers.
+    /// The motion of a modal screen (`transition*` fields of its canvas; `config/CLAUDE.md`, "UI style"): a fade, and for a card in the
+    /// middle of the window also a rise about the centre. A plate that must keep its rect for the cover test fades only; state-bound
+    /// plates have none, since a fade there is latency. `MahjongUiStyleTest` holds the scene file to these numbers.
     inline constexpr float kMotionShowSeconds = 0.18f;
     inline constexpr float kMotionHideSeconds = 0.12f;
     inline constexpr float kMotionScaleFrom = 0.96f;
     inline constexpr const char* kMotionEase = "QuadOut";
 
-    /// The table's own panels, the four seat plates and the centre panel: `MahjongTableComponent` paints each as one rounded framed box in one `DrawGeometry` (`UIBoxMesh`, the order of
-    /// `UIElement::DrawBoxIn`: the soft shadow, the fill from `kSeatPlate` at the top to `kSeatPlateDeep` at the bottom, the border `kSeatPlateFrame`, the highlight line). The radius and the border
-    /// are those of the scale above, times the table's unit; a bar of a mark along an edge is inset by the radius at both ends so it stays on the straight part of the edge. The roles are
-    /// the table's, not the scene file's (outside `kUiPalette`): `kSeatPlateDeep` is `hudPanelDeep`, and `SeatPlatesTest` holds the numbers equal to the scale.
+    /// The table's own panels, the four seat plates and the centre panel, painted by `MahjongTableComponent` as one rounded framed box
+    /// (the order of `UIElement::DrawBoxIn`). The radius and the border are those of the scale above times the table's unit; a mark's bar
+    /// along an edge is inset by the radius at both ends so it stays on the straight part. The roles are the table's, outside `kUiPalette`:
+    /// `kSeatPlateDeep` is `hudPanelDeep`, and `SeatPlatesTest` holds the numbers equal to the scale.
     inline constexpr float kSeatPlateCorner = static_cast<float>(kCornerMiddle);
     inline constexpr float kSeatPlateBorder = static_cast<float>(kBorderWidth);
     inline constexpr Color kSeatPlateDeep{6, 20, 14, 170};
@@ -235,14 +200,12 @@ namespace BECore::Mahjong {
     inline constexpr Color kSeatPlateShadow{0, 0, 0, 60};
     inline constexpr Color kSeatPlateHighlight{255, 255, 255, 36};
 
-    /// The spacing grid: every position, size, spacing and padding of the scene file is a multiple of the unit; the step is the usual
-    /// gap between controls and the margin to the edge of the view.
+    /// The spacing grid: every position, size, spacing and padding of the scene file is a multiple of the unit; the step is the usual gap
+    /// between controls and the margin to the edge of the view.
     inline constexpr int kGridUnit = 4;
     inline constexpr int kGridStep = 8;
 
-    /// The anatomy of a modal screen (`Setup`, `Handoff`, `HandOver`, `MatchOver`), in view units: the plate's padding, the gap between
-    /// the rows of its stack (the grid step), the gap that sets the main button apart from the rows above it, the headline band of
-    /// `Setup`, the main button and the margin of a plate to the edge of the view.
+    /// The anatomy of a modal screen (`Setup`, `Handoff`, `HandOver`, `MatchOver`), in view units; the tests of the screens check it.
     inline constexpr float kModalPadding = 16.0f;
     inline constexpr float kModalGap = static_cast<float>(kGridStep);
     inline constexpr float kModalSectionGap = 16.0f;

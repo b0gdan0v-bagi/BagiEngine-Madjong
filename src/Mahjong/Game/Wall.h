@@ -11,18 +11,17 @@ namespace BECore::Mahjong {
     inline constexpr int kTilesPerStack = 2;
     inline constexpr int kStacksPerSide = 17;
     inline constexpr int kStacksPerSideWithBonus = 18;
-    /// The last 7 stacks of the draw order are the dead wall: 14 tiles that are never drawn.
+    /// The last stacks of the draw order are the dead wall: never drawn.
     inline constexpr int kDeadStacks = 7;
     inline constexpr size_t kDeadWallTiles = static_cast<size_t>(kDeadStacks) * kTilesPerStack;
-    /// The first two tiles at the break are the loose tiles: a reserve for the replacement draws (after a kong or a bonus tile).
+    /// The first tiles at the break are the loose tiles: a reserve for the replacement draws (after a kong or a bonus tile).
     inline constexpr size_t kLooseTiles = 2;
 
-    /// Stacks in one side of the wall: 17, or 18 when the eight bonus tiles are in the set (136 or 144 tiles in the ring).
+    /// Stacks in one side of the wall; the set with bonus tiles needs one more.
     [[nodiscard]] constexpr int StacksPerSide(bool flowers) noexcept {
         return flowers ? kStacksPerSideWithBonus : kStacksPerSide;
     }
 
-    /// Tiles in the whole ring for `perSide` stacks per side.
     [[nodiscard]] constexpr int RingSize(int perSide) noexcept {
         return kSeatCount * perSide * kTilesPerStack;
     }
@@ -36,16 +35,12 @@ namespace BECore::Mahjong {
     }
 
     /**
-     * @brief The ring index of the first tile drawn, from the two rolls of the break (an assumption of this repository, the usual
-     *        way to break the wall).
+     * @brief The ring index of the first tile drawn, from the two rolls of the break (an assumption of this repository).
      *
-     * Ring index 0 is the right end of East's own side; a side holds `perSide` stacks of `kTilesPerStack` tiles. The sides lie
-     * **clockwise** in the ring: side `s` (counted counter-clockwise from East's wall, see `BreakSide`) starts at ring position
-     * `((kSeatCount - s) % kSeatCount) * perSide` stacks. Counting from the right end of a side to its left end then runs on into the
-     * wall of the seat clockwise from it, as on a real table, so the index is the physical position of the break.
-     * East rolls `eastDice` and that picks the side; the owner of that side rolls `ownerDice`; the wall is broken after
-     * `eastDice + ownerDice` stacks counted from the right end of that side, past the last stack of the ring back to the first.
-     * Both dice are the totals of 2d6 (2..12).
+     * Ring index 0 is the right end of East's own side. The sides lie **clockwise** in the ring: side `s` (counted counter-clockwise
+     * from East's wall, see `BreakSide`) starts at ring position `((kSeatCount - s) % kSeatCount) * perSide` stacks, so the index is
+     * the physical position of the break as on a real table. The wall is broken after `eastDice + ownerDice` stacks counted from the
+     * right end of the side `eastDice` picks, wrapping round the ring. Both dice are totals of 2d6 (2..12).
      */
     [[nodiscard]] constexpr int BreakIndex(int eastDice, int ownerDice, int perSide) noexcept {
         const int stacksInRing = kSeatCount * perSide;
@@ -65,13 +60,13 @@ namespace BECore::Mahjong {
     /**
      * @brief The wall of one hand, as the tiles in the order they are taken, starting at the break.
      *
-     * - The first `kLooseTiles` (2) tiles are the **loose tiles**, a separate reserve. `DrawLoose` takes the front of it and refills it
+     * - The first `kLooseTiles` tiles are the **loose tiles**, a separate reserve. `DrawLoose` takes the front of it and refills it
      *   from the **live tail** (the live tile just before the dead wall), so the live wall shrinks by one with each loose draw.
-     * - The last `kDeadWallTiles` (14, 7 stacks) are the **dead wall**: they are never drawn and never refill the reserve.
+     * - The last `kDeadWallTiles` are the **dead wall**: they are never drawn and never refill the reserve.
      * - The tiles between are the **live wall**: `Draw` takes the front. `LiveCount() == 0` means a drawn hand when the next draw is due.
      *
-     * The loose-tile model (a reserve apart from the 14 dead tiles) is an assumption of this repository; the numbers are the named
-     * constants above. A wall shorter than 16 tiles (tests) gives the reserve what it can first, then the dead wall, then the live wall.
+     * The loose-tile model (a reserve apart from the dead wall) is an assumption of this repository. A wall too short for both (tests)
+     * gives the reserve what it can first, then the dead wall, then the live wall.
      */
     class Wall {
     public:
@@ -87,19 +82,16 @@ namespace BECore::Mahjong {
         /// The next tile of the live wall, or `nullopt` when it is empty. Never touches the loose tiles or the dead wall.
         [[nodiscard]] Optional<Tile> Draw();
 
-        /// The front of the reserve, then the reserve is refilled from the live tail when the live wall has a tile left; `nullopt`
-        /// when the reserve is empty.
+        /// The front of the reserve, refilled from the live tail while the live wall has a tile; `nullopt` when the reserve is empty.
         [[nodiscard]] Optional<Tile> DrawLoose();
 
-        /// Tiles a regular `Draw` can still take.
         [[nodiscard]] size_t LiveCount() const noexcept {
             return _liveEnd - _liveBegin;
         }
-        /// Tiles in the loose reserve.
         [[nodiscard]] size_t LooseCount() const noexcept {
             return _loose.size();
         }
-        /// Tiles of the dead wall (14 for a full wall; it never changes during a hand).
+        /// Tiles of the dead wall; it never changes during a hand.
         [[nodiscard]] size_t DeadWallSize() const noexcept {
             return _dead.size();
         }
@@ -108,15 +100,13 @@ namespace BECore::Mahjong {
             return LiveCount() + LooseCount() + DeadWallSize();
         }
 
-        /// The loose reserve, front first (the tile `DrawLoose` takes next).
         [[nodiscard]] const Vector<Tile>& LooseTiles() const noexcept {
             return _loose;
         }
-        /// The dead wall in draw order; for inspection only, nothing takes from it.
+        /// For inspection only, nothing takes from the dead wall.
         [[nodiscard]] const Vector<Tile>& DeadWall() const noexcept {
             return _dead;
         }
-        /// The live tiles still to be drawn, in draw order.
         [[nodiscard]] Vector<Tile> LiveTiles() const {
             return Vector<Tile>(_live.begin() + _liveBegin, _live.begin() + _liveEnd);
         }
@@ -137,8 +127,8 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief Builds the wall of a hand: shuffles the tile set (136 tiles, 144 with `settings.flowers`), lays it in the ring (four sides
-     *        of `StacksPerSide` stacks), rolls the break and returns the wall in draw order from the break.
+     * @brief Builds the wall of a hand: shuffles the tile set, lays it in the ring, rolls the break and returns the wall in draw order
+     *        from the break.
      *
      * The rolls come from `rng` in a fixed order: the shuffle, then East's 2d6, then the owner's 2d6 (`BreakIndex`). `east` is the
      * seat of the dealer; it only names the seat whose wall is broken (`GetBreak().seat`). The same seed gives the same wall.

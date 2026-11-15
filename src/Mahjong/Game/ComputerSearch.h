@@ -50,24 +50,23 @@ namespace BECore::Mahjong {
     /// Where a tool takes the worlds of a run from instead of `SampleWorld`: the world for `view` drawn with the world's own rng, or
     /// nullopt for a world that cannot be made (the run drops it). It is called once per world, possibly on several threads at once
     /// (`PlayWorld` is const), so it must be pure: no shared state it writes, nothing but `view` and the rng it is given.
-    /// **Only the arena's oracle players give one** (they know what a player may not, `../Arena/CLAUDE.md`); no level of `ComputerLevel`
-    /// makes a run that has one, and `ComputerSearchTest` pins that.
+    /// **Only the arena's oracle players give one** (they know what a player may not: `ArenaOracle`, `../Arena/CLAUDE.md`); no level
+    /// makes a run that has one.
     using WorldSource = std::function<Optional<HandModel>(const TableView& view, MahjongRng& rng)>;
 
     /**
      * @brief A search decision as a resumable object: `Step()` plays one rollout, `Result()` is the answer when `Done()`.
      *
      * Made only by `BeginTurnSearch` / `BeginClaimSearch`, which draw the one number from the player's rng, or by `BeginSearchOver`
-     * (a tool's own list of actions and base seed, no rng); after that the run holds
-     * copies only (the view, the candidates, the margin, the base seed, the values so far) and touches no rng, session, model or scene,
-     * so it can be stepped on another thread and dropped with nothing changed. A step is candidate `i` of world `w`; the world is
-     * sampled when `i` is 0. A world that cannot be sampled, or one whose rollout the model refuses, is skipped whole in the step that
-     * finds it. `SearchTurnAction` is "begin, step to the end", so the answer in the background is the one computed at once.
+     * (a tool's own list of actions and base seed, no rng); after that the run holds copies only and touches no rng, session, model
+     * or scene, so it can be stepped on another thread and dropped with nothing changed. A step is candidate `i` of world `w`; the
+     * world is sampled when `i` is 0. A world that cannot be sampled, or one whose rollout the model refuses, is skipped whole.
+     * `SearchTurnAction` is "begin, step to the end", so the answer in the background is the one computed at once.
      *
-     * The other way to play it: the worlds are independent, so a tool may play them in any order on any threads (`PlayWorld`) and hand
-     * them back in order (`Finish`), or give a `WorldLoop` to `RunWorlds`. `Game/` starts no thread; the loop is the tool's. Every
-     * number is a function of the base seed and the index of the world, and the sums run in world order, so the answer and the
-     * counters are the stepped run's whatever the order and the thread count.
+     * The worlds are independent, so a tool may play them in any order on any threads (`PlayWorld`) and hand them back in order
+     * (`Finish`), or give a `WorldLoop` to `RunWorlds`. `Game/` starts no thread; the loop is the tool's. Every number is a function
+     * of the base seed and the index of the world, and the sums run in world order, so the answer is the stepped run's whatever the
+     * order and the thread count.
      */
     class SearchRun {
     public:
@@ -149,12 +148,11 @@ namespace BECore::Mahjong {
      * @brief The search on the own turn (`ChooseTurnAction` calls it after `DeclareWin`): the Normal choice is played against the
      *        other candidates in `profile.searchWorlds` sampled worlds, and replaced only by a candidate that is clearly better.
      *
-     * Each world is `SampleWorld(view, ...)`; the candidate is applied in it and four Normal players (`kNormalProfile`) play the hand
-     * to its end; the value is the seat's points (`deltas` of `SettleHand`). Every candidate is played on the same worlds with the same
-     * rollout seeds (common random numbers) and is compared by the paired difference to the Normal choice: the best candidate wins
-     * when its mean advantage is above 0 and above `profile.searchMargin` tenths of the standard error of the difference (a margin
-     * above 0 also needs a spread to measure, so two worlds at least). The baseline is the Normal choice by the profile with the search
-     * off, made on a copy of `rng`.
+     * Each world is `SampleWorld(view, ...)`; the candidate is applied in it and four Normal players play the hand to its end; the
+     * value is the seat's points (`deltas` of `SettleHand`). Every candidate is played on the same worlds with the same rollout seeds
+     * and is compared by the paired difference to the Normal choice: the best candidate wins when its mean advantage is above 0 and
+     * above `profile.searchMargin` tenths of the standard error of the difference (a margin above 0 needs a spread to measure, so two
+     * worlds at least). The baseline is the Normal choice by the profile with the search off, made on a copy of `rng`.
      *
      * Draws exactly one number from `rng` when it searches (two candidates at least) and nothing otherwise; when no world can be
      * sampled the answer is the Normal choice, after that one draw. `nullopt` means "answer as Normal does" with nothing drawn: the

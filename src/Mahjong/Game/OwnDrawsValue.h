@@ -26,9 +26,9 @@ namespace BECore::Mahjong {
 
     /**
      * The chance, in thousandths, that another seat wins in one round (the three other seats act once), by the number of the other seats
-     * that have declared the calling hand (0..3). Measured by `BagiMahjongArena --table-stats --first 4000 --seeds 1000 --jobs 14` (four Normal
-     * seats, Release): the first column of the table, rounded. `docs/own-draws-ev.md` says what the table shows beyond round 1: the number of
-     * declared opponents grows during the horizon, so the survival after two rounds is lower than `(1 - h)^2`.
+     * that have declared the calling hand (0..3). Measured with the arena's `--table-stats` (`docs/own-draws-ev.md`, "The constants and
+     * the command that reproduces them"): the number of declared opponents grows during the horizon, so the survival after two rounds
+     * is lower than `(1 - h)^2`.
      */
     inline constexpr int kOpponentWinPerRoundPermille[kSeatCount] = {7, 188, 336, 475};
 
@@ -38,9 +38,8 @@ namespace BECore::Mahjong {
         int loser = 0;
     };
 
-    /// The winner's score and the standing score of a seat that did not win, measured by the same command (the means of the rounded scores
-    /// over the won hands, 45.5 and 9.2 pooled, rounded): East and the other seats do not differ significantly (47.9 +- 4.1 against 44.5 +-
-    /// 2.0 for a winner, 9.4 +- 1.0 against 9.1 +- 0.4 standing), so one pair serves both.
+    /// The winner's score and the standing score of a seat that did not win, measured by the same command (`docs/own-draws-ev.md`):
+    /// East and the other seats do not differ significantly, so one pair serves both.
     inline constexpr TypicalScores kTypicalScoresEast{45, 9};
     inline constexpr TypicalScores kTypicalScoresOther{45, 9};
 

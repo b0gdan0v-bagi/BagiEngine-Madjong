@@ -8,9 +8,8 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// Normal's answer on `view` by `profile`; a search decision is handed back, given `source` for its worlds when there is one, and
-        /// its worlds are played through `worlds`, or one by one when there is no loop (the same draws and the same answer as the plain
-        /// chooser).
+        /// Normal's answer by `profile`; a search decision gets `source` for its worlds when there is one, and plays them through `worlds`
+        /// or one by one (the same draws and the same answer as the plain chooser).
         HandAction AskNormal(const TableView& view, MahjongRng& rng, const LevelProfile& profile, const WorldLoop* worlds, WorldSource source = {}) {
             SearchHandoff handoff;
             HandAction action = HandAction::MakePass();
@@ -44,7 +43,7 @@ namespace BECore::Mahjong::Arena {
             return handoff.run->Result();
         }
 
-        /// The kinds that complete the concealed tiles of a declared seat other than `seat`, in the real hands.
+        /// The kinds that complete the real concealed tiles of a declared seat other than `seat`.
         TileCounts DeclaredWinningKinds(const HandModel& hand, Seat seat) {
             TileCounts wins{};
             for (Seat other = 0; other < kSeatCount; ++other) {

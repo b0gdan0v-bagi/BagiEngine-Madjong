@@ -6,22 +6,19 @@
 namespace BECore::Mahjong {
 
     /**
-     * The card of the coach (the panel `CoachCard` of the node `HintsWhy`): one table in the middle of the wall ring that says, in the mode
-     * Coach, either the advice of the viewer's table with its numbers (`MakeAdviceCard`) or the note of the last differing move
-     * (`MakeNoteCard`), with the tally of the coach under both. Plain C++ over an `Explanation` or a `CoachNote`, no scene: the numbers
-     * are those of the chooser (`Game/ComputerExplain.h`, `JudgeMove`), nothing is computed again, so no card knows more than the view.
+     * The card of the coach (the panel `CoachCard` of the node `HintsWhy`): in the mode Coach, either the advice of the viewer's table
+     * with its numbers (`MakeAdviceCard`) or the note of the last differing move (`MakeNoteCard`), with the coach's tally under both.
+     * Plain C++ over an `Explanation` or a `CoachNote`, no scene: the numbers are those of the chooser (`Game/ComputerExplain.h`,
+     * `JudgeMove`) and nothing is computed again, so no card knows more than the view.
      *
-     * The card is a title (the sentence of the advice; a chow by its kind only), a head row (the steps to a ready hand now), at most `kMaxCardRows` rows of moves
-     * (who, the tiles as pictures, a word for the kind, the steps to a ready hand after the move, the unseen tiles that help) and at most
-     * `kMaxCardFooter` lines under them (why, in words, then the tally). The words are keys `hints.card.*`, `hints.why.*` and `coach.*` of
-     * `config/UIStrings.xml`; a number never takes a plural form.
+     * The words are keys `hints.card.*`, `hints.why.*` and `coach.*` of `config/UIStrings.xml`; a number never takes a plural form.
      */
 
-    /// The most rows of moves: the advice and the two alternatives of `Explanation`, or the advice and the person's move of a note.
+    /// The advice and the two alternatives of `Explanation`, or the advice and the person's move of a note.
     inline constexpr size_t kMaxCardRows = 3;
-    /// The most tile pictures of one row: the three tiles of a chow.
+    /// The three tiles of a chow.
     inline constexpr size_t kMaxCardTiles = 3;
-    /// The most lines under the rows, the tally included.
+    /// The lines under the rows (why, then the tally).
     inline constexpr size_t kMaxCardFooter = 2;
 
     /// Whose move a row is: the computer's choice, one of the next best, or the person's own (only in a note).
@@ -50,7 +47,7 @@ namespace BECore::Mahjong {
         Vector<String> footer;
     };
 
-    /// The card of the advice of `explained` on `view` (`ExplainAdviceFor(view)`), with `tally` (`CardTallyText`, maybe empty) as the last line.
+    /// The card of the advice `explained` (`ExplainAdviceFor(view)`) on `view`; `tally` (`CardTallyText`, maybe empty) is the last line.
     [[nodiscard]] HintCard MakeAdviceCard(const UIStrings& strings, const TableView& view, const Explanation& explained, StringView tally);
 
     /// The card of a coach's note: the computer's choice and the person's move with the numbers of `JudgeMove`, `tally` as the last line.

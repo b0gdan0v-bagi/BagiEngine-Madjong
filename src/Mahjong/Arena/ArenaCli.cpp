@@ -24,8 +24,8 @@ namespace BECore::Mahjong::Arena {
         constexpr char kKnobMarker = '=';
         constexpr char kLevelMarker = ':';
 
-        /// The value of `text` as a whole number of type `T`; nullopt when anything else is in it (a `+`, a space, a letter, too large;
-        /// a `-` only for an unsigned `T`: a signed one reads it and `ValidateArenaConfig` refuses the number).
+        /// Nullopt when anything else is in `text` (a `+`, a space, a letter, too large). A `-` is a parse error only for an unsigned `T`: a
+        /// signed one reads it and `ValidateArenaConfig` refuses the number.
         template <typename T>
         Optional<T> ParseWhole(StringView text) {
             T value{};
@@ -37,8 +37,7 @@ namespace BECore::Mahjong::Arena {
             return value;
         }
 
-        /// The players of `--focus`: the parts between commas, where a part that sets a knob (`name=value`, no colon) continues the
-        /// spec before it.
+        /// A part that sets a knob (`name=value`, no colon) continues the spec before it, so `easy:a=1,b=2,normal` is two players.
         std::expected<Vector<ArenaPlayer>, String> ParseFocusList(StringView list) {
             Vector<String> specs;
             size_t begin = 0;
@@ -75,7 +74,7 @@ namespace BECore::Mahjong::Arena {
             return *number;
         }
 
-        /// The threads of `--jobs N`: N from 1 to `kMaxJobs`, and 0 for the hardware concurrency (at least 1, at most `kMaxJobs`).
+        /// 0 is the hardware concurrency.
         std::expected<int, String> ParseJobs(StringView value) {
             const Optional<uint32_t> number = ParseWhole<uint32_t>(value);
             if (!number.has_value() || *number > static_cast<uint32_t>(kMaxJobs)) {
@@ -87,7 +86,6 @@ namespace BECore::Mahjong::Arena {
             return static_cast<int>(*number);
         }
 
-        /// The refusal of an option that plays seeds when the program reads logs.
         String NotWithLogs(StringView option, StringView why) {
             return Format("{} cannot be used with {}: {}", option, kLogsOption, why);
         }

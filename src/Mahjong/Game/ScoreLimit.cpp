@@ -6,11 +6,11 @@ namespace BECore::Mahjong {
 
         using TilePredicate = bool (*)(Tile);
 
-        /// The rank of the winning tile of the two limit hands that name a tile: 1 dot as the last tile, 5 dots as a loose tile.
+        /// The rank of the winning tile of the two limit hands that name a tile.
         constexpr int kLastTileLimitRank = 1;
         constexpr int kLooseTileLimitRank = 5;
 
-        /// Every tile the seat holds, per kind: the concealed tiles and the tiles of the melds (a chow holds its three, a kong four).
+        /// Every tile the seat holds, per kind, the melds' too.
         TileCounts HeldTiles(const PlayerHand& hand) noexcept {
             TileCounts held = CountTiles(hand.concealed);
             const TileCounts inMelds = CountMeldTiles(hand.melds);
@@ -47,7 +47,7 @@ namespace BECore::Mahjong {
 
         // ----- hands made of sets: any complete reading that has them -----
 
-        /// Four pungs or kongs, none open, of one suit (no honours, so the pair is of the suit too).
+        /// None open, of one suit: no honours, so the pair is of the suit too.
         bool HasConcealedPungsOneSuit(const Vector<Reading>& readings, const PlayerHand& hand) {
             if (!SummariseSuits(hand).IsOneSuitNoHonours()) {
                 return false;
@@ -66,7 +66,6 @@ namespace BECore::Mahjong {
             return eastl::any_of(readings.begin(), readings.end(), [](const Reading& reading) { return IsCompleteReading(reading) && CountSets(reading, IsGroupSet) == kSetsInHand; });
         }
 
-        /// A pung or kong of each dragon, and a pung or kong and the pair of one suit.
         bool IsBigThreeDragons(const Reading& reading) noexcept {
             if (!IsCompleteReading(reading) || CountSets(reading, IsDragonGroup) != kDragonCount) {
                 return false;
@@ -84,7 +83,6 @@ namespace BECore::Mahjong {
             return false;
         }
 
-        /// A pung or kong of each wind and a pair.
         bool IsBigFourWinds(const Reading& reading) noexcept {
             if (!IsCompleteReading(reading)) {
                 return false;

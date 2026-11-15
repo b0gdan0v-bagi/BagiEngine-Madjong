@@ -30,8 +30,8 @@ namespace BECore::Mahjong {
             return static_cast<uint32_t>((seed ^ (seed >> kHalfSeedBits)) & std::numeric_limits<uint32_t>::max());
         }
 
-        /// What an answer may say of an applied action to every seat: the action as the table shows it. A concealed kong names no
-        /// tile (the others only count it) and a pass says nothing (it would tell that the seat could claim): `nullopt`.
+        /// The answer of an action is public: a concealed kong names no tile, and a pass says nothing (`nullopt`) because it would tell
+        /// that the seat could claim.
         Optional<Json> PublicActionToJson(const HandAction& action) {
             switch (action.kind) {
                 case ActionKind::Pass:

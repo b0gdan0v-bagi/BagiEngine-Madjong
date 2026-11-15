@@ -45,11 +45,11 @@ namespace BECore::Mahjong {
             /// The upright size of a discarded tile of the seat (a side seat's block is turned, the tiles keep this size).
             float discardTileW = 0.0f;
             float discardTileH = 0.0f;
-            /// The hand is spread over its capacity (the portrait table): tile i lies at i times `(capacity - tileW) / (tiles - 1)`.
+            /// The hand is spread over its capacity (the portrait table) instead of laid side by side.
             bool spreadHand = false;
         };
 
-        /// The offsets of one strip: as many as the most a strip holds (four kongs) without the heap, more only for an input past the rules
+        /// Sized for the most a strip holds (four kongs), so no heap; more only for an input past the rules.
         using StripOffsetList = SmallVector<float, kMaxMeldTiles>;
 
         /// The offsets along the strip's axis of `groups` of tiles (`kMeldGap` between two groups), squeezed to the capacity.
@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
             return meld.kind == MeldKind::Kong ? kMeldTilesPerKong : kMeldTilesPerSet;
         }
 
-        /// Where the layout is built (design units) and how it is mapped into the view.
+        /// Maps the layout, built in design units, into the view.
         struct ViewFit {
             float scale = 1.0f;
             float offsetX = 0.0f;
@@ -98,8 +98,8 @@ namespace BECore::Mahjong {
             }
         };
 
-        /// `wing` is how far the table lies from the left edge of the design of the view's shape (the wide design holds the landscape table in
-        /// its middle, a wing from its left edge).
+        /// `wing` is how far the table lies from the left edge of the design of the view's shape (the wide design holds the landscape table
+        /// in its middle).
         ViewFit FitView(float viewWidth, float viewHeight, float wing) {
             const TableShape shape = ShapeOfView(viewWidth, viewHeight);
             ViewFit fit;
@@ -113,8 +113,7 @@ namespace BECore::Mahjong {
             layout.slots.push_back(TileSlot{fit.MapRect(rect), role, seat, index, part, claimEdge, rotation});
         }
 
-        /// The hand in input order, one plain row; a spread one (the portrait table) puts tile `i` at `i` times the pitch that makes 14
-        /// tiles span the strip, a longer hand squeezes to the strip.
+        /// The hand in input order, one row; a spread one keeps the pitch of a full hand of 14, whatever the count.
         void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
             const int groups[] = {count};
             StripOffsetList offsets = StripOffsets(geometry.hand, groups);
@@ -132,7 +131,7 @@ namespace BECore::Mahjong {
         /// The edge of a meld tile that faces the seat the tile came from, for an owner at screen position `position`; `offset` is
         /// `Offset(owner, from)`: 1 the next seat, 2 across, 3 the previous seat.
         Edge FacingEdge(int position, int offset) noexcept {
-            // rows: the owner at the bottom, right, top, left; columns: the source is the next seat, across, the previous seat
+            // rows: the owner at position 0..3; columns: the source is `offset` 1..3
             constexpr Edge kEdges[kSeatCount][3] = {
                 {Edge::Right, Edge::Top, Edge::Left},
                 {Edge::Top, Edge::Left, Edge::Bottom},
@@ -151,7 +150,7 @@ namespace BECore::Mahjong {
                 const int part = meld.claimed.Rank() - meld.first.Rank();
                 return meld.claimed.IsSuit() && part >= 0 && part < kMeldTilesPerSet ? part : -1;
             }
-            // a pung or kong: the claimed tile lies on the side of the seat it came from: the previous seat left, across middle, next right
+            // a pung or kong: the claimed tile lies on the side of the seat it came from (previous seat left, across middle, next right)
             return kSeatCount - Offset(owner, meld.from) - 1;
         }
 
@@ -180,11 +179,9 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The tile `cell` of a seat's pile, `rows` rows long, as laid in its block. The bottom and top seats lie in rows from left to right,
-        /// the next row below. A side seat's block is turned: a row runs along the screen's vertical the way that seat reads it (the left
-        /// seat top to bottom, the right seat bottom to top) and the next row lies toward the middle of the table, row 0 at the outer side.
-        /// `rowPitch` is the distance between two rows (along the horizontal for a side seat), squeezed when the pile is longer than the
-        /// block holds.
+        /// The tile `cell` of a seat's pile as laid in its block. A side seat's block is the block turned: a row runs along the screen's
+        /// vertical the way that seat reads it (left top to bottom, right bottom to top), row 0 at the outer side and the next row toward the
+        /// middle. `rowPitch` (along the horizontal for a side seat) is squeezed when the pile is longer than the block holds.
         Rect DiscardRect(const SeatGeometry& geometry, int position, int cell, float rowPitch) {
             const float tileW = geometry.discardTileW;
             const float tileH = geometry.discardTileH;
@@ -200,8 +197,8 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The distance between two rows of a pile of `rows` rows in a block whose rows run along `rowSpan` (the block's extent across its
-        /// rows): a tile's thickness while the rows fit, else the rows squeezed to the span.
+        /// The distance between two rows: a tile's thickness while the rows fit in `rowSpan` (the block's extent across its rows), else
+        /// the rows squeezed to it.
         float DiscardRowPitch(int rows, float rowSpan, float tileThickness) {
             return rows <= 1 ? tileThickness : eastl::min(tileThickness, (rowSpan - tileThickness) / static_cast<float>(rows - 1));
         }
@@ -214,9 +211,8 @@ namespace BECore::Mahjong {
                     ++pileOfSeat[seat];
                 }
             }
-            // A pile of more rows than the block holds squeezes its rows together; the pitch is the same for the whole pile of a seat.
-            // A row is as thick as a tile is high, upright or turned: the thickness is `discardTileH` of the seat's geometry on the
-            // screen's vertical for the bottom and top seats and on its horizontal for the side seats.
+            // One pitch for the whole pile of a seat; a row is as thick as a tile is high, on the screen's vertical for the bottom and top
+            // seats and on its horizontal for the side seats.
             Array<float, kSeatCount> rowPitchOfSeat{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;
@@ -237,8 +233,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The cell `n` along the ring, clockwise from the top left corner: the top side, the right, the bottom, the left. The ring is
-        /// `ring`, its cells squares of side `stack`.
+        /// The cell `n` along the ring, clockwise from the top left corner, its cells squares of side `stack`.
         Rect WallCellIn(const Rect& ring, float stack, int n) {
             constexpr int kRight = kWallRingColumns - 1;
             constexpr int kBottom = kWallRingRows - 1;
@@ -335,7 +330,7 @@ namespace BECore::Mahjong {
                 continue;
             }
             const Rect& rect = slot.rect;
-            // the margin under the tiles belongs to the strip: kEdge design units, at the scale the layout was fitted to
+            // the margin under the tiles belongs to the strip, at the scale the layout was fitted to
             const float tileBottom = rect.y + rect.h + kEdge * (rect.h / kViewerHandTileH);
             left = any ? eastl::min(left, rect.x) : rect.x;
             right = any ? eastl::max(right, rect.x + rect.w) : rect.x + rect.w;
@@ -355,8 +350,7 @@ namespace BECore::Mahjong {
         return nearest;
     }
 
-    // The layout from a spec: the zones are data, the tiles are solved (`TableSolver.h`), and the helpers above that know no size lay the
-    // slots out. What follows has no constant of its own except the ones the rules give.
+    // The layout from a spec: the zones are data, the tiles are solved (`TableSolver.h`); the helpers above know no size.
 
     namespace {
 
@@ -389,8 +383,7 @@ namespace BECore::Mahjong {
             return Strip{solved.x, solved.y, solved.slotW, solved.slotH, solved.vertical, solved.capacity};
         }
 
-        /// The geometry of the seat at screen position `position` from its zones; `profileTileW` is the width of the phone profile's hand tile
-        /// (0 when the seat has none).
+        /// The geometry of the seat at screen position `position` from its zones; `profileTileW` is the phone profile's hand tile (0: none).
         SeatGeometry GeometryFromZones(const SeatSpec& seat, int position, const ZoneDesign& design, float profileTileW) {
             const bool vertical = IsSideSeat(position);
             SeatGeometry geometry;
@@ -399,7 +392,7 @@ namespace BECore::Mahjong {
             geometry.spreadHand = seat.hand.spread;
             geometry.melds = StripOfSolved(SolveZoneStrip(seat.melds, design, vertical, kMaxMeldTiles, kMaxMelds - 1, 0.0f));
             geometry.bonus = StripOfSolved(SolveZoneStrip(seat.bonus, design, vertical, kMaxBonusTiles, 0, 0.0f));
-            // The zone is the block, whatever the tile that fills it: a pile of more rows than the tile leaves squeezes inside the zone.
+            // The zone is the block whatever fills it: a longer pile squeezes inside it.
             const Rect block = SnapZone(seat.discards.rect, design.width, design.height);
             const SolvedBlock solvedBlock = SolveDiscardBlock(block, vertical, seat.discards.rows);
             geometry.discardX = block.x;
@@ -412,7 +405,7 @@ namespace BECore::Mahjong {
             return geometry;
         }
 
-        /// The tile width of the viewer's hand zone as it is laid out for the desktop, and the widest the phone override's hand zone solves.
+        /// The viewer's hand tile at the desktop, and the widest tile the phone override's hand zone solves.
         float DesktopHandTileW(const ShapeSpec& zones, const ZoneDesign& design) {
             return SolveZoneStrip(zones.seats[0].hand, design, false, kMaxConcealedTiles, 0, 0.0f).tileW;
         }
@@ -423,8 +416,8 @@ namespace BECore::Mahjong {
             return SolveZoneStrip(widest, design, false, kMaxConcealedTiles, 0, 0.0f).tileW;
         }
 
-        /// The zones of a shape with the design they are fractions of and the fit of that design into a view: what every zone and region is
-        /// built with. `zones` is null for a shape the spec does not describe.
+        /// The zones of a shape with the design they are fractions of and the fit of that design into a view. `zones` is null for a shape
+        /// the spec does not describe.
         struct ShapeFrame {
             const ShapeSpec* zones = nullptr;
             ZoneDesign design;
@@ -444,8 +437,7 @@ namespace BECore::Mahjong {
             return frame;
         }
 
-        /// The free regions of the frame's shape fitted like its zones (snapped to a quarter unit by edges, then mapped into the view), into
-        /// `out`, which keeps its capacity.
+        /// The free regions of the frame's shape fitted like its zones, into `out`, which keeps its capacity.
         void FitFreeZones(const ShapeFrame& frame, Vector<FreeZone>& out) {
             out.clear();
             if (frame.zones == nullptr) {
@@ -468,7 +460,7 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("RebuildTableLayout");
         Vector<TileSlot> slots = eastl::move(layout.slots);
         Vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
-        slots.clear();  // the capacity stays: a table drawn every frame builds its slots without the heap
+        slots.clear();  // the capacity stays: no heap in a steady frame
         freeRegions.clear();
         layout = TableLayout{};
         layout.slots = eastl::move(slots);
@@ -562,13 +554,11 @@ namespace BECore::Mahjong {
         layout.viewHeight = viewHeight;
     }
 
-    // The check of a spec: the worst table built from it, for every shape, and the properties the table must have.
-
     namespace {
 
-        /// How far two rectangles may overlap (or lie short of a gap) before it counts, in design units: the float noise of a scaled layout.
+        /// The float noise of a scaled layout, in design units: an overlap or a short gap below it does not count.
         constexpr float kCheckTolerance = 0.01f;
-        /// The pile the worst table holds: longer than any hand leaves (136 tiles, 52 in the hands at the least).
+        /// The pile the worst table holds: longer than any real one, so the squeeze is exercised.
         constexpr int kCheckedPileSize = 100;
         constexpr size_t kPhoneWidthSteps = 3;
 
@@ -576,7 +566,7 @@ namespace BECore::Mahjong {
             return EnumUtils<TableShape>::ToString(shape);
         }
 
-        /// Every zone at what the rules allow it to hold, the 144-tile wall.
+        /// Every zone at what the rules allow it to hold, the whole wall included.
         TableInput WorstCaseInput(Seat viewer, const TableProfile& profile) {
             TableInput input;
             input.viewer = viewer;
@@ -595,7 +585,7 @@ namespace BECore::Mahjong {
             return input;
         }
 
-        /// The messages of one check, each once (the same table is checked for every viewer).
+        /// Each message once: the same table is checked for every viewer.
         class CheckReport {
         public:
             void Add(const String& message) {
@@ -638,7 +628,7 @@ namespace BECore::Mahjong {
             Rect rect;
         };
 
-        /// The thing a layout names `position` for: a slot's seat for the viewer.
+        /// Messages name a seat by its screen position, which is what a spec edit sees.
         int PositionOf(const TableLayout& layout, Seat seat) noexcept {
             return SeatPosition(layout.viewer, seat);
         }
@@ -678,7 +668,6 @@ namespace BECore::Mahjong {
                     }
                 }
             }
-            // the pile and the wall stay in the zones that are made for them
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role == SlotRole::DiscardTile && !Contains(layout.zones.discards[slot.seat], slot.rect)) {
                     report.Add(Format("{}: the pile of position {} leaves its discard block", tag, PositionOf(layout, slot.seat)));
@@ -686,7 +675,7 @@ namespace BECore::Mahjong {
                     report.Add(Format("{}: a wall stack leaves the wall ring", tag));
                 }
             }
-            // the plates: over no row, no block, no other plate, and `kPlatePadding` clear of the blocks and the ring
+            // a plate overlaps nothing and keeps `kPlatePadding` clear of the blocks and the ring (not of the rows)
             for (int position = 0; position < kSeatCount; ++position) {
                 const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
                 for (const NamedRect& solid : solids) {
@@ -704,8 +693,8 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The free regions of the shape of `layout` (built from `spec`): inside the view, and for a shape with zones of its own clear of
-        /// every tile, discard block, wall ring and plate of the worst-case table (a `like` shape is the same table moved).
+        /// The free regions are inside the view and, for a shape with zones of its own, clear of the whole worst-case table (a `like` shape
+        /// is the same table moved, so the other's check holds).
         void CheckFreeRegions(const TableLayout& layout, const TableLayoutSpec& spec, const String& tag, bool clearOfTable, CheckReport& report) {
             Vector<FreeZone> regions;
             FitFreeZones(FrameOf(spec, layout.shape, layout.viewWidth, layout.viewHeight), regions);
@@ -743,7 +732,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The tiles of the zones of one seat (by screen position) as they solve: too small, or under the minimum the zone asks.
+        /// The zones of one seat (by screen position) as they solve: too small, or under the `minTileW` the zone asks.
         void CheckSolvedSeat(const SeatSpec& seat, int position, const ZoneDesign& design, const String& tag, CheckReport& report) {
             const bool vertical = IsSideSeat(position);
             struct Row {
@@ -812,7 +801,7 @@ namespace BECore::Mahjong {
                 report.Add(Format("{}: the spec does not describe it", tag));
                 continue;
             }
-            // a shape that is like another is the same zones moved: the table must still lie inside its own view, the rest is the other's
+            // a `like` shape is the other's zones moved: only the table inside its own view is checked
             const bool own = !spec.Shape(shape).like;
             if (own) {
                 CheckSolvedShape(*zones, ZoneDesign{DesignWidthOf(shape), DesignHeightOf(shape)}, tag, report);

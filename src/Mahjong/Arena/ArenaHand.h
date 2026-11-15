@@ -8,15 +8,15 @@
 
 namespace BECore::Mahjong::Arena {
 
-    /// The seed of the random seats' shared rng is `seed * kRandomSeatSeedFactor + kRandomSeatSeedOffset`: the seeding of
-    /// `ComputerStrengthTest`, kept so that the arena plays its hands and reaches its numbers. Changing either moves every random seat.
+    /// The seeding of the random seats' shared rng, as in `ComputerStrengthTest`; changing either moves every random seat and with it
+    /// the reference numbers.
     inline constexpr uint32_t kRandomSeatSeedFactor = 13;
     inline constexpr uint32_t kRandomSeatSeedOffset = 5;
 
     /// The four players of a hand, by seat.
     using ArenaPlayers = Array<ArenaPlayer, kSeatCount>;
 
-    /// What happened in one hand of the arena. Plain data.
+    /// What happened in one hand of the arena.
     struct HandRecord {
         ResultKind kind = ResultKind::Drawn;
         /// `kNoSeat` for a drawn hand.
@@ -25,7 +25,6 @@ namespace BECore::Mahjong::Arena {
         SeatScores scores{};
         /// The change of each seat's points (`HandSettlement::deltas`; zeros for a drawn hand).
         SeatScores deltas{};
-        /// The East seat of the hand (`seed % kSeatCount`).
         Seat east = 0;
         /// How the hand was won (meaningful when `winner` is a seat).
         WinSource source = WinSource::SelfDraw;
@@ -37,32 +36,26 @@ namespace BECore::Mahjong::Arena {
         Vector<ScoreKind> winKinds;
         /// Whether the seat declared the calling hand in this hand.
         Array<bool, kSeatCount> declared{};
-        /// The actions each seat chose (a seat decides once per action it takes).
+        /// The actions each seat chose.
         Array<int, kSeatCount> decisions{};
-        /// The wall-clock time each seat spent choosing, in nanoseconds; filled only when timing was asked for (it is the one number
-        /// that is not a function of the arguments).
+        /// Wall-clock time spent choosing; filled only when timing was asked for, the one field that is not a function of the arguments.
         Array<int64_t, kSeatCount> nanoseconds{};
     };
 
-    /// Called before each action of a hand with the model as it stands and the seat that is about to act (`PlayArenaHand`'s observer);
-    /// it reads only, so the hand and its record are the same with or without one.
+    /// Called before each action with the model as it stands; it reads only, so the hand and its record are the same with or without
+    /// one.
     using HandObserver = std::function<void(const HandModel& hand, Seat actor)>;
 
     /**
      * @brief Plays the hand of `seed` with `players` on the four seats and says what happened.
      *
-     * The conventions of `ComputerStrengthTest`, so the old numbers come out: the wall is `MakeWall(MahjongRng(seed), MahjongSettings{},
-     * east)` with `east = seed % 4`, the round wind is East, the next actor is `ComputerTable::NextActor` (the first pending seat of a
-     * window); a computer seat `i` is seeded `SeatSeed(seed, i)` and plays by its profile exactly as `ComputerPlayer` does; the random
-     * seats share one `MahjongRng(seed * kRandomSeatSeedFactor + kRandomSeatSeedOffset)` and choose by `ChooseSeekWin`; the results are `SettleHand` of the finished hand.
+     * Follows the conventions of `ComputerStrengthTest` (the wall, `east = seed % 4`, East round wind, `ComputerTable::NextActor`, the
+     * seat seeds, one shared rng and `ChooseSeekWin` for the random seats), so the old numbers come out: do not "tidy" any of them.
      * Deterministic: the same arguments give the same record (the nanoseconds apart, which are measured only with `timing`).
      *
-     * `worlds` is how a search decision plays its worlds (`SearchRun::RunWorlds`): null plays them at once on the calling thread, a loop
-     * (`WorldThreads::AsLoop`) may play them on several. The record is the same either way; the time of a decision (`timing`) is its
-     * wall time, its worlds included.
-     *
-     * A non-null `observer` is called before every action (the table statistics of `ArenaTable.h` read the hand through it); it is outside the
-     * timed decision and changes nothing.
+     * `worlds` plays a search decision's worlds (`SearchRun::RunWorlds`): null on the calling thread, a loop possibly on several. The
+     * record is the same either way; the time of a decision is its wall time, its worlds included. The `observer` is outside the
+     * timed decision.
      *
      * A refused action, a computer seat with nothing to choose from or a hand that does not end is a defect and comes back as an error
      * text naming the seed and the seat; it is never swallowed.
@@ -70,7 +63,7 @@ namespace BECore::Mahjong::Arena {
     [[nodiscard]] std::expected<HandRecord, String> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false, const WorldLoop* worlds = nullptr,
                                                                   const HandObserver* observer = nullptr);
 
-    /// The most actions one hand may take before it counts as stuck (a hand is at most about 4 x 70).
+    /// The most actions one hand may take before it counts as stuck.
     inline constexpr int kArenaStepLimit = 2000;
 
 }  // namespace BECore::Mahjong::Arena

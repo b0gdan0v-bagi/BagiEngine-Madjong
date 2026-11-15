@@ -6,48 +6,40 @@
 
 namespace BECore::Mahjong::Analyzer {
 
-    /// The `version` of the JSON of one analysis. It grows when a field changes meaning or goes; a new field does not change it.
+    /// Grows when a field changes meaning or goes; a new field does not change it.
     inline constexpr int kAnalysisJsonVersion = 1;
 
-    /// The digits after the point of every number of the report (text and JSON).
+    /// Digits after the point of every number, text and JSON.
     inline constexpr int kReportPrecision = 2;
 
-    /// Where a position came from. All of it may be empty: a position nobody named is printed without a source line.
+    /// Where a position came from; all of it may be empty (no source line is printed then).
     struct PositionLabel {
-        /// The name of the log file as given on the command line, or the name of a hand-written text; empty = unnamed.
+        /// As given on the command line.
         String source;
-        /// A position from a log: the numbers of `LogPosition` (hand 1-based, action 0-based) and the action the log's player took.
-        /// `hand` 0 = not from a log.
+        /// The numbers of `LogPosition`; `hand` 0 means not from a log.
         int hand = 0;
         int actionIndex = 0;
         bool hasLogged = false;
         HandAction logged;
     };
 
-    /// The label of `position` of the log file `file`.
     [[nodiscard]] PositionLabel LabelOfLogPosition(StringView file, const LogPosition& position);
 
-    /// An action as short text: `discard 5p`, `discard 5p declare`, `win`, `kong 5p concealed`, `upgrade 5p`, `claim chow 3s-4s-5s`
-    /// (by `chowFirst`), `claim pung`, `claim kong`, `claim mahjong`, `pass`. The one place that writes an action for a person.
+    /// The one place that writes an action for a person (`discard 5p declare`, `claim chow 3s-4s-5s`, `pass`).
     [[nodiscard]] String ActionNotation(const HandAction& action);
 
     /**
-     * @brief The text of one analysis: the header, the position and the table of the actions, best EV first.
+     * @brief The text of one analysis: the header, the position (written from `view`, the view the analysis was made on) and a row
+     * per legal action, best EV first, `view.legal` order breaking a tie. Columns and notes: `docs/ev-analyzer.md`, "Reading the
+     * report". The header says the opponents are Normal bots and the numbers are not an equilibrium. A cell without a number is blank,
+     * never `nan`.
      *
-     * The header says in a few lines what the numbers are (opponents and play-on are Normal, hidden tiles are sampled uniformly, the
-     * points are this hand's, the worlds asked / played / dropped, the seeds, the interval rule, "not an equilibrium"). The position is
-     * written from `view`, which is the view the analysis was made on. The table has a row per legal action, sorted by the mean of the
-     * EV, highest first, the order of `view.legal` (the order of `analysis.rows`) breaking a tie, with the columns
-     * `action | EV | +- | vs best | +- | vs Normal | +- | note`. `note` names `best`, `Normal` and `logged` (the action `label` says
-     * the log's player took) and, only where the interval of a difference excludes 0, `worse than best`, `better than Normal` or
-     * `worse than Normal`. A cell without a number or without an interval is blank, never `nan`.
-     *
-     * Fixed-width columns, numbers with `kReportPrecision` digits and no locale: the same input gives the same bytes on every platform.
+     * Fixed-width columns, `kReportPrecision` digits and no locale: the same input gives the same bytes on every platform.
      */
     [[nodiscard]] String FormatAnalysisReport(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
 
     /**
-     * @brief The analysis as a JSON object.
+     * @brief The analysis as a JSON object (`kAnalysisJsonVersion`).
      *
      * ```
      * {"version", "source", "hand", "actionIndex"          the label (null when not from a log / unnamed)
@@ -58,13 +50,12 @@ namespace BECore::Mahjong::Analyzer {
      *  "actions": [{"action": ActionToJson, "text", "ev", "half", "vsBest": {"mean", "half", "significant"} | null,
      *                "vsNormal": {...} | null, "best", "normal", "logged"} ...]}
      * ```
-     * `actions` is in the order of the text (best EV first). `half` is null for a mean without an interval, `vsBest` / `vsNormal` are
-     * null on the row that has no difference to itself. Every number is rounded to `kReportPrecision` digits before it is stored, so the
-     * bytes do not depend on how a platform prints a double.
+     * `actions` is in the order of the text. `half` is null for a mean without an interval, `vsBest` / `vsNormal` on the row with no
+     * difference to itself. Numbers are rounded before they are stored, so the bytes do not depend on how a platform prints a double.
      */
     [[nodiscard]] Json AnalysisToJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
 
-    /// `AnalysisToJson` as one line (no spaces, no newline).
+    /// One line, no spaces.
     [[nodiscard]] String FormatAnalysisJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
 
 }  // namespace BECore::Mahjong::Analyzer

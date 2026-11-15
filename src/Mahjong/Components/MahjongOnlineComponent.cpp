@@ -237,7 +237,7 @@ namespace BECore::Mahjong {
         if (!_setupButtonChecked) {
             _setupButtonChecked = true;
             if (OnlineServerUrl().empty()) {
-                // No address of a server (the browser build without `webServer` in `MahjongOnlineConfig`): the button is not offered
+                // No server address (the browser build without `webServer` in `MahjongOnlineConfig`): the button is not offered
                 UICanvasComponent::SetElementVisibleByName(GetScene(), PoolString::Intern(kSetupOnlineButton), false);
             }
         }
@@ -249,7 +249,7 @@ namespace BECore::Mahjong {
 
     void MahjongOnlineComponent::Follow(MahjongGame& game) {
         if (_nicknameActive && (_nicknameClosing || !game.IsOptionsOpen())) {
-            // Stored by `Done` or Escape (the HUD heard that Escape in the same frame, so the pad is still open for it), or `Options` went away under it
+            // After `Done` or Escape (the HUD heard that Escape in the same frame and needs the pad still up), or `Options` went away under it
             _nicknameActive = false;
             _nicknameClosing = false;
         }
@@ -361,7 +361,7 @@ namespace BECore::Mahjong {
         }
         const StringView action = event.action.ToStringView();
         if (action == kOpenAction) {
-            // The button of `Setup`: under the panel, without `Setup` or with no server address it cannot be pressed, an event that says otherwise is out of date
+            // Such an event is out of date under the panel, without `Setup` or with no server address
             if (game->IsSetupOpen() && !game->IsOnlineOpen() && !OnlineServerUrl().empty()) {
                 game->OpenOnline();
                 Follow(*game);
@@ -404,7 +404,7 @@ namespace BECore::Mahjong {
                 StoreName(*game);
             }
         } else if (action == kHandsAction) {
-            // Only the two numbers the panel offers; client text is never parsed into another number
+            // Client text is never parsed into a number the panel does not offer
             if (const Optional<size_t> hands = ParseIndex(value); hands && (*hands == kFullMatchHands || *hands == kShortMatchHands)) {
                 _screens.SetHands(static_cast<int>(*hands));
             }
@@ -413,7 +413,6 @@ namespace BECore::Mahjong {
                 _screens.SetLevel(LevelNumber(*level));
             }
         } else if (action == kHintsAction) {
-            // Only the two ids the panel offers
             if (value == kHintsAllowedValue || value == kHintsOffValue) {
                 _screens.SetHintsAllowed(value == kHintsAllowedValue);
             }
@@ -443,12 +442,10 @@ namespace BECore::Mahjong {
         } else if (action == kRoomsAction) {
             _screens.ShowRooms(client, OnlineServerUrl());
         } else if (action == kVisibilityAction) {
-            // Only the two ids the panel offers
             if (value == kCodeValue || value == kOpenValue) {
                 _screens.SetPublic(value == kOpenValue);
             }
         } else if (action == kJoinListedAction) {
-            // The row is asked again of the list as it is now
             if (const Optional<size_t> row = ParseIndex(value); row && *row < static_cast<size_t>(OnlineScreens::kRoomsPerPage)) {
                 _screens.JoinRoom(client, OnlineServerUrl(), static_cast<int>(*row));
                 StoreName(*game);
@@ -617,10 +614,8 @@ namespace BECore::Mahjong {
         vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
         const OnlineRoomOptions* hosted = client.HostedOptions();
         vars.Set("onlineHostLine"_intern, StringView(hosted == nullptr ? String() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
-        // A guest reads the host's choice about hints from the lobby, on the one line under the title
         const Optional<bool> guestHints = lobby.hintsAllowed;
         vars.Set("onlineWaiting"_intern, StringView(Tr(strings, !guestHints ? kOnlineWaitHostKey : (*guestHints ? kOnlineWaitHostHintsAllowedKey : kOnlineWaitHostHintsOffKey))));
-        // The room: the title of the lobby while there is one, else the room `Return` would enter
         const String& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();
         vars.Set("onlineRoom"_intern, StringView(room));
         for (size_t seat = 0; seat < kSeatCount; ++seat) {
@@ -652,7 +647,6 @@ namespace BECore::Mahjong {
         SetItem(HintsRow, host);
         SetItem(OpenRow, host);
 
-        // One line under the title: the notice, else the status, else (in the lobby) who is waited for
         const bool notice = !_screens.NoticeKey().empty();
         const bool status = !notice && !_screens.StatusKey().empty();
         const OnlineStage stage = client.Stage();

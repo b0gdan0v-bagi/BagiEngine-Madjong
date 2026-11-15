@@ -5,11 +5,10 @@
 namespace BECore::Mahjong {
 
     /**
-     * The seat emblem atlas: one PNG of kEmblemColumns x kEmblemRows square cells, drawn by tools/make_emblems.py (CELL, COLUMNS, ROWS,
-     * DISC_RADIUS), which these numbers mirror; tests/EmblemSpritesTest.cpp compares them with the PNG header. Cell 0 is the person,
-     * cells 1..10 the computer of level 1..10 (the numeral is in the picture), then the turn ring and the calling ring. Every picture
-     * shares the centre of its cell: the emblem is a disc of kEmblemDiscRadius, the rings lie outside it (the turn ring solid, the
-     * calling ring dotted), so a ring cell drawn over the same rectangle as an emblem cell rings it. The rings are white: the table tints them.
+     * The seat emblem atlas: one PNG of square cells drawn by tools/make_emblems.py, which these numbers mirror (`EmblemSpritesTest`).
+     * Cell 0 is the person, then one cell per computer level, then the turn ring and the calling ring. Every picture shares the centre of
+     * its cell and the rings lie outside the emblem's disc, so a ring cell drawn over the same rectangle as an emblem cell rings it.
+     * The rings are white: the table tints them.
      */
     inline constexpr const char* kEmblemAtlasPath = "assets/emblems/emblems.png";
     inline constexpr int kEmblemColumns = 4;
@@ -17,7 +16,7 @@ namespace BECore::Mahjong {
     inline constexpr int kEmblemCellSize = 64;
     inline constexpr int kEmblemAtlasWidth = kEmblemColumns * kEmblemCellSize;
     inline constexpr int kEmblemAtlasHeight = kEmblemRows * kEmblemCellSize;
-    /// The radius of the emblem disc in cell pixels (half of the cell is the outer edge of the rings).
+    /// The radius of the emblem disc in cell pixels.
     inline constexpr int kEmblemDiscRadius = 24;
 
     inline constexpr int kPersonEmblemCell = 0;

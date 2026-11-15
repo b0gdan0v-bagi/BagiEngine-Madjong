@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
         if (!(fit > 0.0f) || !(pixelDensity > 0.0f)) {
             return false;
         }
-        // The same expression `TableProfileFor` sizes the phone tile with, so a tile made just wide enough is not under the minimum
+        // The same expression `TableProfileFor` sizes the phone tile with, so a tile made just wide enough is not under the minimum.
         return handTileW < minTouchSize * pixelDensity / fit;
     }
 

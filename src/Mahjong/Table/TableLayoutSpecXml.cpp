@@ -24,7 +24,7 @@ namespace BECore::Mahjong {
         constexpr const char* kFreeElement = "Free";
         constexpr const char* kTileSolve = "solve";
         constexpr const char* kTileProfile = "profile";
-        /// A pile of 100 tiles is 17 rows; more rows than this in a zone only mean a typo.
+        /// More rows than any pile needs only mean a typo.
         constexpr int kMaxZoneDiscardRows = 24;
 
         /// One pass over the file: the messages collect in `errors`, each starting with the place (`where`) it was found.

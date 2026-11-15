@@ -23,22 +23,21 @@ namespace BECore::Mahjong {
     inline constexpr uint8_t kKindCount = kFirstFlowerId;
     /// Flowers and seasons: laid open when drawn, never part of a hand.
     inline constexpr uint8_t kBonusCount = kFlowerCount + kSeasonCount;
-    /// Every id: the playable kinds plus the bonus tiles.
     inline constexpr uint8_t kTileIdCount = kKindCount + kBonusCount;
     /// Copies of each playable kind in the set (a bonus tile has one).
     inline constexpr uint8_t kCopiesPerTile = 4;
 
-    /// Counting array over the playable kinds: counts[tile.Id()] is how many copies of the kind are held.
+    /// counts[tile.Id()] is how many copies of the kind are held.
     using TileCounts = Array<uint8_t, kKindCount>;
 
-    /// The suit of a tile; None for honours and bonus tiles.
+    /// `None` for honours and bonus tiles.
     CORE_ENUM(TileSuit, uint8_t, None, Dots, Bamboo, Characters)
 
     /**
      * @brief One tile, a value type over a single id (layout above).
      *
-     * A default constructed tile is invalid (IsValid() is false, every predicate is false); it stands for "no tile".
-     * Tiles order by id, which is the order a hand is kept sorted in: suits, winds, dragons, flowers, seasons.
+     * A default constructed tile is invalid (every predicate is false); it stands for "no tile". Tiles order by id, the order a hand
+     * is kept sorted in.
      */
     class Tile {
     public:
@@ -55,8 +54,7 @@ namespace BECore::Mahjong {
             return Tile{static_cast<uint8_t>((static_cast<int>(suit) - 1) * kRanksPerSuit + rank - 1)};
         }
 
-        /// By index inside the group: a wind 0..3 (East South West North), a dragon 0..2 (Red White Green), a flower 0..3, a season 0..3.
-        /// An index out of range gives an invalid tile.
+        /// By index inside the group (winds in the order of `Wind`); an index out of range gives an invalid tile.
         [[nodiscard]] static constexpr Tile FromWind(int index) noexcept {
             return index >= 0 && index < kWindCount ? Tile{static_cast<uint8_t>(kFirstWindId + index)} : Tile{};
         }
@@ -77,11 +75,9 @@ namespace BECore::Mahjong {
             return _id < kTileIdCount;
         }
 
-        /// Dots, bamboo or characters.
         [[nodiscard]] constexpr bool IsSuit() const noexcept {
             return _id < kSuitTileCount;
         }
-        /// Winds and dragons.
         [[nodiscard]] constexpr bool IsHonour() const noexcept {
             return _id >= kFirstWindId && _id < kFirstFlowerId;
         }
@@ -91,19 +87,15 @@ namespace BECore::Mahjong {
         [[nodiscard]] constexpr bool IsDragon() const noexcept {
             return _id >= kFirstDragonId && _id < kFirstFlowerId;
         }
-        /// Flowers and seasons.
         [[nodiscard]] constexpr bool IsBonus() const noexcept {
             return _id >= kFirstFlowerId && _id < kTileIdCount;
         }
-        /// A playable kind: a suit tile or an honour (the ids below kKindCount).
         [[nodiscard]] constexpr bool IsPlayable() const noexcept {
             return _id < kKindCount;
         }
-        /// A 1 or a 9 of a suit.
         [[nodiscard]] constexpr bool IsTerminal() const noexcept {
             return IsSuit() && (Rank() == 1 || Rank() == kRanksPerSuit);
         }
-        /// A 2..8 of a suit.
         [[nodiscard]] constexpr bool IsSimple() const noexcept {
             return IsSuit() && !IsTerminal();
         }

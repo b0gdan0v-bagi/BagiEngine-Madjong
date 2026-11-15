@@ -6,8 +6,8 @@
 namespace BECore::Mahjong {
 
     /*
-     * The events of a match log as JSON, one object per line (JSON lines), key `event`. `Game/MatchLog.h` has the plain data;
-     * this is its text form, written by `MatchLogWriter`.
+     * The events of a match log as JSON, one object per line (JSON lines), key `event`: the text form of `Game/MatchLog.h`, written by
+     * `MatchLogWriter`. The version history is in `src/Mahjong/CLAUDE.md`, "Match log".
      *
      * ```
      * {"event":"start","version":6,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","levels":[5,5,2,10],"platform":"desktop"|"web"|"unknown","build":"a1b2c3d","gameVersion":"0.1.0","nickname":"Anna"}
@@ -17,55 +17,46 @@ namespace BECore::Mahjong {
      * {"event":"end","scores":[4],"standings":[seats, best first]}
      * ```
      * Tiles are the notation of `Tile.h` (`5p`, `Ew`, `Rd`, `F1`), winds the names of `Wind` (`East` ...), seats the numbers 0..3 and the
-     * `seats` letters of `start` are those of the control `reset` (P a person, C a computer). The `action` is exactly the object the control
-     * API lists (`ActionToJson`), the `breakdown` the one of its `result` (`BreakdownToJson`; the winner's lines are in the winner's
-     * breakdown). The deal lists East's 14 tiles: nothing is hidden, the log is the owner's.
+     * `seats` letters of `start` those of the control `reset` (P a person, C a computer).
      *
-     * Reading back takes everything but the `breakdown`s of a settlement, which are there for the human reader (the scores and changes
-     * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter,
-     * wind name or level is an error text that names the member; nothing aborts.
+     * The log is the owner's: the deal lists East's 14 tiles and nothing is hidden, which is why it is not the view of a seat. The
+     * `action` is exactly `ActionToJson` and the `breakdown` the one of `BreakdownToJson`.
      *
-     * Versions: 6 (`kMatchLogFormatVersion`, `kMatchLogNicknameVersion`) adds the optional `nickname` to `start`: written only when
-     * the tester typed one (`MatchLogOrigin::nickname`), at most `kMaxMatchLogNicknameBytes` bytes without a control character, else
-     * the line is refused. Versions 1..5 read with none, and an older `start` that carries a `nickname` is not looked at, like any
-     * member it should not have. Version 5 (`kMatchLogOriginVersion`) adds the origin of the match to `start`: `platform`, the `build`
-     * id and the `gameVersion` (strings, empty when not known; `unknown` is a legal platform so that every event round-trips). Versions
-     * 1..4 have none and read as `Unknown`, empty, empty. Version 4 (`kMatchLogSeatLevelsVersion`) writes `levels`, the strength of each
-     * seat as four numbers 1..10 in seat order (`LevelNumber`; a person's seat has one too, it is kept for when the seat becomes a computer). Version 3
-     * (`kMatchLogNumberLevelVersion`) wrote one number `level` for the table, read as four equal levels. Version 2
-     * (`kMatchLogLevelVersion`) wrote it as a name, `easy` (read as 1) or `normal` (5), and a `hard` of version 2
-     * (`kMatchLogRetiredLevelName`) is read as 5. Version 1 files (`kMatchLogOldestVersion`) have no level and are read as `Normal`, the
-     * only player there was. Any other version is refused.
+     * Reading back ignores the `breakdown`s of a settlement (they are for the human reader). Reading is checked: a missing or
+     * wrong-typed member, an unknown `event`, a bad tile, seat letter, wind name or level is an error text that names the member;
+     * nothing aborts. **Any `version` outside `kMatchLogOldestVersion..kMatchLogFormatVersion` is refused.** A `start` of an older
+     * version is read as if the members added later were absent, and a member that its version does not have is not looked at.
      */
 
     /// The `version` of the `start` line that is written.
     inline constexpr int kMatchLogFormatVersion = 6;
 
-    /// The oldest `version` that is still read; a log with a version outside `kMatchLogOldestVersion..kMatchLogFormatVersion` is not read.
+    /// The oldest `version` that is still read.
     inline constexpr int kMatchLogOldestVersion = 1;
 
-    /// The first `version` whose `start` line has `level`; an older one has none and reads as `Normal`.
+    /// The first `version` whose `start` line has `level` (a name); an older one has none and reads as `Normal`.
     inline constexpr int kMatchLogLevelVersion = 2;
     static_assert(kMatchLogLevelVersion >= kMatchLogOldestVersion && kMatchLogLevelVersion <= kMatchLogFormatVersion);
 
-    /// The first `version` whose `level` is a number 1..10, not a name (one for the whole table).
+    /// The first `version` whose `level` is a number 1..10 for the whole table.
     inline constexpr int kMatchLogNumberLevelVersion = 3;
     static_assert(kMatchLogNumberLevelVersion > kMatchLogLevelVersion && kMatchLogNumberLevelVersion <= kMatchLogFormatVersion);
 
-    /// The first `version` whose `start` line has `levels`, four numbers 1..10 (a level per seat), instead of `level`.
+    /// The first `version` whose `start` line has `levels`, a level per seat, a person's seat too (kept for when it becomes a computer).
     inline constexpr int kMatchLogSeatLevelsVersion = 4;
     static_assert(kMatchLogSeatLevelsVersion > kMatchLogNumberLevelVersion && kMatchLogSeatLevelsVersion <= kMatchLogFormatVersion);
 
-    /// The first `version` whose `start` line has `platform`, `build` and `gameVersion`.
+    /// The first `version` whose `start` line has `platform`, `build` and `gameVersion` (strings, empty when not known; `unknown` is a
+    /// legal platform so that every event round-trips).
     inline constexpr int kMatchLogOriginVersion = 5;
     static_assert(kMatchLogOriginVersion > kMatchLogSeatLevelsVersion && kMatchLogOriginVersion <= kMatchLogFormatVersion);
 
-    /// The first `version` whose `start` line may have `nickname`.
+    /// The first `version` whose `start` line may have `nickname`: written only when the tester typed one (`MatchLogOrigin::nickname`),
+    /// at most `kMaxMatchLogNicknameBytes` bytes without a control character, else the line is refused.
     inline constexpr int kMatchLogNicknameVersion = 6;
     static_assert(kMatchLogNicknameVersion > kMatchLogOriginVersion && kMatchLogNicknameVersion <= kMatchLogFormatVersion);
 
-    /// The name of the level `Hard` of the first slice of the computer levels. It played exactly like Normal and is gone, but files were
-    /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. Only version 2 has names.
+    /// A level name that files of version 2 hold and no level has now: read as `Normal`, not refused.
     inline constexpr StringView kMatchLogRetiredLevelName = "hard";
 
     /// The `platform` text of a `start`: `desktop`, `web` or `unknown`.

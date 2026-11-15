@@ -15,9 +15,8 @@ namespace BECore::Mahjong::Arena {
             return Format("seed {} seat {}", seed, static_cast<int>(seat));
         }
 
-        /// The action a computer seat of `profile` chooses on `view` (what `ComputerPlayer::Choose` does with the profile of its level),
-        /// at once; with `worlds` a search decision is handed back by the chooser and its worlds are played through the loop (the same
-        /// draws and the same answer).
+        /// What `ComputerPlayer::Choose` does with the profile of its level; with `worlds` a search decision plays its worlds through the
+        /// loop (the same draws and the same answer).
         HandAction ChooseComputer(const TableView& view, MahjongRng& rng, const LevelProfile& profile, const WorldLoop* worlds) {
             SearchHandoff handoff;
             SearchHandoff* const asked = worlds != nullptr ? &handoff : nullptr;
@@ -40,7 +39,6 @@ namespace BECore::Mahjong::Arena {
             return action;
         }
 
-        /// Fills the outcome of a finished hand into `record` (which already holds the decisions and the times).
         void FillResult(const HandModel& hand, const HandSettlement& settlement, HandRecord& record) {
             record.kind = settlement.kind;
             record.east = settlement.east;

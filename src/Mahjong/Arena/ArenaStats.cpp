@@ -6,7 +6,7 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// The number of `metric` in one seed row (over its `kSeatCount` hands); empty when the row has none.
+        /// Per hand; empty when the row has no value for `metric`.
         Optional<double> RowNumber(const SeedRow& row, SeedMetric metric) {
             switch (metric) {
                 case SeedMetric::PointsPerHand:

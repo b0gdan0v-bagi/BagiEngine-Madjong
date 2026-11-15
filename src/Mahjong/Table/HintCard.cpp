@@ -12,7 +12,6 @@ namespace BECore::Mahjong {
             return Format("{}", value);
         }
 
-        /// The steps to a ready hand as the card says them: a number, the word "ready" for none left.
         String StepsText(const UIStrings& strings, int steps) {
             return steps <= 0 ? Tr(strings, "hints.card.ready") : Num(steps);
         }
@@ -24,12 +23,12 @@ namespace BECore::Mahjong {
             return after == now ? CardTrend::Same : CardTrend::Farther;
         }
 
-        /// The advice that ends the hand: nothing is compared with a win.
+        /// Nothing is compared with a win.
         bool EndsTheHand(const HandAction& action) noexcept {
             return action.kind == ActionKind::DeclareWin || (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong);
         }
 
-        /// The pictures of `action`: the tile of a discard or a kong of the hand, the pending tile of a pung or kong claim, the three of a chow.
+        /// The pictures of `action`: its own tile, the pending tile for a pung or kong claim, the three tiles of a chow.
         Array<Tile, kMaxCardTiles> TilesOf(const HandAction& action, Tile pending) noexcept {
             Array<Tile, kMaxCardTiles> tiles{};
             switch (action.kind) {
@@ -55,8 +54,7 @@ namespace BECore::Mahjong {
             return tiles;
         }
 
-        /// The title of a card that names `action`: the sentence of the advice, but a chow only by its kind (its three tiles are the
-        /// pictures of the row, and their names would not fit the title).
+        /// The sentence of the advice, but a chow only by its kind: its three tiles are the pictures of the row and would not fit.
         String TitleOf(const UIStrings& strings, Tile pending, const HandAction& action) {
             if (action.kind == ActionKind::Claim && action.claim == ClaimKind::Chow) {
                 return Tr(strings, "hints.card.title.chow");
@@ -107,7 +105,6 @@ namespace BECore::Mahjong {
             return {};
         }
 
-        /// A row of `action` with no numbers yet.
         CardRow RowOf(const UIStrings& strings, CardRowKind kind, const HandAction& action, Tile pending) {
             CardRow row;
             row.kind = kind;
@@ -117,7 +114,6 @@ namespace BECore::Mahjong {
             return row;
         }
 
-        /// Puts the steps after the move (against `now`) and the unseen tiles that help on `row`.
         void Rate(const UIStrings& strings, CardRow& row, int now, int steps, int useful) {
             row.steps = StepsText(strings, steps);
             row.trend = TrendOf(now, steps);
@@ -150,7 +146,6 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The word for a `kKeep...` class.
         const char* KeepKey(int keep) noexcept {
             if (keep <= kKeepWorthless) {
                 return "hints.why.keep.worthless";
@@ -161,7 +156,7 @@ namespace BECore::Mahjong {
             return keep == kKeepSimple ? "hints.why.keep.simple" : "hints.why.keep.value";
         }
 
-        /// The danger of the advised discard (only with a declared opponent, for a step that discards).
+        /// Only with a declared opponent, for a step that discards.
         String DangerLine(const UIStrings& strings, Danger danger) {
             switch (danger) {
                 case Danger::Safe:
@@ -176,9 +171,9 @@ namespace BECore::Mahjong {
             return Tr(strings, "hints.why.danger.high");
         }
 
-        /// How the tie of equal choices was settled. The first alternative is the best of the others, so it is the equal one with the
-        /// danger and then the keep value that come first: when the danger (read only with the knob of the advice player, against a
-        /// declared opponent) differs, it decided; an equal keep value too leaves the choice to chance.
+        /// How the tie of equal choices was settled. The first alternative is the best of the others, so it is the equal one that comes
+        /// first by danger, then by keep value: a differing danger (read only with the advice player's knob, against a declared opponent)
+        /// decided; an equal keep value leaves the choice to chance.
         String TieLine(const UIStrings& strings, const TurnExplanation& turn) {
             if (turn.equalChoices == 0) {
                 return Tr(strings, "hints.why.tie.none");

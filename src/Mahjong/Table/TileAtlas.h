@@ -5,10 +5,9 @@
 namespace BECore::Mahjong {
 
     /**
-     * The tile atlas: one PNG of kAtlasColumns x kAtlasRows cells, the cell of a tile is its id (Tile.h), the back is the cell
-     * after the last id and the wall stack (two backs side by side seen from above) the cell after the back. The numbers are
-     * those of tools/make_tiles.py (CELL_W, CELL_H, COLUMNS, ROWS), which draws the atlas and writes config/TextureLibrary.xml;
-     * tests/TileSpritesTest.cpp compares them with the XML and the PNG, so they cannot drift apart.
+     * The tile atlas: one PNG of cells; the cell of a tile is its id (Tile.h), the back the cell after the last id and the wall stack
+     * (two backs side by side seen from above) the cell after the back. The numbers are those of tools/make_tiles.py, which draws the
+     * atlas and writes config/TextureLibrary.xml; `TileSpritesTest` compares them with the XML and the PNG.
      */
     inline constexpr const char* kAtlasPath = "assets/tiles/tiles.png";
     inline constexpr int kAtlasColumns = 8;
@@ -19,7 +18,7 @@ namespace BECore::Mahjong {
     inline constexpr int kAtlasHeight = kAtlasRows * kCellHeight;
     /// The cell after the tile ids.
     inline constexpr int kBackCell = kTileIdCount;
-    /// The cell after the back: a wall stack seen from above, a kStackSize square at the top left corner of the cell, the rest transparent.
+    /// The cell after the back: a wall stack seen from above, a square at the top left corner of the cell, the rest transparent.
     inline constexpr int kStackCell = kBackCell + 1;
     inline constexpr int kStackSize = 96;
     static_assert(kStackSize <= kCellWidth && kStackSize <= kCellHeight);

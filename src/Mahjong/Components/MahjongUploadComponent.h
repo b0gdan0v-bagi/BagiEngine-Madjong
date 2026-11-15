@@ -21,27 +21,21 @@ namespace BECore::Mahjong {
 
     /**
      * @brief The glue of the tester upload (`docs/tester-match-logs.md`): the node `Consent` (`config/nodes/MahjongConsent.xml`) carries this component
-     *        and the question it shows. It owns the `WebUploadSink` and the page's post call (`EngineWebPoster`).
+     *        and the question it shows; the upload is the tester's choice. It owns the `WebUploadSink` and the page's post call (`EngineWebPoster`).
      *
-     * **Only where the page can post** (`IWebPoster::Available()`, a browser build with the script): everywhere else the component does nothing at
-     * all, no screen, no file, and the game's `GetUpload()` is untouched, so the desktop is as it was.
+     * **Only where the page can post** (`IWebPoster::Available()`): everywhere else the component does nothing at all, no screen, no file, and the
+     * game's `GetUpload()` is untouched, so the desktop is as it was.
      *
-     * **The first frame** (the game is active, the scene draws) reads the tester's choice from `UploadPrefsFolder()` into
-     * `MahjongGame::GetUploadPrefs()` and then, in this order, gives the uploader its sink, its consent (`MahjongGame::SavesAreRemembered()` says whether
-     * the choice is kept) and the session its origin with the nickname (only while the consent is `Granted`), so no match can begin recorded before
-     * the choice is applied. `Choose` does the same for a later change and stores the file. **Privacy:** nothing leaves unless the consent is
-     * `Granted`, and a nickname is in a log only then.
+     * **The first frame** reads the tester's choice from `UploadPrefsFolder()` and then, in this order, gives the uploader its sink and its consent and
+     * the session its origin, so no match can begin recorded before the choice is applied. **Privacy:** nothing leaves unless the consent is `Granted`,
+     * and a nickname is in a log only then.
      *
-     * **The rows of `Options`** (`Send matches`, `Nickname` and its note, in `config/nodes/MahjongOptions.xml`) are hidden in the file and shown here,
-     * with the plate grown by them, once the component runs, so the desktop page is the one it was. Actions `MahjongSetUpload` (`on` | `off`, the
-     * same as `Choose`) and `MahjongNickname` (opens the pad of `MahjongOnlineComponent` on the nickname) are honoured only while `Options` is up and
-     * the question is not. Variables `uploadChoice` (`on` | `off` | empty while the question is up) and `uploadNickname` (the name, or the word
-     * "none" in the muted colour), set when the consent, the nickname or the language moved.
+     * **The rows of `Options`** are hidden in `config/nodes/MahjongOptions.xml` and shown here once the component runs, so the desktop page is the one
+     * it was. Their actions are honoured only while `Options` is up and the question is not. `MahjongNickname` opens the pad of `MahjongOnlineComponent`.
      *
-     * **The question** is up exactly while the consent is `Unasked` (the actions `MahjongUploadAccept` / `MahjongUploadDecline`, honoured only
-     * then). Where the choice is not remembered the next visit asks again by itself, as nothing is read. Each frame pumps the sink with the
-     * clock of the scene (the sum of the frame times); a frame in which nothing moved allocates nothing. The sink is flushed when the component
-     * goes (the scene is torn down after `Stop()` gave the running match up), so that the `Abandoned` piece is posted at once.
+     * **The question** is up exactly while the consent is `Unasked`; where the choice is not remembered (`MahjongGame::SavesAreRemembered()`) the next
+     * visit asks again by itself. A frame in which nothing moved allocates nothing. The sink is flushed when the component goes (the scene is torn
+     * down after `Stop()` gave the running match up), so the `Abandoned` piece is posted at once.
      */
     class MahjongUploadComponent : public IComponent {
         BE_CLASS(MahjongUploadComponent)
@@ -60,7 +54,6 @@ namespace BECore::Mahjong {
         void OnAttached() override;
         void OnDraw() override;
 
-        /// The attached component, if any; the game assumes a single one.
         static MahjongUploadComponent* GetActive() noexcept {
             return s_active;
         }
