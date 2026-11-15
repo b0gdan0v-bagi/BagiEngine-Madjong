@@ -14,16 +14,15 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The tiles East starts with: the dealt tiles and the first draw (the first tile is drawn at once).
+        /// The dealt tiles and East's first draw.
         inline constexpr int kEastOpeningTiles = kDealtTiles + 1;
 
-        // What the match page says about the default game; a change of either rule fails the build, then the words of the page are the fix.
+        // The match page words these defaults: a change of either rule fails the build, then the words of the page are the fix.
         static_assert(MahjongSettings{}.replayDrawnHand, "the page of the match says that a drawn hand is played again");
         static_assert(kEastRepeatCountsAsHand, "the page of the match says that an East repeat counts as a hand");
 
-        /// The numbers and the words that the texts of the pages put in: `{dealt}`, `{pung}`, ... Built once per page from the named constants
-        /// of the rules and the string table, so no text holds a number or a button word of its own. An unused name is harmless (`Subst`).
-        /// Not copyable: the views of `_args` point into `_values`.
+        /// The numbers and button words the page texts put in (`{dealt}`, `{pung}`, ...), from the named constants of the rules and the
+        /// string table, so no text holds a number of its own. Not copyable: the views of `_args` point into `_values`.
         class RulesArgs {
         public:
             explicit RulesArgs(const UIStrings& strings) : _strings(strings) {
@@ -105,14 +104,14 @@ namespace BECore::Mahjong {
 
         using TileRows = Vector<Vector<Tile>>;
 
-        /// A row of tiles from the notation of `Tile.h`; the examples are written the way a player reads them.
+        /// A row of tiles from the notation of `Tile.h`.
         Vector<Tile> Row(StringView notation) {
             const auto tiles = ParseTiles(notation);
             ASSERT(tiles.has_value(), "RulesText: an example row is not in the notation of Tile.h");
             return tiles.value_or(Vector<Tile>{});
         }
 
-        /// Page 1: one suit from the lowest rank to the highest, then the honours (four winds, three dragons).
+        /// Page 1: one suit in rank order, then the honours.
         TileRows TileRowsOfTiles() {
             Vector<Tile> suit;
             for (int rank = 1; rank <= kRanksPerSuit; ++rank) {
@@ -128,25 +127,25 @@ namespace BECore::Mahjong {
             return {eastl::move(suit), eastl::move(honours)};
         }
 
-        /// Page 2: a whole winning hand (`kWinningHandTiles`): a chow, a pung, a chow, a pung of dragons and a pair.
+        /// Page 2: a whole winning hand (`kWinningHandTiles`).
         TileRows TileRowsOfSets() {
             return {Row("2p 3p 4p 5s 5s 5s 7m 8m 9m Rd Rd Rd 9p 9p")};
         }
 
-        /// Page 6: a hand that waits (`kDealtTiles` tiles): a chow, a pung, a chow, a pair and two tiles of a run that wait for 5p or 8p.
+        /// Page 6: a hand that waits (`kDealtTiles` tiles).
         TileRows TileRowsOfCalling() {
             return {Row("2p 3p 4p 5s 5s 5s 7m 8m 9m Ew Ew 6p 7p")};
         }
 
         using Items = Vector<String>;
 
-        /// A line of the score as the score table prints it ("Pung of 5 Dots: 2", "Dragon set: x2"), with the numbers given by the caller.
+        /// A line of the score as the score table prints it, with the numbers given by the caller.
         String ScoreItem(const UIStrings& strings, ScoreKind kind, Tile tile, int points, int doubles) {
             return ScoreLineText(strings, ScoreLine{kind, tile, points, doubles});
         }
 
-        /// The kinds of `first` to `last` as items, each with the doubles `doublesOf` says; the kinds are walked in the order of the enum, so
-        /// a kind added between the two shows up by itself (and `doublesOf` must know it: the callers with a switch assert in its `default`).
+        /// The kinds of `first` to `last` as items, walked in enum order so a kind added between the two shows up by itself (`doublesOf`
+        /// must know it: the callers' switches assert in their `default`).
         template <typename DoublesOf>
         Items DoublesItems(const UIStrings& strings, ScoreKind first, ScoreKind last, DoublesOf doublesOf) {
             Items items;
@@ -157,9 +156,8 @@ namespace BECore::Mahjong {
             return items;
         }
 
-        /// Page 8: worked examples of the points of a set. Each number is the product of the named factors of `Score.h`, the same ones the
-        /// scoring multiplies (`RulesTextTest` holds the examples to `ScoreSeat`). The tiles are examples, not numbers of the rules: any simple,
-        /// terminal and dragon would do.
+        /// Page 8: worked examples of the points of a set, each the product of the named factors of `Score.h` that the scoring multiplies.
+        /// The tiles are examples, not rules: any simple, terminal and dragon would do.
         Items ItemsOfPoints(const UIStrings& strings) {
             const Tile simple = Tile::Suited(TileSuit::Dots, 5);
             const Tile terminal = Tile::Suited(TileSuit::Bamboo, kRanksPerSuit);
@@ -178,7 +176,7 @@ namespace BECore::Mahjong {
             return items;
         }
 
-        /// Page 9: the doubles every seat can have. The value is the constant of the kind, so the page prints what the score table prints.
+        /// Page 9: the doubles every seat can have, valued by the constants of the kinds so the page agrees with the score table.
         Items ItemsOfDoubles(const UIStrings& strings) {
             return DoublesItems(strings, ScoreKind::DragonSet, ScoreKind::OneSuitNoHonours, [](ScoreKind kind) {
                 switch (kind) {
@@ -199,7 +197,7 @@ namespace BECore::Mahjong {
             });
         }
 
-        /// Page 10: the doubles only the winner can have, from `OnlyPungs` to `CallingFirstHand`.
+        /// Page 10: the doubles only the winner can have.
         Items ItemsOfWinnerDoubles(const UIStrings& strings) {
             return DoublesItems(strings, ScoreKind::OnlyPungs, ScoreKind::CallingFirstHand, [](ScoreKind kind) {
                 switch (kind) {
@@ -234,13 +232,13 @@ namespace BECore::Mahjong {
             });
         }
 
-        /// Page 11: every limit hand, by name ("Limit: Thirteen orphans"); the walk is the range of the enum, as in `ScoreText.cpp`.
+        /// Page 11: every limit hand, by name.
         Items ItemsOfLimitHands(const UIStrings& strings) {
             return DoublesItems(strings, ScoreKind::ConcealedPungsOneSuit, ScoreKind::LooseTileFiveDots, [](ScoreKind) { return 0; });
         }
 
-        /// One page of the table: the key of its title, the keys of its lines (a null one ends the list) and the builders of its items and
-        /// of its examples (null for none).
+        /// One page: the key of its title, the keys of its lines (a null one ends the list) and the builders of its items and examples
+        /// (null for none).
         struct PageSpec {
             const char* title;
             Array<const char*, kRulesMaxLines> lines;

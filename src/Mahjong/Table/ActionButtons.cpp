@@ -4,7 +4,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The hint keys that more than one button shares: the three chows, the three concealed kongs.
         constexpr const char* kChowHint = "hint.ClaimChow";
         constexpr const char* kConcealedKongHint = "hint.ConcealedKong";
 
@@ -27,7 +26,6 @@ namespace BECore::Mahjong {
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));
         static_assert(kConcealedKongButtons + static_cast<int>(ButtonKind::ConcealedKong0) == static_cast<int>(ButtonKind::UpgradeKong));
 
-        /// Shows `kind` with its action and hint and no tile yet.
         ButtonState& Show(ActionButtons& buttons, ButtonKind kind, const HandAction& action) {
             ButtonState& button = buttons[kind];
             button.shown = true;
@@ -59,7 +57,7 @@ namespace BECore::Mahjong {
                 return static_cast<ButtonKind>(i);
             }
         }
-        // The toggle of the declaration emits the state it asks for: "on" while the flag is off and "off" while it is on
+        // The toggle emits the state it asks for, so the button also answers to the other value
         if (action == SpecOf(ButtonKind::Declare).action && value == kDeclareOff) {
             return ButtonKind::Declare;
         }

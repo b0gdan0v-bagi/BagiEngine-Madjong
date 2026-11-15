@@ -6,7 +6,7 @@
 
 namespace BECore::Mahjong {
 
-    /// How a seat is named on screen: "Seat 2 (South)" (seats count from 1 for a person; `wind` is the seat's wind in the hand). The words are the keys `seat.name` and `wind.*`.
+    /// How a seat is named on screen: "Seat 2 (South)"; seats count from 1, `wind` is the seat's wind in the hand.
     [[nodiscard]] inline String SeatName(const UIStrings& strings, Seat seat, Wind wind) {
         const String number = Format("{}", seat + 1);
         const String windName = WindName(strings, wind);
@@ -23,11 +23,11 @@ namespace BECore::Mahjong {
     }
 
     /**
-     * @brief Who sits at the seats, for the words that name a seat. Built from the seat kinds (a local game: the one person is "you", nobody
-     *        has a name) or from a session, which in remote mode (a room) knows the players' names and the own seat.
+     * @brief Who sits at the seats, for the words that name a seat: from the seat kinds (a local game: the one person is "you", nobody
+     *        has a name) or from a session, which in a room knows the players' names and the own seat.
      *
-     * A person with a name is called by it ("Ann"), a computer or a person without one by the seat's number; "you" is the viewer's seat in a room
-     * (several persons sit there) and the one person of a local table. Holds a reference: use it within the call it is made for.
+     * A person with a name is called by it, a computer or a person without one by the seat's number. Holds a reference: use it within
+     * the call it is made for.
      */
     class SeatWho {
     public:
