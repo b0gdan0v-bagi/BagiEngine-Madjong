@@ -160,6 +160,22 @@ namespace BECore::Mahjong {
     }};
     // clang-format on
 
+    /// The roles the table paints itself (`TablePalette`), tokens of `config/UIThemes.xml` beside `kUiPaletteNames`. The seat plates and the
+    /// centre panel take `hudPanel` / `hudPanelDeep` as their fill.
+    inline constexpr int kTablePaletteSize = 8;
+    // clang-format off
+    inline constexpr Array<const char*, kTablePaletteSize> kTablePaletteNames{{
+        "felt",
+        "feltRim",
+        "feltLip",
+        "handRack",
+        "handRackLip",
+        "plateFrame",
+        "plateShadow",
+        "plateHighlight",
+    }};
+    // clang-format on
+
     /// The type scale: small, body, title. No other `fontSize` in the scene file.
     inline constexpr Array<int, 3> kFontScale{{18, 22, 28}};
 

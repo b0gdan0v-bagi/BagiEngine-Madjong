@@ -9,6 +9,7 @@
 #include <Mahjong/Table/UiPalette.h>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <tests/ShippedThemes.h>
 
 namespace BECore::Mahjong::Tests {
 
@@ -22,15 +23,21 @@ namespace BECore::Mahjong::Tests {
         return std::abs(a.x - b.x) < kSameRectEpsilon && std::abs(a.y - b.y) < kSameRectEpsilon && std::abs(a.w - b.w) < kSameRectEpsilon && std::abs(a.h - b.h) < kSameRectEpsilon;
     }
 
-    /// The colour of a role of the palette (an entry of `kUiPaletteNames`: `surface`, `header`, `textMuted`, `accent`, ...).
+    /// The colour of a role of the shipped `classic` theme (`kUiPaletteNames` and `kTablePaletteNames`: `surface`, `header`, `textMuted`, `accent`, ...). Read from the
+    /// file, not from the table of `CoreManager`, so it needs no services; a colour a screen resolved is compared with it after a draw.
     inline Color PaletteColor(const char* role) {
-        for (int i = 0; i < kUiPaletteSize; ++i) {
-            if (StringView(kUiPaletteNames[i]) == role) {
-                return kUiPalette[i];
-            }
+        static const UIThemes classic = [] {
+            UIThemes themes;
+            const Vector<String> problems = LoadShippedThemes(themes);
+            EXPECT_TRUE(problems.empty()) << "config/UIThemes.xml: " << (problems.empty() ? "" : problems.front().c_str());
+            return themes;
+        }();
+        const Optional<Color> color = classic.Find(role);
+        if (!color) {
+            ADD_FAILURE() << "no role " << role;
+            return {};
         }
-        ADD_FAILURE() << "no role " << role;
-        return {};
+        return *color;
     }
 
     /// The gap between two rects one above the other (negative when they overlap).
