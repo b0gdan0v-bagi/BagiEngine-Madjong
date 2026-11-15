@@ -56,7 +56,7 @@ in pieces for the sink (`WebUploadSink`, below):
   offer, **Accept** / **Don't send**, and says the matches go **together with the Google email** (the owner's wording; a guest has no
   email, so for a guest nothing but the match and the nickname is stored).
 - **Where:** the volume of the web service, `MATCH_STORE` (`engine/tools/web/CLAUDE.md`, "Match logs"). Settings the owner makes on the
-  service: `MATCH_STORE`, `MATCH_LOG_VERSIONS=1-6` (the format is 6; with `1-5` every new match is refused with 400),
+  service: `MATCH_STORE`, `MATCH_LOG_VERSIONS=1-7` (the format is 7; with `1-6` every new match is refused with 400),
   `MATCH_FORWARDED_FOR=1`, `MATCH_COLLECT_TOKEN` and a volume; the sign-in variables are in `docs/deploy-google-signin.md`.
 - **Who is named:** a signed-in tester's match is stamped by the service with the verified Google email (`tester.json` beside the
   match, taken from Google's checked token, never from the page); a guest's match has no stamp. The nickname is an optional label.

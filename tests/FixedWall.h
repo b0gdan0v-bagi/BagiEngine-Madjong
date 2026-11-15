@@ -56,6 +56,23 @@ namespace BECore::Mahjong::Tests {
         return deal;
     }
 
+    /// A position of a match under way (`handsPlayed` hands counted, uneven scores): four hands, the tiles that come next are
+    /// `Gd Gd 9m`, the loose reserve starts `4s 5s`.
+    inline FixedStart MakeSamplePosition(Seat east = 0, int handsPlayed = 0) {
+        FixedWallSpec spec;
+        spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";
+        spec.hands[1] = "1m 2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw";
+        spec.hands[2] = "1p 2p 3p 4p 5p 6p 7p 8p 9p Rd Wd Gd Ew";
+        spec.hands[3] = "5s 6s 7s 8s 9s 1m 2m 3m 4m 5m 6m 7m 8m";
+        spec.live = "Gd Gd 9m";
+        spec.loose = "4s 5s";
+        FixedStart state;
+        state.deal = MakeFixedDeal(spec, east);
+        state.handsPlayed = handsPlayed;
+        state.scores = {250, 120, -40, 900};
+        return state;
+    }
+
     /// The wall of `spec` (`BuildFixedWall`); each problem fails the test.
     inline Wall MakeFixedWall(const FixedWallSpec& spec, bool flowers, Seat east = 0) {
         FixedWallBuild build = BuildFixedWall(MakeFixedDeal(spec, east), flowers);

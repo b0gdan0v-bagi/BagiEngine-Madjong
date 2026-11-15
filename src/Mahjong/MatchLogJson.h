@@ -10,14 +10,16 @@ namespace BECore::Mahjong {
      * `MatchLogWriter`. The version history is in `src/Mahjong/CLAUDE.md`, "Match log".
      *
      * ```
-     * {"event":"start","version":6,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","levels":[5,5,2,10],"platform":"desktop"|"web"|"unknown","build":"a1b2c3d","gameVersion":"0.1.0","nickname":"Anna"}
+     * {"event":"start","version":7,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","levels":[5,5,2,10],"platform":"desktop"|"web"|"unknown","build":"a1b2c3d","gameVersion":"0.1.0","nickname":"Anna","state":{"deal":{"hands":[[13
+     * tiles] x4],"live":[...],"loose":[...],"east":s,"liveAfterDeal":n},"handsPlayed":n,"scores":[4]}}
      * {"event":"hand","number":handsPlayed,"east":s,"roundWind":"East","winds":["East",...],"deal":[{"concealed":["1p",...],"bonus":[...]} x4]}
      * {"event":"action","seat":s,"by":"person"|"computer","action":{...}}
      * {"event":"settlement","kind":"win"|"drawn","winner":s|null,"east":s,"roundWind":"..","scores":[4],"deltas":[4],"seats":[{"breakdown":{...}} x4]}
      * {"event":"end","scores":[4],"standings":[seats, best first]}
      * ```
-     * Tiles are the notation of `Tile.h` (`5p`, `Ew`, `Rd`, `F1`), winds the names of `Wind` (`East` ...), seats the numbers 0..3 and the
-     * `seats` letters of `start` those of the control `reset` (P a person, C a computer).
+     * `nickname` and `state` are written only when there is one: `state` is the position a match began from (`Start`'s `FixedStart`;
+     * `liveAfterDeal` only when set). Tiles are the notation of `Tile.h` (`5p`, `Ew`, `Rd`, `F1`), winds the names of `Wind` (`East` ...),
+     * seats the numbers 0..3 and the `seats` letters of `start` those of the control `reset` (P a person, C a computer).
      *
      * The log is the owner's: the deal lists East's 14 tiles and nothing is hidden, which is why it is not the view of a seat. The
      * `action` is exactly `ActionToJson` and the `breakdown` the one of `BreakdownToJson`.
@@ -29,7 +31,7 @@ namespace BECore::Mahjong {
      */
 
     /// The `version` of the `start` line that is written.
-    inline constexpr int kMatchLogFormatVersion = 6;
+    inline constexpr int kMatchLogFormatVersion = 7;
 
     /// The oldest `version` that is still read.
     inline constexpr int kMatchLogOldestVersion = 1;
@@ -56,6 +58,10 @@ namespace BECore::Mahjong {
     inline constexpr int kMatchLogNicknameVersion = 6;
     static_assert(kMatchLogNicknameVersion > kMatchLogOriginVersion && kMatchLogNicknameVersion <= kMatchLogFormatVersion);
 
+    /// The first `version` whose `start` line may have `state`, the position a match began from; an older line's is not looked at.
+    inline constexpr int kMatchLogStateVersion = 7;
+    static_assert(kMatchLogStateVersion > kMatchLogNicknameVersion && kMatchLogStateVersion <= kMatchLogFormatVersion);
+
     /// A level name that files of version 2 hold and no level has now: read as `Normal`, not refused.
     inline constexpr StringView kMatchLogRetiredLevelName = "hard";
 
@@ -64,6 +70,13 @@ namespace BECore::Mahjong {
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);
+
+    /// The `deal` object of a position (`start.state.deal`, and of the control's `set_state`): `hands` four lists of 13 tiles, in deal
+    /// order, `live` and `loose` (may be left out), `east` (seat, default 0), `liveAfterDeal` (may be left out). A list of tiles is an
+    /// array of notation strings or one text of notation. Checked as far as the text goes (the wall refuses the rest, `TryBuildFixedWall`);
+    /// the error names the member from the object down (`hands[2]: needs 13 tiles, has 12`).
+    [[nodiscard]] std::expected<FixedDeal, String> FixedDealFromJson(const Json& json);
+    [[nodiscard]] Json FixedDealToJson(const FixedDeal& deal);
 
     /// The event of one parsed line, or the error text naming the member that is wrong.
     [[nodiscard]] std::expected<MatchLogEvent, String> EventFromJson(const Json& json);

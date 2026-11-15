@@ -1,5 +1,6 @@
 #include "MatchLogJson.h"
 
+#include <Mahjong/Game/Deal.h>
 #include <Mahjong/MahjongGameControl.h>
 
 namespace BECore::Mahjong {
@@ -17,6 +18,7 @@ namespace BECore::Mahjong {
         constexpr StringView kPlatformWeb = "web";
         constexpr StringView kPlatformUnknown = "unknown";
         constexpr StringView kNicknameKey = "nickname";
+        constexpr StringView kStateKey = "state";
         constexpr unsigned char kFirstPrintableByte = 0x20;
         constexpr unsigned char kDeleteByte = 0x7F;
         constexpr StringView kKindWin = "win";
@@ -69,6 +71,14 @@ namespace BECore::Mahjong {
             json["replayDrawnHand"] = settings.replayDrawnHand;
             json["limit"] = settings.limit;
             json["startingScore"] = settings.startingScore;
+            return json;
+        }
+
+        Json StateToJson(const FixedStart& state) {
+            Json json = Json::object();
+            json["deal"] = FixedDealToJson(state.deal);
+            json["handsPlayed"] = state.handsPlayed;
+            json["scores"] = SeatScoresToJson(state.scores);
             return json;
         }
 
@@ -241,6 +251,73 @@ namespace BECore::Mahjong {
             return levels;
         }
 
+        /// The error of a read inside the member `parent`, with the path in front (`state.deal.hands[2]: ...`).
+        String Under(StringView parent, const String& error) {
+            return Format("{}.{}", parent, error);
+        }
+
+        /// A list of tiles: an array of notation strings or one text of notation.
+        std::expected<Vector<Tile>, String> ReadTileList(const Json& value, StringView member) {
+            if (value.is_string()) {
+                //-NoStd: Json holds its strings as std::string
+                const std::string& text = value.get_ref<const std::string&>();
+                Optional<Vector<Tile>> tiles = ParseTiles(FromStd(text));
+                if (!tiles) {
+                    return Fail(member, Format("is not a text of tiles: \"{}\"", text).c_str());
+                }
+                return std::move(*tiles);
+            }
+            if (!value.is_array()) {
+                return Fail(member, "has to be an array of tiles or a text of tiles");
+            }
+            Vector<Tile> tiles;
+            for (const Json& item : value) {
+                const auto tile = ReadTileItem(item, member);
+                if (!tile) {
+                    return std::unexpected(tile.error());
+                }
+                tiles.push_back(*tile);
+            }
+            return tiles;
+        }
+
+        /// A tile list that may be left out (then empty).
+        std::expected<Vector<Tile>, String> ReadOptionalTileList(const Json& object, StringView key) {
+            const Json* member = FindJsonMember(object, key);
+            if (member == nullptr) {
+                return Vector<Tile>();
+            }
+            return ReadTileList(*member, key);
+        }
+
+        std::expected<FixedStart, String> StateFromJson(const Json& json) {
+            if (!json.is_object()) {
+                return Fail(kStateKey, "has to be an object");
+            }
+            FixedStart state;
+            const String dealPath = Under(kStateKey, "deal");
+            const Json* deal = FindJsonMember(json, "deal");
+            if (deal == nullptr) {
+                return Fail(dealPath.c_str(), "has to be an object");
+            }
+            auto read = FixedDealFromJson(*deal);
+            if (!read) {
+                return std::unexpected(Under(dealPath.c_str(), read.error()));
+            }
+            state.deal = std::move(*read);
+            const auto handsPlayed = ReadIntMember(json, "handsPlayed");
+            if (!handsPlayed) {
+                return std::unexpected(Under(kStateKey, handsPlayed.error()));
+            }
+            state.handsPlayed = *handsPlayed;
+            const auto scores = ReadSeatScores(json, "scores");
+            if (!scores) {
+                return std::unexpected(Under(kStateKey, scores.error()));
+            }
+            state.scores = *scores;
+            return state;
+        }
+
         /// Absent is none; a string that breaks the limits of `kMatchLogNicknameVersion` is refused, not trimmed.
         std::expected<String, String> ReadNickname(const Json& object) {
             if (FindJsonMember(object, kNicknameKey) == nullptr) {
@@ -364,6 +441,15 @@ namespace BECore::Mahjong {
                     return std::unexpected(nickname.error());
                 }
                 event.origin.nickname = std::move(*nickname);
+            }
+            if (*version >= kMatchLogStateVersion) {
+                if (const Json* state = FindJsonMember(json, kStateKey); state != nullptr) {
+                    auto read = StateFromJson(*state);
+                    if (!read) {
+                        return std::unexpected(read.error());
+                    }
+                    event.state = std::move(*read);
+                }
             }
             if (*version >= kMatchLogSeatLevelsVersion) {
                 const auto levels = ReadSeatLevels(json, "levels");
@@ -567,6 +653,70 @@ namespace BECore::Mahjong {
         return kPlatformUnknown;
     }
 
+    Json FixedDealToJson(const FixedDeal& deal) {
+        Json hands = Json::array();
+        for (const Vector<Tile>& hand : deal.hands) {
+            hands.push_back(TilesToJson(hand));
+        }
+        Json json = Json::object();
+        json["hands"] = std::move(hands);
+        json["live"] = TilesToJson(deal.live);
+        json["loose"] = TilesToJson(deal.loose);
+        json["east"] = deal.east;
+        if (deal.liveAfterDeal) {
+            json["liveAfterDeal"] = *deal.liveAfterDeal;
+        }
+        return json;
+    }
+
+    std::expected<FixedDeal, String> FixedDealFromJson(const Json& json) {
+        if (!json.is_object()) {
+            return Fail("deal", "has to be an object");
+        }
+        FixedDeal deal;
+        const auto hands = ReadArray(json, "hands", kSeatCount);
+        if (!hands) {
+            return std::unexpected(hands.error());
+        }
+        size_t seat = 0;
+        for (const Json& item : **hands) {
+            const String member = Format("hands[{}]", seat);
+            auto tiles = ReadTileList(item, member.c_str());
+            if (!tiles) {
+                return std::unexpected(tiles.error());
+            }
+            if (tiles->size() != static_cast<size_t>(kDealtTiles)) {
+                return Fail(member.c_str(), Format("needs {} tiles, has {}", kDealtTiles, tiles->size()).c_str());
+            }
+            deal.hands[seat++] = std::move(*tiles);
+        }
+        auto live = ReadOptionalTileList(json, "live");
+        if (!live) {
+            return std::unexpected(live.error());
+        }
+        deal.live = std::move(*live);
+        auto loose = ReadOptionalTileList(json, "loose");
+        if (!loose) {
+            return std::unexpected(loose.error());
+        }
+        deal.loose = std::move(*loose);
+        if (FindJsonMember(json, "east") != nullptr) {
+            const auto east = ReadSeat(json, "east");
+            if (!east) {
+                return std::unexpected(east.error());
+            }
+            deal.east = *east;
+        }
+        if (FindJsonMember(json, "liveAfterDeal") != nullptr) {
+            const auto after = ReadIntMember(json, "liveAfterDeal");
+            if (!after) {
+                return std::unexpected(after.error());
+            }
+            deal.liveAfterDeal = *after;
+        }
+        return deal;
+    }
+
     Json EventToJson(const MatchLogEvent& event) {
         Json json = Json::object();
         json["event"] = MakeJsonString(EventName(event.kind));
@@ -582,6 +732,9 @@ namespace BECore::Mahjong {
                 json["gameVersion"] = MakeJsonString(event.origin.gameVersion);
                 if (!event.origin.nickname.empty()) {
                     json["nickname"] = MakeJsonString(event.origin.nickname);
+                }
+                if (event.state) {
+                    json["state"] = StateToJson(*event.state);
                 }
                 break;
             }

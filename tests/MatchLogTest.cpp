@@ -26,22 +26,6 @@ namespace BECore::Mahjong::Tests {
             return settings;
         }
 
-        /// A position to start from: four hands and the tiles that come next, the hands counted and scores of a match under way.
-        FixedStart Position(Seat east, int handsPlayed = 0) {
-            FixedWallSpec spec;
-            spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";
-            spec.hands[1] = "1m 2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw";
-            spec.hands[2] = "1p 2p 3p 4p 5p 6p 7p 8p 9p Rd Wd Gd Ew";
-            spec.hands[3] = "5s 6s 7s 8s 9s 1m 2m 3m 4m 5m 6m 7m 8m";
-            spec.live = "Gd Gd 9m";
-            spec.loose = "4s 5s";
-            FixedStart state;
-            state.deal = MakeFixedDeal(spec, east);
-            state.handsPlayed = handsPlayed;
-            state.scores = {250, 120, -40, 900};
-            return state;
-        }
-
         /// A match, its session and a log on it.
         struct LoggedTable {
             Match match;
@@ -359,7 +343,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MatchLogTest, AMatchFromAPositionIsLoggedWithItAndReplaysEqual) {
-        const FixedStart state = Position(1, 5);
+        const FixedStart state = MakeSamplePosition(1, 5);
         LoggedTable table;
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), state).has_value());
         table.PlayMatch();
@@ -385,7 +369,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, ADifferentPositionMakesTheStartsUnequal) {
         MatchLogEvent a;
-        a.state = Position(0);
+        a.state = MakeSamplePosition(0);
         MatchLogEvent b = a;
         EXPECT_TRUE(a == b);
         b.state->scores[2] += 10;
@@ -400,7 +384,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, APositionTheLogWasChangedInStopsAtTheHandOrTheStart) {
         LoggedTable table;
-        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), Position(2)).has_value());
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), MakeSamplePosition(2)).has_value());
         table.PlayMatch();
 
         // Two tiles swapped between seats: still a deal the wall takes, but not the hand the log's Hand event holds.
@@ -431,7 +415,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, AMatchResumedFromAPositionLogIsWhereTheLogLeftItEvenInAClaimWindow) {
         LoggedTable live;
-        ASSERT_TRUE(live.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), Position(0, 4)).has_value());
+        ASSERT_TRUE(live.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), MakeSamplePosition(0, 4)).has_value());
         bool inWindow = false;
         for (int steps = 0; steps < kStepLimit && !inWindow; ++steps) {
             if (live.session.GetPhase() == SessionPhase::HandOver) {
