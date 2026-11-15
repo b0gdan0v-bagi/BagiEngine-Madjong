@@ -504,7 +504,7 @@ namespace BECore::Mahjong {
                 return GetSeatScores(json, "scores", result.scores) && GetSeatScores(json, "deltas", result.deltas);
             }
 
-            /// The room's setting; missing or not a boolean is false, never a read error (additive key: `Online/CLAUDE.md`).
+            /// The room's setting; missing or not a boolean is false, never a read error (additive key: `src/Mahjong/Online/CLAUDE.md`).
             void ReadHintsAllowed() {
                 const Optional<bool> flag = GetJsonBool(_view, kHintsAllowedKey);
                 _t.hintsAllowed = flag.value_or(false);
