@@ -9,7 +9,7 @@ namespace BECore::Mahjong {
 
     /// What differs between the two users of the table state: the control API (`MahjongGameControl`, over a `TableSession`) and the
     /// online view (`MahjongSeatedGame`, over a `Match` alone). They share the keys, so a change here is a change of the wire format
-    /// (`src/Mahjong/Online/CLAUDE.md`, "A view"). Pointers are borrowed for the call.
+    /// (the "A view" bullet of `src/Mahjong/Online/CLAUDE.md`). Pointers are borrowed for the call.
     struct StateJsonContext {
         const Match& match;
         /// The phase of the session, or `PhaseOfMatch(match)` for a user with no `TableSession`.

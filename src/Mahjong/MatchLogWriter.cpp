@@ -36,7 +36,6 @@ namespace BECore::Mahjong {
             return text;
         }
 
-        /// `<directory>/<stamp>_seed<seed>.jsonl`, or with `-2`, `-3` ... before the extension while that file exists.
         std::filesystem::path FreeFileName(const std::filesystem::path& directory, uint32_t seed) {
             const String stem = Format("{}_seed{}", TimeStamp(), seed);
             std::filesystem::path path = directory / Format("{}{}", stem, kFileExtension).c_str();
