@@ -108,7 +108,9 @@ namespace BECore::Mahjong::Arena {
                 action = player.oracle != OracleKind::None ? ChooseOracle(hand, actor, player, seatRngs[actor], worlds) : ChooseComputer(view, seatRngs[actor], player.profile, worlds);
             }
             if (timing) {
-                record.nanoseconds[actor] += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - started).count();
+                const int64_t spent = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - started).count();
+                record.nanoseconds[actor] += spent;
+                record.slowestNanoseconds[actor] = eastl::max(record.slowestNanoseconds[actor], spent);
             }
             ++record.decisions[actor];
             const HandStatus applied = hand.Apply(actor, action);

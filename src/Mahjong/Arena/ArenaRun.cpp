@@ -18,6 +18,7 @@ namespace BECore::Mahjong::Arena {
             tally.drawn += record.kind == ResultKind::Drawn ? 1 : 0;
             tally.decisions += record.decisions[seat];
             tally.nanoseconds += record.nanoseconds[seat];
+            tally.slowestNanoseconds = eastl::max(tally.slowestNanoseconds, record.slowestNanoseconds[seat]);
             if (record.winner == seat) {
                 ++tally.wins;
                 tally.winScore += record.scores[seat];
@@ -58,6 +59,7 @@ namespace BECore::Mahjong::Arena {
             }
             total.decisions += part.decisions;
             total.nanoseconds += part.nanoseconds;
+            total.slowestNanoseconds = eastl::max(total.slowestNanoseconds, part.slowestNanoseconds);
         }
 
         /// Plays the seed `config.first + index` for every focus player into `plays[f]` (`f` the place in the focus list). An empty

@@ -51,7 +51,7 @@ printed), 2 is a bad argument (printed with the usage).
 one thread (all focus players, all four rotations) into a result slot of its own, and the slots are merged in seed order, so the report is the
 same bytes at any N (only the `--time` table differs between runs, as always). When there are fewer seeds than N, each seed thread also owns
 `N / seeds` threads (the integer division) that play the worlds of a search decision (`WorldThreads`), so the total never exceeds N and a
-one-seed job uses all the cores; the worlds are summed in world order, so the answer is the same bytes too. `--time` is the wall time of a
+one-seed job uses all the cores; the worlds are summed in world order, so the answer is the same bytes too. `--time` prints the mean and the slowest decision of each player (`slowest us`) and is the wall time of a
 decision: with the worlds level it is lower than the work in it, and the table sums the threads' microseconds, so it is not the wall time of the run. A hand the rules refuse stops the run, and the error printed is that of the lowest seed that
 failed, whatever N is. The default stays 1. A search player (`searchWorlds`) plays hundreds of Normal decisions for each of its own, so use
 `--jobs` for those runs; for the players without a search (`normal` and `easy`), on 14 cores in Debug, `--seeds 150` of two focus

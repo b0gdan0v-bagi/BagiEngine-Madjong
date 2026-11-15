@@ -40,6 +40,8 @@ namespace BECore::Mahjong::Arena {
         Array<int, kSeatCount> decisions{};
         /// Wall-clock time spent choosing; filled only when timing was asked for, the one field that is not a function of the arguments.
         Array<int64_t, kSeatCount> nanoseconds{};
+        /// The slowest single decision of each seat, measured the same way (0 without timing).
+        Array<int64_t, kSeatCount> slowestNanoseconds{};
     };
 
     /// Called before each action with the model as it stands; it reads only, so the hand and its record are the same with or without
