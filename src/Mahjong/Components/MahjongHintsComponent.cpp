@@ -9,6 +9,7 @@
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHintsComponent.gen.hpp>
+#include <Mahjong/Components/ColorTokens.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/TableLayout.h>
@@ -77,29 +78,34 @@ namespace BECore::Mahjong {
         }
 
         /// The fill of a row of the card: the computer's choice raised, the person's own move in the colour of a pass, the others none.
-        Color RowFill(CardRowKind kind) {
+        void SetRowFill(UIElement& row, CardRowKind kind) {
             switch (kind) {
                 case CardRowKind::Best:
-                    return kUiPalette[2];  // surfaceRaised
+                    SetColorToken(row, row.color, "surfaceRaised"_intern);
+                    return;
                 case CardRowKind::Yours:
-                    return kUiPalette[8];  // danger
+                    SetColorToken(row, row.color, "danger"_intern);
+                    return;
                 case CardRowKind::Other:
                     break;
             }
-            return Color{0, 0, 0, 0};
+            SetPlainColor(row.color, Color{0, 0, 0, 0});
         }
 
-        Color TrendColor(CardTrend trend) {
+        /// The colour of the steps of a row: the marks of the table when the move gets closer or farther, the text of the theme otherwise.
+        void SetTrendColor(UIElement& steps, UITextComponent& label, CardTrend trend) {
             switch (trend) {
                 case CardTrend::Closer:
-                    return kSafeMark;
+                    SetPlainColor(label.textColor, kSafeMark);
+                    return;
                 case CardTrend::Farther:
-                    return kRiskyMark;
+                    SetPlainColor(label.textColor, kRiskyMark);
+                    return;
                 case CardTrend::Same:
                 case CardTrend::None:
                     break;
             }
-            return kUiPalette[9];  // text
+            SetColorToken(steps, label.textColor, "text"_intern);
         }
 
         /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`). In a room the
@@ -397,10 +403,10 @@ namespace BECore::Mahjong {
             vars.Set(IndexedName(kCardUsefulVar, at), row != nullptr ? StringView(row->useful) : StringView());
             const PoolString rowName = IndexedName(kCardRowPrefix, at);
             if (UIElement* element = root.FindByName(rowName)) {
-                element->color = RowFill(row != nullptr ? row->kind : CardRowKind::Other);
+                SetRowFill(*element, row != nullptr ? row->kind : CardRowKind::Other);
             }
             if (UIElement* steps = root.FindByName(IndexedName(kCardStepsPrefix, at)); UITextComponent* label = steps != nullptr ? steps->GetComponent<UITextComponent>() : nullptr) {
-                label->textColor = TrendColor(row != nullptr ? row->trend : CardTrend::None);
+                SetTrendColor(*steps, *label, row != nullptr ? row->trend : CardTrend::None);
             }
             for (size_t k = 0; k < kMaxCardTiles; ++k) {
                 const PoolString name = CardTileName(at, static_cast<int>(k));

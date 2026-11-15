@@ -32,6 +32,7 @@
         <color name="highlight" value="255,255,255,60"/>
         <color name="outline" value="16,18,26,255"/>
         <color name="glowPrimary" value="90,200,120,160"/>
+        <!-- winnerRow: the winner's row (a modal plate, so a gold accent border is allowed); a first place in the standings the same. placeBadge: the badge with the place number. -->
         <color name="winnerRow" value="84,74,36,255"/>
         <color name="placeBadge" value="70,84,128,255"/>
         <!-- The table: the felt and its rim, the lip under the tiles, the rack under the viewer's hand and the seat plates' frame, shadow and highlight

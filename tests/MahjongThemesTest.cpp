@@ -6,7 +6,7 @@
 #include <tests/ShippedThemes.h>
 #include <tests/UiStyleTestSupport.h>
 
-// The shipped `config/UIThemes.xml`: whole, legal, and the same as the constants it replaces.
+// The shipped `config/UIThemes.xml`: whole and legal, with a token for every role of `UiPalette.h`.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -33,12 +33,6 @@ namespace BECore::Mahjong::Tests {
             UIThemes themes;
             Vector<String> problems;
         };
-
-        void ExpectColor(const UIThemes& themes, const char* token, const Color& expected) {
-            const Optional<Color> found = themes.Find(token);
-            ASSERT_TRUE(found.has_value()) << token;
-            EXPECT_TRUE(SameColor(*found, expected)) << token;
-        }
 
     }  // namespace
 
@@ -85,25 +79,6 @@ namespace BECore::Mahjong::Tests {
         const Optional<Color> surface = themes.Find("surface");
         ASSERT_TRUE(surface.has_value());
         EXPECT_TRUE(SameColor(PaletteColor("surface"), *surface));
-    }
-
-    // The bridge: the file equals the constants it replaces. Both cases go when the constants do.
-
-    TEST_F(MahjongThemesTest, ClassicHoldsTheValuesOfThePalette) {
-        for (int i = 0; i < kUiPaletteSize; ++i) {
-            ExpectColor(themes, kUiPaletteNames[i], kUiPalette[i]);
-        }
-    }
-
-    TEST_F(MahjongThemesTest, ClassicHoldsTheValuesOfTheTableConstants) {
-        ExpectColor(themes, "felt", kFelt);
-        ExpectColor(themes, "feltRim", kFeltRim);
-        ExpectColor(themes, "feltLip", kFeltLip);
-        ExpectColor(themes, "handRack", kHandRack);
-        ExpectColor(themes, "handRackLip", kHandRackLip);
-        ExpectColor(themes, "plateFrame", kSeatPlateFrame);
-        ExpectColor(themes, "plateShadow", kSeatPlateShadow);
-        ExpectColor(themes, "plateHighlight", kSeatPlateHighlight);
     }
 
 }  // namespace BECore::Mahjong::Tests

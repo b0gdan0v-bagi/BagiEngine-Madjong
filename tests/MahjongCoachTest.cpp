@@ -501,6 +501,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(SameColor(panel->color, PaletteColor("surface")));
             EXPECT_TRUE(SameColor(Element("HintsWhy", "CardRow0")->color, PaletteColor("surfaceRaised"))) << "the computer's choice";
             EXPECT_TRUE(SameColor(Element("HintsWhy", "CardRow1")->color, PaletteColor("danger"))) << "the person's move";
+            EXPECT_EQ(Element("HintsWhy", "CardRow0")->color.token, "surfaceRaised"_intern) << "a token, so a theme recolours it";
+            EXPECT_EQ(Element("HintsWhy", "CardRow1")->color.token, "danger"_intern);
 
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role != SlotRole::WallStack) {

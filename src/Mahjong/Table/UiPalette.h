@@ -5,31 +5,28 @@
 namespace BECore::Mahjong {
 
     /**
-     * The look of the game in numbers: the palette, the type scale and the spacing grid. The scene file writes the colours of `kUiPalette`
-     * as text, the sizes of `kFontScale` and every position and size on the grid of `kGridUnit`; `MahjongUiStyleTest` holds it to all three.
-     * The roles are in `config/CLAUDE.md` ("UI style"): a new control takes the role of what it does, never a new literal. The colours
-     * from `kFelt` to `kAdvisedFrame` are painted by the components (`MahjongTableComponent`, `MahjongHintsComponent`) and are not in the
-     * file.
+     * The look of the game in numbers: the roles of the palette, the type scale and the spacing grid. The colours of the palette are not here
+     * but in `config/UIThemes.xml`, one table per theme (`kUiPaletteNames` and `kTablePaletteNames` list the roles every theme defines); the
+     * scene file writes `@role`, the sizes of `kFontScale` and every position and size on the grid of `kGridUnit`, and `MahjongUiStyleTest`
+     * holds it to all three. The roles are in `config/CLAUDE.md` ("UI style"): a new control takes the role of what it does, never a new
+     * literal. The colours that stay here, from `kTileShadow` to `kAdvisedFrame` and the marks of the plates, are the table's marks: they sit
+     * on the ivory tiles, which no theme changes, so they are constants and not tokens.
      *
      * **Gold is the table's family of marks**, and nothing else on the table is gold; the wind bars, the danger marks and the dealer mark
      * are roles of their own. `kClaimLostFrame`, `kSeatTurnFrame` and `kPanelTurnLight` each have an alpha of their own, because the tests find a mark by its colour.
      */
 
-    /// The table.
-    inline constexpr Color kFelt{22, 92, 62, 255};
-    inline constexpr Color kFeltRim{10, 46, 32, 255};
+    /// The table: its colours are the `felt`, `feltRim` and `feltLip` tokens (`TablePalette`).
     /// The rim is this wide on every side of the view.
     inline constexpr float kRimWidth = 8.0f;
     /// A thin line on the inner side of the rim, under every tile.
-    inline constexpr Color kFeltLip{54, 128, 92, 255};
     inline constexpr float kFeltLipWidth = 2.0f;
     /// The two layers of a tile's shadow, both under the tile: the tight one at an offset, the fainter one round it. Neither is a mark.
     inline constexpr Color kTileShadow{0, 0, 0, 70};
     inline constexpr Color kTileShadowSoft{0, 0, 0, 34};
-    /// The rack under the viewer's hand (the bottom seat, whoever sits there): the darker lip is the whole plate, the lighter colour lies
-    /// on it with the lip left on three sides, so it reads as raised. Wood, nowhere near the gold of a mark; under every tile and mark.
-    inline constexpr Color kHandRack{92, 62, 42, 255};
-    inline constexpr Color kHandRackLip{52, 34, 24, 255};
+    /// The rack under the viewer's hand (the bottom seat, whoever sits there): the `handRackLip` colour is the whole plate, the `handRack`
+    /// colour lies on it with the lip left on three sides, so it reads as raised. Wood in every theme, nowhere near the gold of a mark;
+    /// under every tile and mark.
     inline constexpr float kRackPadding = 4.0f;
     inline constexpr float kHandRackLipWidth = 2.0f;
     /// Behind the hand of the seat whose turn it is.
@@ -77,10 +74,8 @@ namespace BECore::Mahjong {
     inline constexpr Color kDeclareMark{255, 214, 80, 255};
     inline constexpr Color kAdvisedFrame{255, 214, 80, 230};
 
-    /// The seat plates (the table paints them; the words are labels of the node `SeatPlates`): the fill starts at the `hudPanel` colour
-    /// (a test holds them equal); the plate of the seat whose turn it is gets the tint `kTurnMark` and the frame `kSeatTurnFrame`, the emblem's
-    /// turn and calling rings are tinted `kSeatTurnFrame` and `kCallingFrame` (no new gold), the dealer gets a red bar along the top edge.
-    inline constexpr Color kSeatPlate{10, 30, 22, 170};
+    /// The seat plates (the table paints them; the words are labels of the node `SeatPlates`): the fill starts at the `hudPanel` colour; the plate of the seat whose turn it is gets the tint
+    /// `kTurnMark` and the frame `kSeatTurnFrame`, the emblem's turn and calling rings are tinted `kSeatTurnFrame` and `kCallingFrame` (no new gold), the dealer gets a red bar along the top edge.
     inline constexpr Color kSeatTurnFrame{255, 214, 80, 240};
     inline constexpr float kSeatTurnFrameWidth = 4.0f;
     inline constexpr Color kDealerMark{200, 70, 60, 255};
@@ -95,38 +90,8 @@ namespace BECore::Mahjong {
     /// The HUD and the seat plates keep this far clear of a discard block and of the wall ring, in view units.
     inline constexpr float kPlatePadding = 4.0f;
 
-    /// The colours of the scene file, by role (`kUiPaletteNames` holds the role of each, in the same order).
+    /// The roles of the scene file's colours, tokens of `config/UIThemes.xml` (`kUiPaletteNames` holds them in the order of the file).
     inline constexpr int kUiPaletteSize = 28;
-    inline constexpr Array<Color, kUiPaletteSize> kUiPalette{{
-        {0, 0, 0, 200},        // scrim
-        {36, 40, 52, 255},     // surface
-        {48, 54, 72, 255},     // surfaceRaised
-        {58, 66, 92, 255},     // header
-        {10, 30, 22, 170},     // hudPanel
-        {40, 110, 60, 255},    // primary
-        {45, 75, 120, 255},    // secondary
-        {70, 70, 100, 255},    // neutral
-        {90, 50, 50, 255},     // danger
-        {255, 255, 255, 255},  // text
-        {190, 196, 190, 255},  // textMuted
-        {255, 214, 80, 255},   // accent
-        {26, 78, 40, 255},     // primaryDeep
-        {30, 52, 86, 255},     // secondaryDeep
-        {48, 48, 72, 255},     // neutralDeep
-        {62, 34, 34, 255},     // dangerDeep
-        {26, 29, 38, 255},     // surfaceDeep
-        {34, 38, 52, 255},     // surfaceRaisedDeep
-        {42, 48, 68, 255},     // headerDeep
-        {6, 20, 14, 170},      // hudPanelDeep
-        {78, 86, 116, 255},    // frame
-        {140, 150, 180, 255},  // frameLight
-        {0, 0, 0, 90},         // shadow
-        {255, 255, 255, 60},   // highlight
-        {16, 18, 26, 255},     // outline
-        {90, 200, 120, 160},   // glowPrimary
-        {84, 74, 36, 255},     // winnerRow: the winner's row (a modal plate, so a gold `accent` border is allowed); a first place in the standings the same
-        {70, 84, 128, 255},    // placeBadge: the badge with the place number
-    }};
     // clang-format off
     inline constexpr Array<const char*, kUiPaletteSize> kUiPaletteNames{{
         "scrim",
@@ -207,14 +172,10 @@ namespace BECore::Mahjong {
 
     /// The table's own panels, the four seat plates and the centre panel, painted by `MahjongTableComponent` as one rounded framed box
     /// (the order of `UIElement::DrawBoxIn`). The radius and the border are those of the scale above times the table's unit; a mark's bar
-    /// along an edge is inset by the radius at both ends so it stays on the straight part. The roles are the table's, outside `kUiPalette`:
-    /// `kSeatPlateDeep` is `hudPanelDeep`, and `SeatPlatesTest` holds the numbers equal to the scale.
+    /// along an edge is inset by the radius at both ends so it stays on the straight part. The colours are the `TablePalette` of the theme (the
+    /// fill is `hudPanel` to `hudPanelDeep`), and `SeatPlatesTest` holds the numbers equal to the scale.
     inline constexpr float kSeatPlateCorner = static_cast<float>(kCornerMiddle);
     inline constexpr float kSeatPlateBorder = static_cast<float>(kBorderWidth);
-    inline constexpr Color kSeatPlateDeep{6, 20, 14, 170};
-    inline constexpr Color kSeatPlateFrame{84, 138, 106, 200};
-    inline constexpr Color kSeatPlateShadow{0, 0, 0, 60};
-    inline constexpr Color kSeatPlateHighlight{255, 255, 255, 36};
 
     /// The spacing grid: every position, size, spacing and padding of the scene file is a multiple of the unit; the step is the usual gap
     /// between controls and the margin to the edge of the view.

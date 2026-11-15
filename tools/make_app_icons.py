@@ -27,7 +27,8 @@ CELL_W = 96
 CELL_H = 128
 COLUMNS = 8
 RED_DRAGON = 31
-# kFelt of src/Mahjong/Table/UiPalette.h.
+# The `felt` of the `classic` theme of config/UIThemes.xml, copied: the web icon is one picture and does not follow the theme, so a
+# change of that colour is made here too.
 FELT = (22, 92, 62)
 # The tile's height as a part of the icon: inside the circle of a maskable icon (the safe zone is 80 % of the side).
 TILE_SHARE = 0.72

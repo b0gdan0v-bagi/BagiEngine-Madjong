@@ -588,6 +588,7 @@ namespace BECore::Mahjong::Tests {
         Frames();
         EXPECT_EQ(DisplayText(Element(kOptions, kNicknameField)), kNickname);
         EXPECT_TRUE(SameColor(Element(kOptions, kNicknameField)->GetComponent<UITextComponent>()->textColor, PaletteColor("text")));
+        EXPECT_EQ(Element(kOptions, kNicknameField)->GetComponent<UITextComponent>()->textColor.token, "text"_intern) << "a token, so a theme recolours it";
     }
 
     TEST_F(MahjongUploadSceneTest, TheNicknameTypedOnThePadLandsInTheFileAndInTheStartOfTheNextPostedMatch) {
