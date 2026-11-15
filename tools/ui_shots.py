@@ -12,6 +12,12 @@ and 09-online (the online panel: New game, then the Online button of Setup; the 
 A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and prints the seed it
 used.
 
+    python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label after --scenes fresh-table,setup
+
+`--scenes a,b` (names without the NN- prefix) takes only those scenes and writes **only the small copy**: the set of the todo loop
+(`.claude/rules/qa-project.md`) compares small pictures, and the file name `<NN>-<scene>-<W>x<H>.png` with the small size is the pairing key
+of `engine/tools/shots/shots.py diff`. An unknown name exits 1 with the list. Without `--scenes` all nine scenes are written, both copies.
+
 The size is the window of the headless game (1920 x 1080 from the engine's `SDLWindowConfig.xml`), and no control call changes it. With
 `--window WxH` that is not the default the tool writes a **temporary** `config/SDLWindowConfig.xml` of the game (next to `SceneConfig.xml`;
 the game's file overrides the engine's) and removes it when it ends, also on Ctrl-C or a signal; it refuses to start when such a file is
@@ -242,9 +248,12 @@ def small_size(window: tuple[int, int]) -> tuple[int, int]:
     return round(window[0] * scale), round(window[1] * scale)
 
 
-def write_shots(client: BagiControlClient, folder: Path, name: str, window: tuple[int, int]) -> list[Path]:
+def write_shots(client: BagiControlClient, folder: Path, name: str, window: tuple[int, int], small_only: bool) -> list[Path]:
     written = []
-    for max_size, (width, height) in ((NATIVE_MAX_SIZE, window), (SMALL_MAX_SIZE, small_size(window))):
+    copies = [(SMALL_MAX_SIZE, small_size(window))]
+    if not small_only:
+        copies.insert(0, (NATIVE_MAX_SIZE, window))
+    for max_size, (width, height) in copies:
         data, got_width, got_height = screenshot(client, max_size)
         check((got_width, got_height) == (width, height), f"{name}: the picture is {got_width}x{got_height}, expected {width}x{height}")
         path = folder / f"{name}-{width}x{height}.png"
@@ -292,16 +301,33 @@ def parse_window(text: str) -> tuple[int, int]:
     return int(parts[0]), int(parts[1])
 
 
-def run(exe: Path, folder: Path, seed: int, window: tuple[int, int]) -> None:
+def scene_short_name(full_name: str) -> str:
+    return full_name.split("-", 1)[1]
+
+
+def parse_scenes(text: str) -> list[str]:
+    """The names of `--scenes` (comma-separated, without the NN- prefix); an unknown one is a ShotFailure that lists the known."""
+    known = [scene_short_name(name) for name, _ in SCENES]
+    names = [part.strip() for part in text.split(",") if part.strip()]
+    unknown = [name for name in names if name not in known]
+    check(bool(names) and not unknown, f"unknown scene {', '.join(unknown) or '(none given)'}; the scenes are: {', '.join(known)}")
+    return names
+
+
+def run(exe: Path, folder: Path, seed: int, window: tuple[int, int], chosen: list[str] | None) -> int:
+    """Takes the scenes (all, or the short names in `chosen`); returns how many pictures were written."""
+    scenes = [(name, scene) for name, scene in SCENES if chosen is None or scene_short_name(name) in chosen]
+    count = 0
     folder.mkdir(parents=True, exist_ok=True)
     port = free_port()
     with GameProcess(build_game_command(exe, port, headless=True, manual_clock=True), cwd=exe.parent) as game:
         client = game.connect(port)
         try:
-            for name, scene in SCENES:
+            for name, scene in scenes:
                 note = scene(client, seed)
-                for path in write_shots(client, folder, name, window):
+                for path in write_shots(client, folder, name, window, small_only=chosen is not None):
                     print(f"{path.name}: {note}", flush=True)
+                    count += 1
             client.call("quit")
         except (ShotFailure, ControlError, ConnectionClosed, OSError) as error:
             raise ShotFailure(f"{error}\n--- game log (tail) ---\n{game.log_tail()}") from error
@@ -310,6 +336,7 @@ def run(exe: Path, folder: Path, seed: int, window: tuple[int, int]) -> None:
                 client.close()
             except (OSError, ConnectionClosed):
                 pass
+    return count
 
 
 def main() -> int:
@@ -319,9 +346,16 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"the folder of the folders (default {DEFAULT_OUT}); outside every git work tree")
     parser.add_argument("--window", type=parse_window, default=DEFAULT_WINDOW, metavar="WxH",
                         help="the size of the headless window (default %dx%d); another size is made by a temporary config/SDLWindowConfig.xml" % DEFAULT_WINDOW)
+    parser.add_argument("--scenes", default=None, metavar="a,b",
+                        help="only these scenes (names without the NN- prefix), only the small copy; default all nine, both copies")
     parser.add_argument("--seed", type=int, default=1, help="the first seed (scenes that need a state search from here)")
     args = parser.parse_args()
 
+    try:
+        chosen = None if args.scenes is None else parse_scenes(args.scenes)
+    except ShotFailure as error:  # exit 1 as every failure (argparse would exit 2)
+        print(f"FAILED: {error}")
+        return EXIT_FAILED
     if not args.exe.is_file():
         print(f"SKIPPED: {args.exe} does not exist")
         return EXIT_SKIPPED
@@ -336,11 +370,11 @@ def main() -> int:
     folder = out / args.label
     try:
         with temporary_window_config(args.window):
-            run(args.exe.resolve(), folder, args.seed, args.window)  # the game runs with its own directory as the working directory
+            count = run(args.exe.resolve(), folder, args.seed, args.window, chosen)  # the game runs with its own directory as the working directory
     except (ShotFailure, GameLaunchError) as error:
         print(f"FAILED: {error}")
         return EXIT_FAILED
-    print(f"DONE: {len(SCENES) * 2} pictures in {folder}")
+    print(f"DONE: {count} pictures in {folder}")
     return EXIT_DONE
 
 
