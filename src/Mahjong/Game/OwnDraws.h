@@ -36,7 +36,7 @@ namespace BECore::Mahjong {
      * **The search** is an expectimax over the seat's next `depth` draws. A draw of a kind that lowers the shanten (`ImprovingTiles`)
      * branches with the probability `unseen copies / unseen total` and is followed by the discard of the best value among the discards
      * that leave the lowest shanten; every other draw is one branch "the hand is unchanged" that takes the rest of the probability and
-     * spends a draw. Lines meeting again are valued once (a memo cleared per call). A hand that waits is taken as declared (Normal
+     * spends a draw. Lines meeting again are valued once, and so are the shanten, the improving and the winning kinds of one hand (tables of the call). A hand that waits is taken as declared (Normal
      * always declares) and is valued in closed form over all the draws the wall leaves (`liveCount / kSeatCount`): each draw wins with
      * the chance of the unseen winning copies, every win is `ScoreSeat` of the hand with that tile, and the rest is the standing hand
      * (`NotWinningValue`) or a drawn hand (0). Where the search stops with a hand that does not wait, it does not win any more.

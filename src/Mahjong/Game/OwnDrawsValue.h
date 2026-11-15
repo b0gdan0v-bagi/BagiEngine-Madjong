@@ -10,9 +10,9 @@ namespace BECore::Mahjong {
      * earns when another seat wins, and the chance that nobody else has won after some draws. Pure: no `TableView`, no rng.
      *
      * **Fixed point, so one input gives one choice on every platform.** A probability is an integer over `kOwnDrawsProbBase`, a value is
-     * an `int64_t` in milli-points (`kMilliPerPoint` to a point). Every division goes through `RoundedDiv` (round half up). No `double`
-     * is used in a choice. A score is an `int` up to `LimitCap(INT_MAX)`, a milli-point value of it with the largest factor is far inside
-     * an `int64_t`, so a huge limit cannot overflow.
+     * an `int64_t` in milli-points (`kMilliPerPoint` to a point). Every division goes through `RoundedDiv` (round half up) or, for a numerator that can be negative, `RoundedDivSigned` (the same on
+     * the magnitude). No `double` is used in a choice. A score is an `int` up to `LimitCap(INT_MAX)`, a milli-point value of it with the largest factor is far inside an `int64_t`, so a huge limit
+     * cannot overflow.
      */
 
     /// A probability of 1.
@@ -51,7 +51,7 @@ namespace BECore::Mahjong {
     inline constexpr TypicalScores kTypicalScoresEast{45, 9};
     inline constexpr TypicalScores kTypicalScoresOther{45, 9};
 
-    /// `numerator / denominator` rounded half up; both are not negative and `denominator` is positive. The one rounding of this file.
+    /// `numerator / denominator` rounded half up; both are not negative and `denominator` is positive.
     [[nodiscard]] int64_t RoundedDiv(int64_t numerator, int64_t denominator) noexcept;
 
     /// `numerator / denominator` rounded half away from zero (`RoundedDiv` of the magnitude); `denominator` is positive.

@@ -17,6 +17,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kDepth = 2;
         constexpr int kPerfectChance = static_cast<int>(kOwnDrawsProbBase);
         constexpr double kChanceTolerance = 1e-4;
+        constexpr int kMeldSetSize = 3;
 
         // Two sets, a terminal pung and a tanki wait: discarding 5p leaves "Gd" alone, discarding Gd leaves "5p" alone (3 copies unseen of
         // each). Both fully concealed and declared with the first discard (x4); the pung of 9m is concealed (8 points).
@@ -28,6 +29,25 @@ namespace BECore::Mahjong::Tests {
 
         // Two sets, 78m and 57p to join, a pair of east winds (East's own wind and the round wind) and two strays: 9s, 2m.
         constexpr const char* kOneFromWaiting = "1p 2p 3p 4s 5s 6s 7m 8m Ew Ew 5p 7p 9s 2m";
+
+        /// The listed actions of `view`: a plain discard of every kind held, and the declaring one where the tiles left wait.
+        void ListDiscards(TableView& view) {
+            view.legal.clear();
+            const int meldCount = MeldCountOf(view);
+            const TileCounts meldTiles = CountMeldTiles(view.own.melds);
+            TileCounts counts = CountTiles(view.own.concealed);
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                if (counts[id] == 0) {
+                    continue;
+                }
+                view.legal.push_back(HandAction::MakeDiscard(Tile{id}));
+                --counts[id];
+                if (IsWaiting(counts, meldCount, meldTiles)) {
+                    view.legal.push_back(HandAction::MakeDiscard(Tile{id}, true));
+                }
+                ++counts[id];
+            }
+        }
 
         /// East's view on its turn with the 14 tiles `hand`, the tiles `pile` lying open, `live` tiles in the wall. Nothing else is
         /// visible. The listed actions: a plain discard of every kind held, and the declaring one where the 13 left wait.
@@ -48,18 +68,7 @@ namespace BECore::Mahjong::Tests {
                 ++view.visible[tile.Id()];
             }
             view.liveCount = live;
-            TileCounts counts = CountTiles(view.own.concealed);
-            for (uint8_t id = 0; id < kKindCount; ++id) {
-                if (counts[id] == 0) {
-                    continue;
-                }
-                view.legal.push_back(HandAction::MakeDiscard(Tile{id}));
-                --counts[id];
-                if (IsWaiting(counts, 0, TileCounts{})) {
-                    view.legal.push_back(HandAction::MakeDiscard(Tile{id}, true));
-                }
-                ++counts[id];
-            }
+            ListDiscards(view);
             return view;
         }
 
@@ -76,6 +85,429 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(a[i].meanWinScore, b[i].meanWinScore) << "entry " << i;
                 EXPECT_EQ(a[i].valueWhenNotWinning, b[i].valueWhenNotWinning) << "entry " << i;
                 EXPECT_EQ(a[i].expected, b[i].expected) << "entry " << i;
+            }
+        }
+
+        // ----- the golden table: values copied from the build before the evaluator was made fast -----
+
+        /// One position of the golden table: `how` says how it was made.
+        struct GoldenSpec {
+            const char* how;
+            const char* hand;      // the 14 tiles (3n + 2 with the melds)
+            const char* heldDrop;  // the tile taken out to make the 3n + 1 hand of `ValueOfHeldHand`
+            const char* pile = "";
+            int live = kLongWall;
+            Wind seatWind = Wind::East;
+            Vector<Meld> melds;
+            bool declared = false;
+            int declaredAt = 0;
+            int discardCount = 0;
+            const char* bonus = "";
+            Vector<Seat> declaredOpponents;
+        };
+
+        struct GoldenEntry {
+            const char* tile;
+            int winChance;
+            int meanWinScore;
+            int64_t valueWhenNotWinning;
+            int64_t expected;
+        };
+
+        struct GoldenValues {
+            Vector<GoldenEntry> depth1;
+            Vector<GoldenEntry> depth2;
+            Vector<GoldenEntry> waits;
+            int64_t held = 0;
+            int64_t heldWithLooseTile = 0;
+        };
+
+        Meld OpenPung(const char* tile, Seat from) {
+            Meld meld;
+            meld.kind = MeldKind::Pung;
+            meld.first = T(tile);
+            meld.claimed = T(tile);
+            meld.from = from;
+            meld.fromDiscard = true;
+            return meld;
+        }
+
+        Meld ConcealedKong(const char* tile) {
+            Meld meld;
+            meld.kind = MeldKind::Kong;
+            meld.concealed = true;
+            meld.first = T(tile);
+            return meld;
+        }
+
+        TableView GoldenView(const GoldenSpec& spec) {
+            TableView view = MakeView(spec.hand, spec.pile, spec.live);
+            view.seatWind = spec.seatWind;
+            view.own.melds = spec.melds;
+            for (const Meld& meld : spec.melds) {
+                const int tiles = meld.kind == MeldKind::Kong ? kCopiesPerTile : kMeldSetSize;
+                view.visible[meld.first.Id()] += static_cast<uint8_t>(tiles);
+            }
+            view.own.callingDeclared = spec.declared;
+            view.own.callingAtDiscardCount = spec.declaredAt;
+            view.own.discardCount = spec.discardCount;
+            const Vector<Tile> bonus = ParseTiles(spec.bonus).value();
+            for (const Tile tile : bonus) {
+                view.own.bonus.push_back(tile);
+                ++view.visible[tile.Id()];
+            }
+            for (const Seat seat : spec.declaredOpponents) {
+                view.seats[seat].callingDeclared = true;
+            }
+            ListDiscards(view);
+            return view;
+        }
+
+        TableView HeldView(const GoldenSpec& spec) {
+            TableView view = GoldenView(spec);
+            view.own.RemoveConcealed(T(spec.heldDrop));
+            return view;
+        }
+
+        Vector<GoldenSpec> GoldenSpecs() {
+            Vector<GoldenSpec> specs;
+            specs.push_back({.how = "the tanki hand of TheDearerWaitIsRankedFirst, East, a long wall", .hand = kTankiHand, .heldDrop = "5p"});
+            specs.push_back({.how = "the four pairs of kPairsHand with a Rd lying open", .hand = kPairsHand, .heldDrop = "5m", .pile = "Rd"});
+            specs.push_back({.how = "kOneFromWaiting (shanten 1 after 9s), East, a long wall", .hand = kOneFromWaiting, .heldDrop = "9s"});
+            specs.push_back({.how = "a declared hand waiting on Gd that drew 7s, 6 own discards, a flower, seat 1 declared too",
+                             .hand = "1p 2p 3p 7p 8p 9p 4s 5s 6s 9m 9m 9m Gd 7s",
+                             .heldDrop = "7s",
+                             .live = 40,
+                             .declared = true,
+                             .declaredAt = 2,
+                             .discardCount = 6,
+                             .bonus = "F1",
+                             .declaredOpponents = {kSeat1}});
+            specs.push_back({.how = "an open pung of Rd and a hand that waits on 6m / 9m after 9s (East pair Ew)",
+                             .hand = "1p 2p 3p 4s 5s 6s 7m 8m Ew Ew 9s",
+                             .heldDrop = "9s",
+                             .pile = "5s",
+                             .melds = {OpenPung("Rd", kSeat1)}});
+            specs.push_back({.how = "a concealed kong of 9m and a hand that waits on 8p after 2m",
+                             .hand = "1p 2p 3p 4s 5s 6s 5m 5m 7p 9p 2m",
+                             .heldDrop = "2m",
+                             .melds = {ConcealedKong("9m")},
+                             .discardCount = 3});
+            specs.push_back({.how = "kOneFromWaiting with the South wind pair, South not East, seats 2 and 3 declared",
+                             .hand = "1p 2p 3p 4s 5s 6s 7m 8m Sw Sw 5p 7p 9s 2m",
+                             .heldDrop = "9s",
+                             .seatWind = Wind::South,
+                             .declaredOpponents = {kSeat2, kSeat3}});
+            specs.push_back({.how = "kOneFromWaiting late in the wall (10 live: 2 draws), all three others declared",
+                             .hand = kOneFromWaiting,
+                             .heldDrop = "9s",
+                             .live = 10,
+                             .declaredOpponents = {kSeat1, kSeat2, kSeat3}});
+            specs.push_back({.how = "the tanki hand with 3 live tiles: fewer than kSeatCount, no draw left", .hand = kTankiHand, .heldDrop = "5p", .live = kSeatCount - 1});
+            specs.push_back({.how = "kPairsHand with 2 live tiles", .hand = kPairsHand, .heldDrop = "5m", .live = kSeatCount - 2});
+            specs.push_back({.how = "a hand two sets and two partials at shanten 2, East", .hand = "1p 2p 4p 5p 7s 8s 3m 5m 9m 9m Ew Rd Gd 2s", .heldDrop = "Gd"});
+            return specs;
+        }
+
+        /// The values of `GoldenSpecs()` in the same order, as the evaluator answered before it was made fast (WP 3 of slice 2): the
+        /// optimisation changes no number, so these stay as they are.
+        Vector<GoldenValues> GoldenTable() {
+            return {
+                // the tanki hand of TheDearerWaitIsRankedFirst, East, a long wall
+                {
+                    .depth1 =
+                        {
+                            {"5p", 297802, 140, -10127, 243043},
+                            {"Gd", 297802, 130, -10127, 225175},
+                            {"1p", 58259, 65, -8829, 14400},
+                            {"9p", 58259, 65, -8829, 14400},
+                            {"9m", 69222, 57, -12891, 11679},
+                            {"2p", 40708, 70, -8766, 8689},
+                        },
+                    .depth2 =
+                        {
+                            {"5p", 297802, 140, -10127, 243043},
+                            {"Gd", 297802, 130, -10127, 225175},
+                            {"1p", 106085, 65, -9059, 33261},
+                            {"9p", 106085, 65, -9059, 33261},
+                            {"9m", 123277, 57, -13180, 30597},
+                            {"2p", 73861, 70, -8923, 22757},
+                        },
+                    .waits =
+                        {
+                            {"5p", 297802, 140, -10127, 243043},
+                            {"Gd", 297802, 130, -10127, 225175},
+                        },
+                    .held = 243043,
+                    .heldWithLooseTile = 255475,
+                },
+                // the four pairs of kPairsHand with a Rd lying open
+                {
+                    .depth1 =
+                        {
+                            {"2s", 12365, 104, -8622, -758},
+                            {"5m", 12365, 104, -8622, -758},
+                            {"8m", 12365, 104, -8622, -758},
+                            {"Rd", 17853, 60, -12542, -5892},
+                            {"1p", 0, 0, -8566, -8566},
+                            {"4s", 0, 0, -8566, -8566},
+                        },
+                    .depth2 =
+                        {
+                            {"2s", 23471, 104, -8646, 6284},
+                            {"5m", 23471, 104, -8646, 6284},
+                            {"8m", 23471, 104, -8646, 6284},
+                            {"Rd", 33791, 60, -12493, 92},
+                            {"1p", 2407, 102, -8545, -7044},
+                            {"4s", 2407, 102, -8545, -7044},
+                        },
+                    .waits = {},
+                    .held = -8600,
+                    .heldWithLooseTile = -9142,
+                },
+                // kOneFromWaiting (shanten 1 after 9s), East, a long wall
+                {
+                    .depth1 =
+                        {
+                            {"9s", 42774, 60, -8765, 7008},
+                            {"2m", 42774, 60, -8765, 7008},
+                            {"5p", 0, 0, -8401, -8401},
+                            {"7p", 0, 0, -8401, -8401},
+                            {"8m", 0, 0, -8401, -8401},
+                            {"7m", 0, 0, -8401, -8401},
+                        },
+                    .depth2 =
+                        {
+                            {"9s", 79212, 60, -8934, 20290},
+                            {"2m", 79212, 60, -8934, 20290},
+                            {"5p", 26273, 82, -8387, 4736},
+                            {"7p", 25392, 83, -8383, 4415},
+                            {"8m", 13559, 84, -8334, -1384},
+                            {"7m", 11552, 88, -8320, -2109},
+                        },
+                    .waits = {},
+                    .held = -8600,
+                    .heldWithLooseTile = -9142,
+                },
+                // a declared hand waiting on Gd that drew 7s, 6 own discards, a flower, seat 1 declared too
+                {
+                    .depth1 =
+                        {
+                            {"Gd", 199527, 280, 67043, 388871},
+                            {"4s", 106753, 310, 65952, 257472},
+                            {"7s", 106753, 310, 65952, 257472},
+                            {"1p", 22563, 282, 65804, 102492},
+                            {"9p", 22563, 282, 65804, 102492},
+                            {"9m", 41065, 231, -38962, 19640},
+                        },
+                    .depth2 =
+                        {
+                            {"Gd", 199527, 280, 67043, 388871},
+                            {"4s", 106753, 310, 65952, 257472},
+                            {"7s", 106753, 310, 65952, 257472},
+                            {"1p", 37988, 282, 66591, 128333},
+                            {"9p", 37988, 282, 66591, 128333},
+                            {"9m", 64930, 231, -38199, 54392},
+                        },
+                    .waits =
+                        {
+                            {"Gd", 199527, 280, 67043, 388871},
+                            {"4s", 106753, 310, 65952, 257472},
+                            {"7s", 106753, 310, 65952, 257472},
+                        },
+                    .held = 257472,
+                    .heldWithLooseTile = 263234,
+                },
+                // an open pung of Rd and a hand that waits on 6m / 9m after 9s (East pair Ew)
+                {
+                    .depth1 =
+                        {
+                            {"9s", 616468, 120, -7311, 441053},
+                            {"8m", 100297, 96, -4327, 53986},
+                            {"7m", 79816, 105, -4292, 46406},
+                            {"1p", 70210, 60, -4744, 20864},
+                            {"4s", 70210, 60, -4744, 20864},
+                            {"6s", 70210, 60, -4744, 20864},
+                        },
+                    .depth2 =
+                        {
+                            {"9s", 616468, 120, -7311, 441053},
+                            {"8m", 170602, 96, -4114, 94969},
+                            {"7m", 138143, 105, -4040, 83628},
+                            {"1p", 128654, 60, -4895, 42050},
+                            {"4s", 128654, 60, -4895, 42050},
+                            {"6s", 128654, 60, -4895, 42050},
+                        },
+                    .waits =
+                        {
+                            {"9s", 616468, 120, -7311, 441053},
+                        },
+                    .held = 441053,
+                    .heldWithLooseTile = 456312,
+                },
+                // a concealed kong of 9m and a hand that waits on 8p after 2m
+                {
+                    .depth1 =
+                        {
+                            {"2m", 378870, 120, 4245, 275423},
+                            {"9p", 124312, 115, 3611, 89241},
+                            {"7p", 84248, 118, 3539, 62994},
+                            {"1p", 38797, 115, 3460, 30182},
+                            {"4s", 38797, 115, 3460, 30182},
+                            {"6s", 38797, 115, 3460, 30182},
+                        },
+                    .depth2 =
+                        {
+                            {"2m", 378870, 120, 4245, 275423},
+                            {"9p", 207763, 115, 3802, 146857},
+                            {"7p", 145881, 118, 3668, 106586},
+                            {"1p", 72083, 115, 3521, 53158},
+                            {"4s", 72083, 115, 3521, 53158},
+                            {"6s", 72083, 115, 3521, 53158},
+                        },
+                    .waits =
+                        {
+                            {"2m", 378870, 120, 4245, 275423},
+                        },
+                    .held = 275423,
+                    .heldWithLooseTile = 288487,
+                },
+                // kOneFromWaiting with the South wind pair, South not East, seats 2 and 3 declared
+                {
+                    .depth1 =
+                        {
+                            {"9s", 7798, 55, -57214, -55047},
+                            {"2m", 7798, 55, -57214, -55047},
+                            {"7p", 0, 0, -56777, -56777},
+                            {"8m", 0, 0, -56777, -56777},
+                            {"7m", 0, 0, -56777, -56777},
+                            {"5p", 0, 0, -56778, -56778},
+                        },
+                    .depth2 =
+                        {
+                            {"9s", 12462, 55, -57218, -53756},
+                            {"2m", 12462, 55, -57218, -53756},
+                            {"5p", 3417, 62, -56577, -55539},
+                            {"7p", 3295, 62, -56575, -55571},
+                            {"8m", 1684, 65, -56575, -56040},
+                            {"7m", 1425, 67, -56566, -56100},
+                        },
+                    .waits = {},
+                    .held = -57210,
+                    .heldWithLooseTile = -57251,
+                },
+                // kOneFromWaiting late in the wall (10 live: 2 draws), all three others declared
+                {
+                    .depth1 =
+                        {
+                            {"5p", 0, 0, -60866, -60866},
+                            {"7p", 0, 0, -60867, -60867},
+                            {"8m", 0, 0, -60867, -60867},
+                            {"7m", 0, 0, -60867, -60867},
+                            {"9s", 2276, 60, -62345, -61383},
+                            {"2m", 2276, 60, -62345, -61383},
+                        },
+                    .depth2 =
+                        {
+                            {"7m", 0, 0, -60504, -60504},
+                            {"7p", 0, 0, -60516, -60516},
+                            {"5p", 0, 0, -60520, -60520},
+                            {"8m", 0, 0, -60520, -60520},
+                            {"9s", 2276, 60, -62345, -61383},
+                            {"2m", 2276, 60, -62345, -61383},
+                        },
+                    .waits = {},
+                    .held = -62296,
+                    .heldWithLooseTile = -73556,
+                },
+                // the tanki hand with 3 live tiles: fewer than kSeatCount, no draw left
+                {
+                    .depth1 =
+                        {
+                            {"5p", 0, 0, 0, 0},
+                            {"Gd", 0, 0, 0, 0},
+                            {"9m", 0, 0, 0, 0},
+                            {"1p", 0, 0, 0, 0},
+                            {"9p", 0, 0, 0, 0},
+                            {"2p", 0, 0, 0, 0},
+                        },
+                    .depth2 =
+                        {
+                            {"5p", 0, 0, 0, 0},
+                            {"Gd", 0, 0, 0, 0},
+                            {"9m", 0, 0, 0, 0},
+                            {"1p", 0, 0, 0, 0},
+                            {"9p", 0, 0, 0, 0},
+                            {"2p", 0, 0, 0, 0},
+                        },
+                    .waits =
+                        {
+                            {"5p", 0, 0, 0, 0},
+                            {"Gd", 0, 0, 0, 0},
+                        },
+                    .held = 0,
+                    .heldWithLooseTile = 20069,
+                },
+                // kPairsHand with 2 live tiles
+                {
+                    .depth1 =
+                        {
+                            {"2s", 0, 0, 0, 0},
+                            {"5m", 0, 0, 0, 0},
+                            {"8m", 0, 0, 0, 0},
+                            {"Rd", 0, 0, 0, 0},
+                            {"1p", 0, 0, 0, 0},
+                            {"4s", 0, 0, 0, 0},
+                        },
+                    .depth2 =
+                        {
+                            {"2s", 0, 0, 0, 0},
+                            {"5m", 0, 0, 0, 0},
+                            {"8m", 0, 0, 0, 0},
+                            {"Rd", 0, 0, 0, 0},
+                            {"1p", 0, 0, 0, 0},
+                            {"4s", 0, 0, 0, 0},
+                        },
+                    .waits = {},
+                    .held = 0,
+                    .heldWithLooseTile = -602,
+                },
+                // a hand two sets and two partials at shanten 2, East
+                {
+                    .depth1 =
+                        {
+                            {"1p", 0, 0, -12238, -12238},
+                            {"3m", 0, 0, -12238, -12238},
+                            {"2s", 0, 0, -12600, -12600},
+                            {"Ew", 0, 0, -12600, -12600},
+                            {"Rd", 0, 0, -12600, -12600},
+                            {"Gd", 0, 0, -12600, -12600},
+                        },
+                    .depth2 =
+                        {
+                            {"1p", 0, 0, -11998, -11998},
+                            {"3m", 0, 0, -12007, -12007},
+                            {"2s", 0, 0, -12599, -12599},
+                            {"Ew", 0, 0, -12599, -12599},
+                            {"Rd", 0, 0, -12599, -12599},
+                            {"Gd", 0, 0, -12599, -12599},
+                        },
+                    .waits = {},
+                    .held = -12601,
+                    .heldWithLooseTile = -13394,
+                },
+            };
+        }
+
+        void ExpectGolden(const char* how, const char* query, const Vector<DiscardValue>& values, const Vector<GoldenEntry>& golden) {
+            ASSERT_EQ(values.size(), golden.size()) << how << ": " << query;
+            for (size_t i = 0; i < values.size(); ++i) {
+                const GoldenEntry& entry = golden[i];
+                EXPECT_EQ(values[i].tile, T(entry.tile)) << how << ": " << query << " entry " << i;
+                EXPECT_EQ(values[i].winChance, entry.winChance) << how << ": " << query << " entry " << i;
+                EXPECT_EQ(values[i].meanWinScore, entry.meanWinScore) << how << ": " << query << " entry " << i;
+                EXPECT_EQ(values[i].valueWhenNotWinning, entry.valueWhenNotWinning) << how << ": " << query << " entry " << i;
+                EXPECT_EQ(values[i].expected, entry.expected) << how << ": " << query << " entry " << i;
             }
         }
 
@@ -148,7 +580,7 @@ namespace BECore::Mahjong::Tests {
     TEST(OwnDrawsTest, TheChanceOfAOneWaitHandIsTheChanceOfTheCopiesOverTheDrawsLeft) {
         // Discarding 5p leaves a wait on Gd alone: 3 copies unseen of the 136 - 14 = 122 tiles the view cannot see, so a draw wins with
         // p = 3 / 122. The wall of 40 tiles gives the seat 10 draws; with no declared opponent the chance that nobody else has won
-        // before draw i is (1 - 15/1000)^(i - 1). The chance to win within the draws is the sum over i of that x (1 - p)^(i - 1) x p.
+        // before draw i is (1 - h)^(i - 1), h = `kOpponentWinPerRoundPermille[0]` / 1000. The chance to win within the draws is the sum over i of that x (1 - p)^(i - 1) x p.
         constexpr int kWall = 40;
         constexpr int kDraws = kWall / kSeatCount;
         const double p = 3.0 / 122.0;
@@ -302,6 +734,22 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(Has(view.legal, HandAction::MakeDiscard(wait.tile, true))) << ToString(wait.tile).data();
         }
         EXPECT_TRUE(ValueWaits(MakeView(kPairsHand)).empty());
+    }
+
+    TEST(OwnDrawsTest, TheValuesOfTheGoldenPositionsDoNotMove) {
+        const Vector<GoldenSpec> specs = GoldenSpecs();
+        const Vector<GoldenValues> table = GoldenTable();
+        ASSERT_EQ(specs.size(), table.size());
+        for (size_t i = 0; i < specs.size(); ++i) {
+            const GoldenSpec& spec = specs[i];
+            const TableView view = GoldenView(spec);
+            const TableView held = HeldView(spec);
+            ExpectGolden(spec.how, "depth 1", ValueDiscards(view, 1), table[i].depth1);
+            ExpectGolden(spec.how, "depth 2", ValueDiscards(view, 2), table[i].depth2);
+            ExpectGolden(spec.how, "waits", ValueWaits(view), table[i].waits);
+            EXPECT_EQ(ValueOfHeldHand(held), table[i].held) << spec.how;
+            EXPECT_EQ(ValueOfHeldHand(held, 1), table[i].heldWithLooseTile) << spec.how;
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests

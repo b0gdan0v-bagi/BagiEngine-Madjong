@@ -286,6 +286,8 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr int kOwnDrawsTestDepth = 2;
+        /// The range of the draw that tells whether a chooser took a number from an rng: equal states give equal draws.
+        constexpr uint32_t kRngProbeRange = 1000000;
 
         /// East holds the pairs hand of `OwnDrawsTest` (123p 456s and the pairs Rd, 5m, 8m, 2s) on its second turn, with one Rd lying in the
         /// pile (seat 1 discarded it; East passes the pung): the dragon pair has 1 copy unseen, each simple pair 2.
@@ -313,7 +315,7 @@ namespace BECore::Mahjong::Tests {
         /// Whether `rng` is where a fresh generator of `seed` is.
         bool IsUntouched(MahjongRng& rng, uint32_t seed) {
             MahjongRng fresh(seed);
-            return rng.Below(1000000) == fresh.Below(1000000);
+            return rng.Below(kRngProbeRange) == fresh.Below(kRngProbeRange);
         }
     }  // namespace
 
@@ -349,7 +351,7 @@ namespace BECore::Mahjong::Tests {
                 const TurnDecision off = DecideTurn(view, offRng, OwnDrawsProfile(0, false));
                 EXPECT_EQ(off.action, normal.action) << "rng seed " << seed;
                 EXPECT_EQ(off.step, normal.step) << "rng seed " << seed;
-                EXPECT_EQ(offRng.Below(1000000), normalRng.Below(1000000)) << "rng seed " << seed;
+                EXPECT_EQ(offRng.Below(kRngProbeRange), normalRng.Below(kRngProbeRange)) << "rng seed " << seed;
             }
         }
     }
@@ -705,7 +707,7 @@ namespace BECore::Mahjong::Tests {
                 const TurnDecision decisionOn = DecideTurn(view, on, DangerProfile(true));
                 EXPECT_EQ(decisionOn.action, decisionOff.action) << hand << ", rng seed " << seed;
                 EXPECT_EQ(decisionOn.step, decisionOff.step);
-                EXPECT_EQ(on.Below(1000000), off.Below(1000000)) << hand << ": the same state afterwards, seed " << seed;
+                EXPECT_EQ(on.Below(kRngProbeRange), off.Below(kRngProbeRange)) << hand << ": the same state afterwards, seed " << seed;
             }
         }
     }

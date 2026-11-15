@@ -125,3 +125,14 @@ own draw (check)             4627       273.39        238        870.6
 ```
 
 `kDiscardHitPermille` is 806 (the discard row). The own draw is the check and should be about 1000 by the nature of the wall; it is 871 here and 888 on `--first 20000 --seeds 6000` (the discard row 803 there), so it is below 1000 by 4 standard errors. The count is right (a hand worked out by hand in `ArenaTableTest`); the likely reason is that the opponents hold back the winning kinds of a declared seat, so the unseen copies are over-represented in their hands, not in the wall. That is the same effect that makes the discard rate lower, and it is a hypothesis, not measured. This run also differs slightly from the slice 1 table above (761 wins on a discard against 763): Normal moved between the slices; the slice 2 rows are measured on the code of this branch.
+
+### The evaluator made fast (WP 3)
+
+The search of one call keeps, per concealed hand, the `Shanten`, the improving kinds, the winning kinds, the standing value and the discards that leave the lowest shanten (`HandFacts`), a hash table for the memo, and the number of copies drawn on the line; the sampled profile before it said `Shanten` was two thirds of a decision. A golden table of 11 positions (`OwnDrawsTest`: depth 1 and 2, `ValueWaits`, the held hand with and without a loose tile) was written against the old code and does not move. Debug, `--jobs 1 --time`, seeds 4000 .. 4003, focus `5:ownDrawsDepth=2`, others `5`, the machine shared (two runs each):
+
+| | mean decision | slowest decision |
+|---|---|---|
+| before | 85.9 to 86.5 ms | 1751 ms |
+| after | 37.3 to 37.7 ms | 673 to 693 ms |
+
+The first discard of 14 tiles is still 2.2 times over the 0.3 s of the time rule (a): the cheap steps give a factor 2.3 on the mean and 2.6 on the slowest decision, not 4. Release, the same command: 6.2 ms a decision, 121 ms slowest. Left as it was, and why: `WinScore` (3 % of a decision), and the test "does this hand wait" by the shanten, which would miss seven pairs and thirteen orphans (they wait at a high shanten).
