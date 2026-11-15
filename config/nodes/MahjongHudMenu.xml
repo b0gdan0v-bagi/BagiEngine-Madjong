@@ -22,7 +22,7 @@
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
       <elements>
-        <element type="UIElement" name="Rules" anchor="TopRight" x="-136" y="8" width="56" height="56" color="70,70,100,255" cornerRadius="28" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+        <element type="UIElement" name="Rules" anchor="TopRight" x="-136" y="8" width="56" height="56" color="@neutral" cornerRadius="28" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
           <components>
             <component type="UIInputClicker" action="MahjongRules"/>
             <component type="UITooltipComponent" text="{#hud.rules}"/>
@@ -35,7 +35,7 @@
             </element>
           </children>
         </element>
-        <element type="UIElement" name="Options" anchor="TopRight" x="-72" y="8" width="56" height="56" color="70,70,100,255" cornerRadius="28" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+        <element type="UIElement" name="Options" anchor="TopRight" x="-72" y="8" width="56" height="56" color="@neutral" cornerRadius="28" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
           <components>
             <component type="UIInputClicker" action="MahjongOptions"/>
             <component type="UITooltipComponent" text="{#hud.options}"/>
@@ -48,7 +48,7 @@
             </element>
           </children>
         </element>
-        <element type="UIElement" name="NewGame" anchor="TopRight" x="-8" y="8" width="56" height="56" color="45,75,120,255" cornerRadius="28" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+        <element type="UIElement" name="NewGame" anchor="TopRight" x="-8" y="8" width="56" height="56" color="@secondary" cornerRadius="28" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@secondaryDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
           <components>
             <component type="UIInputClicker" action="MahjongNewGame"/>
             <component type="UITooltipComponent" text="{newGameWord}"/>

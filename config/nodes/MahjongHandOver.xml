@@ -36,11 +36,11 @@
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" visible="false">
       <elements>
-        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="@surface" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
           <children>
-            <element type="UIElement" name="Headline" height="52" fontSize="28" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
+            <element type="UIElement" name="Headline" height="52" fontSize="28" color="@header" cornerRadius="12" gradientDirection="Vertical" gradientColor="@headerDeep" highlight="@highlight">
               <components>
-                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{handOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="22"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,@outline" text="{handOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="22"/>
               </components>
             </element>
             <element type="UIStack" name="ScoreTable" height="152" direction="Vertical" spacing="4" crossAlign="Stretch">
@@ -49,34 +49,34 @@
                   <children>
                     <element type="UIElement" name="ScoreCol0" width="34%" height="100%" fontSize="18">
                       <components>
-                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.seat}" textColor="190,196,190,255" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.seat}" textColor="@textMuted" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                       </components>
                     </element>
                     <element type="UIElement" name="ScoreCol1" width="12%" height="100%" fontSize="18">
                       <components>
-                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.wind}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.wind}" textColor="@textMuted" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                       </components>
                     </element>
                     <element type="UIElement" name="ScoreCol2" width="18%" height="100%" fontSize="18">
                       <components>
-                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.hand}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.hand}" textColor="@textMuted" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                       </components>
                     </element>
                     <element type="UIElement" name="ScoreCol3" width="18%" height="100%" fontSize="18">
                       <components>
-                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.change}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.change}" textColor="@textMuted" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                       </components>
                     </element>
                     <element type="UIElement" name="ScoreCol4" width="18%" height="100%" fontSize="18">
                       <components>
-                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.total}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.total}" textColor="@textMuted" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                       </components>
                     </element>
                   </children>
                 </element>
-                <element type="UIElement" name="SeatRow0" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                <element type="UIElement" name="SeatRow0" height="28" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
                   <children>
-                    <element type="UIElement" name="WinnerRow0" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIElement" name="WinnerRow0" anchor="Stretch" visible="false" color="@winnerRow" cornerRadius="8" borderWidth="2" borderColor="@accent" />
                     <element type="UIStack" name="SeatCells0" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
                       <children>
                         <element type="UIElement" name="ScoreCell0_0" width="34%" height="100%" fontSize="18">
@@ -108,9 +108,9 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIElement" name="SeatRow1" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                <element type="UIElement" name="SeatRow1" height="28" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
                   <children>
-                    <element type="UIElement" name="WinnerRow1" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIElement" name="WinnerRow1" anchor="Stretch" visible="false" color="@winnerRow" cornerRadius="8" borderWidth="2" borderColor="@accent" />
                     <element type="UIStack" name="SeatCells1" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
                       <children>
                         <element type="UIElement" name="ScoreCell1_0" width="34%" height="100%" fontSize="18">
@@ -142,9 +142,9 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIElement" name="SeatRow2" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                <element type="UIElement" name="SeatRow2" height="28" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
                   <children>
-                    <element type="UIElement" name="WinnerRow2" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIElement" name="WinnerRow2" anchor="Stretch" visible="false" color="@winnerRow" cornerRadius="8" borderWidth="2" borderColor="@accent" />
                     <element type="UIStack" name="SeatCells2" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
                       <children>
                         <element type="UIElement" name="ScoreCell2_0" width="34%" height="100%" fontSize="18">
@@ -176,9 +176,9 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIElement" name="SeatRow3" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                <element type="UIElement" name="SeatRow3" height="28" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
                   <children>
-                    <element type="UIElement" name="WinnerRow3" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIElement" name="WinnerRow3" anchor="Stretch" visible="false" color="@winnerRow" cornerRadius="8" borderWidth="2" borderColor="@accent" />
                     <element type="UIStack" name="SeatCells3" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
                       <children>
                         <element type="UIElement" name="ScoreCell3_0" width="34%" height="100%" fontSize="18">
@@ -223,7 +223,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark0" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark0" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile1" visible="false" width="24" height="32">
@@ -231,7 +231,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark1" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark1" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile2" visible="false" width="24" height="32">
@@ -239,7 +239,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark2" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark2" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile3" visible="false" width="24" height="32">
@@ -247,7 +247,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark3" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark3" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile4" visible="false" width="24" height="32">
@@ -255,7 +255,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark4" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark4" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile5" visible="false" width="24" height="32">
@@ -263,7 +263,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark5" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark5" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile6" visible="false" width="24" height="32">
@@ -271,7 +271,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark6" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark6" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile7" visible="false" width="24" height="32">
@@ -279,7 +279,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark7" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark7" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile8" visible="false" width="24" height="32">
@@ -287,7 +287,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark8" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark8" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile9" visible="false" width="24" height="32">
@@ -295,7 +295,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark9" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark9" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile10" visible="false" width="24" height="32">
@@ -303,7 +303,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark10" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark10" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile11" visible="false" width="24" height="32">
@@ -311,7 +311,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark11" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark11" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile12" visible="false" width="24" height="32">
@@ -319,7 +319,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark12" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark12" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile13" visible="false" width="24" height="32">
@@ -327,7 +327,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark13" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark13" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile14" visible="false" width="24" height="32">
@@ -335,7 +335,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark14" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark14" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile15" visible="false" width="24" height="32">
@@ -343,7 +343,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark15" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark15" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile16" visible="false" width="24" height="32">
@@ -351,7 +351,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark16" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark16" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTile17" visible="false" width="24" height="32">
@@ -359,7 +359,7 @@
                         <component type="UIImageComponent"/>
                       </components>
                       <children>
-                        <element type="UIElement" name="WinTileMark17" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                        <element type="UIElement" name="WinTileMark17" anchor="Stretch" visible="false" borderWidth="2" borderColor="@accent" />
                       </children>
                     </element>
                     <element type="UIElement" name="WinTilesRight" flex="1" height="100%" />
@@ -449,14 +449,14 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
                   <components>
-                    <component type="UITextComponent" text="{handOverCoach}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{handOverCoach}" textColor="@textMuted" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
-                <element type="UIElement" name="Summary" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                <element type="UIElement" name="Summary" height="24" fontSize="18" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
                   <components>
-                    <component type="UITextComponent" text="{handOverSummary}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{handOverSummary}" textColor="@textMuted" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
               </children>
