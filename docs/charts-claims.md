@@ -64,6 +64,62 @@ window that cannot be measured: a defect, the seed is printed), 2 (bad arguments
 (`src/Mahjong/Arena/ArenaCharts*`) is tested by `ArenaChartsClassesTest`, `ArenaChartsWindowsTest`, `ArenaChartsRunTest` and
 `ArenaChartsReportTest`. Run it in Release: a window costs `--worlds` rollouts of whole hands.
 
+## Protocol
+
+Fixed here, before any number of the study was looked at (the commit that adds this section comes before the run's commit; the cost
+runs below are on a range that is not used for anything else; of their output only the counters and the times are used, a table of
+20 seeds is no basis for any class).
+
+| Range | Command | Seeds | Worlds |
+|-------|---------|-------|--------|
+| discovery | `BagiMahjongCharts --first 200000 --seeds 2400 --worlds 100 --jobs 12 --markdown` | 200000 .. 202399 | 100 |
+| confirmation | `BagiMahjongCharts --first 300000 --seeds 2400 --worlds 100 --jobs 12 --markdown` | 300000 .. 302399 | 100 |
+
+- The two ranges are disjoint, of the same size and with the same worlds; neither touches the cost range (100000 .. 100019). The
+  discovery range is run first and read first. The confirmation range is run once, with the same build, and nothing is tuned between
+  the two: no class, no worlds, no seed count, no filter is changed after a number is seen. A run that fails (exit 1) is a defect,
+  fixed with its own test, and the run starts again on the same ranges. No other range is run.
+- The worlds are 100 a window (the default). A row's value is the mean over its worlds, and the spread between windows (a claim is
+  worth tens of points in one position and minus tens in another) is far larger than the noise of the worlds of one row, so the
+  seeds and rows are worth more than more worlds ("Cost" below).
+- The discovery range is expected to hold about 20 000 rows (nine a seed). A kong cell, and any cell the thirds of the wall thin
+  out, may stay `few`: that is a result.
+- `--jobs 12` is the threads of one run on a machine that other loops share; the output does not depend on it.
+- **How a finding is read.** The cells read are every cell of the main table and of the five one-way tables, each as its whole, its
+  `Normal takes` sub-row and its `Normal passes` sub-row. A class **holds** when it is `significant` in the discovery range and its
+  confirmation mean has the same sign and is `significant` too. A class that holds is a **finding**. A class that is `significant` in
+  one range only, or whose confirmation has the other sign, **does not hold** and is said so. A `few` class that agrees in sign
+  between the two ranges is a **lead**, not a finding: its number is shown with its count and nothing is built on it. Where Normal's
+  rule is wrong is read from the sub-rows: a `Normal takes` row that holds with a negative gain (it takes what loses points), or a
+  `Normal passes` row that holds with a positive gain (it passes what gains them).
+- A finding is a statement about the table of this program (the caveats below), against three Normal bots and one hand's points.
+
+## Cost
+
+`BagiMahjongCharts --first 100000 --seeds 20 --worlds W --jobs 10` in Release (`macos-release`, 14 cores, shared with other loops:
+load average 27 to 56 during the runs), run before the protocol was fixed; only the counters and the times are used. `user` is the CPU time
+of all the threads.
+
+| Worlds W | Wall, s | CPU (user), s | CPU per seed, s | Windows with a claim | Rows | Rows per seed |
+|----------|---------|---------------|-----------------|----------------------|------|---------------|
+| 100 | 11.5 | 58.0 | 2.9 | 168 | 180 | 9.0 |
+| 250 | 15.1 | 126.7 | 6.3 | 168 | 180 | 9.0 |
+| 500 | 29.6 | 256.6 | 12.8 | 168 | 180 | 9.0 |
+
+The cost is linear in W and in the seeds. The rows do not depend on W (the same windows). Twenty seeds on ten threads are two rounds, so
+the wall time of this small run is longer than its CPU time over ten; for a long run the wall time is about CPU divided by the cores
+the machine really gives, which on a loaded machine was about eight. For the target of about 15 minutes a run and at least about
+20 000 rows in the discovery range:
+
+| W | CPU for 2400 seeds, s | Wall at about 8 cores, min | Rows |
+|---|-----------------------|----------------------------|------|
+| 100 | 6 960 | about 14.5 | about 21 600 |
+| 250 | 15 120 | about 31 | about 21 600 |
+| 500 | 30 720 | about 64 | about 21 600 |
+
+W 250 or 500 would give 1 400 or 700 seeds in the same time, 12 600 or 6 300 rows: fewer rows and fewer seeds for an interval whose
+width is set by the seeds and by the spread between windows, so W = 100 and 2400 seeds are chosen.
+
 ## Caveats
 
 - **Against Normal bots.** The three other seats and the seat itself after the claim play Normal (level 5). A number says "against this
