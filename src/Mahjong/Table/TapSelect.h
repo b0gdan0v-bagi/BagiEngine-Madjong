@@ -5,16 +5,14 @@
 
 namespace BECore::Mahjong {
 
-    /// How far a selected hand tile rises above its slot, in design units (a quarter of `kViewerHandTileH`); `RaisedRect` scales it with
-    /// the layout.
+    /// How far a selected hand tile rises above its slot, in design units; `RaisedRect` scales it with the layout.
     inline constexpr float kSelectedTileRise = 16.0f;
 
     /**
      * Whether a tap on a hand tile only selects it (a second tap on the same tile discards) instead of discarding at once: when a touch
-     * input was seen (`touchSeen`: a mouse event SDL made from a touch or a pen, remembered by the component) **or** a hand tile of the
-     * viewer (`handTileW` view units, the `TableProfile::handTileW` of the window, times `FitScale`, over the pixel density) is smaller
-     * than `minTouchSize`, the measure of `NeedsCompactActions`. A phone profile whose tile reaches the minimum keeps the one-click
-     * discard. The fit is that of the active view (`viewWidth` x `viewHeight`, the landscape view by default). False for a size or a
+     * input was seen (`touchSeen`: a mouse event SDL made from a touch or a pen, remembered by the component) **or** the viewer's hand tile
+     * (`handTileW` view units, fitted and over the pixel density) is smaller than `minTouchSize`, the measure of `NeedsCompactActions`. A
+     * phone profile whose tile reaches the minimum keeps the one-click discard. The fit is that of the active view. False for a size or a
      * density that is not positive when no touch was seen.
      */
     [[nodiscard]] bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float handTileW = kViewerHandTileW, float viewWidth = kViewWidth,
@@ -45,12 +43,11 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] TapOutcome StepTap(const Optional<int>& selected, const Optional<int>& hit, bool tapToSelect) noexcept;
 
-    /// The screen rectangle of a selected tile whose slot is `slotRect`: the slot moved up by `kSelectedTileRise` design units at the
-    /// scale of the layout (`slotRect.h / kViewerHandTileH`). The hit region does not follow it.
+    /// The screen rectangle of a selected tile: the slot moved up by `kSelectedTileRise` at the scale of the layout. The hit region does
+    /// not follow it.
     [[nodiscard]] Rect RaisedRect(const Rect& slotRect) noexcept;
 
-    /// The sentence that names the selected hand tile ("Selected: 5 Dots"): the key `table.selectedTile` of the current language, with the
-    /// name of `tile` (`TileName`).
+    /// The sentence that names the selected hand tile: the key `table.selectedTile` with the name of `tile` (`TileName`).
     [[nodiscard]] String SelectedTileText(const UIStrings& strings, Tile tile);
 
 }  // namespace BECore::Mahjong

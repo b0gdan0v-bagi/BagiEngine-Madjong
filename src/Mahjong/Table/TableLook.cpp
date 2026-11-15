@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
         constexpr uint32_t kHashMixShift = 15;
         constexpr uint32_t kHashByteMask = 0xFFu;
 
-        /// A hash of two numbers, spread over a byte (a plain integer mix: the grain must not depend on a random generator).
+        /// A hash of two numbers, spread over a byte: the grain must not depend on a random generator.
         constexpr uint32_t HashByte(uint32_t x, uint32_t y) {
             uint32_t h = (x * kHashMultiplierX) ^ (y * kHashMultiplierY);
             h ^= h >> kHashMixShift;
@@ -21,7 +21,7 @@ namespace BECore::Mahjong {
             return h & kHashByteMask;
         }
 
-        /// How far from the middle `nearest` of `size` pixels is, 0 in the middle and nearly 1 at the edge; the same for a pixel and its mirror.
+        /// 0 in the middle and nearly 1 at the edge; the same for a pixel and its mirror.
         float DistanceFromMiddle(uint32_t nearest, uint32_t size) {
             return 1.0f - static_cast<float>(2 * nearest + 1) / static_cast<float>(size);
         }

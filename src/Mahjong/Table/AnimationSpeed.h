@@ -3,17 +3,16 @@
 namespace BECore::Mahjong {
 
     /**
-     * The speed of the table, the one setting of the player (the page `Options`) that scales together the pause of the computers
-     * (`kComputerStepSeconds`), the flights of the tiles (`kTileFlightSeconds`) and the marks of a claim (`kClaimHighlightSeconds`,
-     * `kClaimBlinkSeconds`, `kClaimLostSeconds`, also the hold of the score table behind it). Plain C++, no scene: the table component
-     * multiplies those base times by `SpeedFactor`, so every one of them stays what it was at `Normal` and a flight stays inside the
-     * step at every speed. The control API does not wait, so it ignores the speed.
+     * The speed of the table, the player's one setting (the page `Options`) that scales together the pause of the computers
+     * (`kComputerStepSeconds`), the flights of the tiles (`kTileFlightSeconds`) and the marks of a claim (also the hold of the score table
+     * behind it). The table component multiplies those base times by `SpeedFactor`: one factor for all, so a flight stays inside the step
+     * at every speed. The control API does not wait, so it ignores the speed.
      */
     CORE_ENUM(AnimationSpeed, uint8_t, Slow, Normal, Fast)
 
     inline constexpr AnimationSpeed kDefaultAnimationSpeed = AnimationSpeed::Normal;
 
-    /// The factors of the base times: more is slower. `Normal` is 1.
+    /// More is slower; `Normal` is 1.
     inline constexpr float kSlowFactor = 1.6f;
     inline constexpr float kFastFactor = 0.6f;
 
@@ -35,7 +34,7 @@ namespace BECore::Mahjong {
         return baseSeconds * SpeedFactor(speed);
     }
 
-    /// The id of a speed in the saved settings, the variable `speedChoice` and the values of the buttons of the page: `slow`, `normal`, `fast`.
+    /// The id of a speed in the saved settings, the variable `speedChoice` and the values of the buttons of the page.
     [[nodiscard]] constexpr StringView SpeedText(AnimationSpeed speed) noexcept {
         switch (speed) {
             case AnimationSpeed::Slow:
