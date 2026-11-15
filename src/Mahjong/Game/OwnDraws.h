@@ -73,6 +73,19 @@ namespace BECore::Mahjong {
     [[nodiscard]] Vector<DiscardValue> ValueWaits(const TableView& view, const OwnDrawsModel& model = {});
 
     /**
+     * @brief The listed plain (non-declaring) discards of a turn that has declaring ones, rated as "declare later", best expected value
+     *        first; compared with `ValueWaits` (declare now) by `ownDrawsDeclareDepth`.
+     *
+     * The candidates and the search are those of `ValueDiscards` (`model.depth`), with one rule that differs: a discard that leaves a
+     * hand that waits **does not declare it**, so the hand cannot win at the root (a self-draw and a mahjong claim need the
+     * declaration) and the first round is lost. That root is expanded over every draw that has an unseen copy, each followed by the
+     * best discard that declares; the later declaration is one own discard more in `callingAtDiscardCount`, so what the lost round
+     * costs comes out of `ScoreSeat` and the shorter horizon, not out of a constant. Below the root nothing differs. Empty where
+     * `ValueDiscards` is, and for a view that lists no declaring discard.
+     */
+    [[nodiscard]] Vector<DiscardValue> ValueLater(const TableView& view, const OwnDrawsModel& model);
+
+    /**
      * @brief The seat's hand as it is held (3n + 1 tiles: in a claim window, or a view made for a claim), in milli-points, in the
      *        closed form of a waiting hand (taken as declared) over the draws the wall leaves plus `extraDraws` (a kong's loose tile).
      *

@@ -103,7 +103,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
-        static_assert(kProfileFieldCount == 13, "an oracle is no LevelProfile field");
+        static_assert(kProfileFieldCount == 14, "an oracle is no LevelProfile field");
         for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
@@ -204,6 +204,7 @@ namespace BECore::Mahjong::Arena {
                                                       set.ownDrawsPickWait != kNormalProfile.ownDrawsPickWait,
                                                       set.ownDrawsDiscardWins != kNormalProfile.ownDrawsDiscardWins,
                                                       set.ownDrawsClaimDepth != kNormalProfile.ownDrawsClaimDepth,
+                                                      set.ownDrawsDeclareDepth != kNormalProfile.ownDrawsDeclareDepth,
                                                       set.readDanger != kNormalProfile.readDanger,
                                                       set.waitingKongByPoints != kNormalProfile.waitingKongByPoints};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;

@@ -113,6 +113,27 @@ namespace BECore::Mahjong {
                 return Evaluate(counts, Line{}, 0);
             }
 
+            /// As `Start`, but a root that waits is **not** declared with this discard: it cannot win in the first round (a self-draw
+            /// and a mahjong claim need the declaration), so the round is lost and the hand is declared by a later discard. The root is
+            /// expanded over every draw that has an unseen copy (the wait can change, not only improve), each followed by the best
+            /// discard that declares; below it nothing differs from `Start`. What the lost round costs comes out of the scoring: the
+            /// later declaration is one more own discard in `callingAtDiscardCount` (`WinScore`) and the horizon is one round shorter.
+            Value StartUndeclared(const TileCounts& counts) {
+                const Line root;
+                if (_draws < 1 || UnseenTotal(root) <= 0 || WinningOf(counts).empty()) {
+                    return Start(counts);
+                }
+                const int64_t total = UnseenTotal(root);
+                Value value;
+                for (uint8_t id = 0; id < kKindCount; ++id) {
+                    const int unseen = Unseen(root, id);
+                    if (unseen > 0) {
+                        Add(value, Scaled(AfterDrawThenDeclare(counts, root, 0, id), RoundedDiv(unseen * kOwnDrawsProbBase, total)));
+                    }
+                }
+                return value;
+            }
+
         private:
             /// The copies of kind `id` still unseen once the draws of the line are taken out.
             [[nodiscard]] int Unseen(const Line& line, uint8_t id) const {
@@ -340,6 +361,34 @@ namespace BECore::Mahjong {
                 return best;
             }
 
+            /// The value after the draw of `id` of a waiting hand that is not declared yet: the best of the discards that leave a waiting
+            /// hand (the discard that declares). Throwing the drawn tile is one of them, so there is always one; `AfterDraw` is only the
+            /// guard of a caller that gives a hand that does not wait.
+            [[nodiscard]] Value AfterDrawThenDeclare(const TileCounts& counts, const Line& line, int used, uint8_t id) {
+                TileCounts hand = counts;
+                ++hand[id];
+                Line nowDrawn = line;
+                ++nowDrawn.drawn[id];
+                ++nowDrawn.drawnTotal;
+                Value best;
+                bool any = false;
+                for (uint8_t discard = 0; discard < kKindCount; ++discard) {
+                    if (hand[discard] == 0) {
+                        continue;
+                    }
+                    --hand[discard];
+                    if (!WinningOf(hand).empty()) {
+                        const Value value = Evaluate(hand, nowDrawn, used + 1);
+                        if (!any || value.Expected() > best.Expected()) {
+                            best = value;
+                            any = true;
+                        }
+                    }
+                    ++hand[discard];
+                }
+                return any ? best : AfterDraw(counts, line, used, id);
+            }
+
             /// The value of the hand `counts` (after a discard) once `used` draws have been made, per unit of the chance of getting here.
             Value Evaluate(const TileCounts& counts, const Line& line, int used) {
                 StateKey key{};
@@ -438,6 +487,43 @@ namespace BECore::Mahjong {
             return values;
         }
 
+        /// The candidates of `ValueDiscards` rated. With `undeclaredRoot` a discard that leaves a waiting hand does not declare it
+        /// (`Evaluator::StartUndeclared`).
+        Vector<DiscardValue> RateListedDiscards(const TableView& view, const OwnDrawsModel& model, bool undeclaredRoot) {
+            if (model.depth < 1 || !IsOwnDiscardTurn(view)) {
+                return {};
+            }
+            Array<bool, kKindCount> listed{};
+            for (const HandAction& action : view.legal) {
+                if (action.kind == ActionKind::Discard && !action.declareCalling && action.tile.IsPlayable()) {
+                    listed[action.tile.Id()] = true;
+                }
+            }
+            TileCounts counts = CountTiles(view.own.concealed);
+            // The chooser's order; the best shanten and the slack are those of the listed discards.
+            Vector<DiscardOption> options;
+            for (const DiscardOption& option : RateDiscards(counts, MeldCountOf(view), view)) {
+                if (listed[option.tile.Id()]) {
+                    options.push_back(option);
+                }
+            }
+            if (options.empty()) {
+                return {};
+            }
+            const int bestShanten = options.front().shanten;
+            Evaluator evaluator(view, eastl::min(model.depth, kOwnDrawsMaxDepth), model.discardWins);
+            Vector<Ranked> ranked;
+            for (const DiscardOption& option : options) {
+                if (option.shanten > bestShanten + kSearchShantenSlack || static_cast<int>(ranked.size()) >= kOwnDrawsMaxCandidates) {
+                    continue;
+                }
+                --counts[option.tile.Id()];
+                ranked.push_back({MakeDiscardValue(option.tile, undeclaredRoot ? evaluator.StartUndeclared(counts) : evaluator.Start(counts)), static_cast<int>(ranked.size())});
+                ++counts[option.tile.Id()];
+            }
+            return BestFirst(eastl::move(ranked));
+        }
+
     }  // namespace
 
     Vector<DiscardValue> ValueDiscards(const TableView& view, int depth) {
@@ -445,38 +531,12 @@ namespace BECore::Mahjong {
     }
 
     Vector<DiscardValue> ValueDiscards(const TableView& view, const OwnDrawsModel& model) {
-        if (model.depth < 1 || !IsOwnDiscardTurn(view)) {
-            return {};
-        }
-        Array<bool, kKindCount> listed{};
-        for (const HandAction& action : view.legal) {
-            if (action.kind == ActionKind::Discard && !action.declareCalling && action.tile.IsPlayable()) {
-                listed[action.tile.Id()] = true;
-            }
-        }
-        TileCounts counts = CountTiles(view.own.concealed);
-        // The chooser's order; the best shanten and the slack are those of the listed discards.
-        Vector<DiscardOption> options;
-        for (const DiscardOption& option : RateDiscards(counts, MeldCountOf(view), view)) {
-            if (listed[option.tile.Id()]) {
-                options.push_back(option);
-            }
-        }
-        if (options.empty()) {
-            return {};
-        }
-        const int bestShanten = options.front().shanten;
-        Evaluator evaluator(view, eastl::min(model.depth, kOwnDrawsMaxDepth), model.discardWins);
-        Vector<Ranked> ranked;
-        for (const DiscardOption& option : options) {
-            if (option.shanten > bestShanten + kSearchShantenSlack || static_cast<int>(ranked.size()) >= kOwnDrawsMaxCandidates) {
-                continue;
-            }
-            --counts[option.tile.Id()];
-            ranked.push_back({MakeDiscardValue(option.tile, evaluator.Start(counts)), static_cast<int>(ranked.size())});
-            ++counts[option.tile.Id()];
-        }
-        return BestFirst(eastl::move(ranked));
+        return RateListedDiscards(view, model, false);
+    }
+
+    Vector<DiscardValue> ValueLater(const TableView& view, const OwnDrawsModel& model) {
+        const bool declares = eastl::any_of(view.legal.begin(), view.legal.end(), [](const HandAction& action) { return action.kind == ActionKind::Discard && action.declareCalling; });
+        return declares ? RateListedDiscards(view, model, true) : Vector<DiscardValue>{};
     }
 
     Vector<DiscardValue> ValueWaits(const TableView& view, const OwnDrawsModel& model) {
