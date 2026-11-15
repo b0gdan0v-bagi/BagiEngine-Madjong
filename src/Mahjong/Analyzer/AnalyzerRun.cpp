@@ -36,13 +36,12 @@ namespace BECore::Mahjong::Analyzer {
             return result;
         }
 
-        /// The base seed of the worlds: a fixed function of the seed of the run.
-        uint32_t BaseSeedOf(uint32_t seed) {
-            MahjongRng mixer(seed + kBaseSeedSalt);
-            return mixer.Below(kSearchBaseSeedRange);
-        }
-
     }  // namespace
+
+    uint32_t BaseSeedOf(uint32_t seed) {
+        MahjongRng mixer(seed + kBaseSeedSalt);
+        return mixer.Below(kSearchBaseSeedRange);
+    }
 
     std::expected<PositionAnalysis, String> AnalyzePosition(const TableView& view, const AnalyzerConfig& config, const WorldLoop& loop) {
         if (!IsSeat(view.seat)) {
@@ -61,7 +60,7 @@ namespace BECore::Mahjong::Analyzer {
         run->RunWorlds(loop);
         const Vector<Vector<int>>& values = run->Values();
         if (values.empty() || values.front().empty()) {
-            return std::unexpected(String("no world could be sampled for this position"));
+            return std::unexpected(String(kNoWorldReason));
         }
 
         PositionAnalysis analysis;

@@ -12,6 +12,9 @@ namespace BECore::Mahjong::Analyzer {
     inline constexpr uint32_t kNormalChoiceSeed = 1;
     /// So a small seed does not start the worlds from the same place a small seed starts anything else.
     inline constexpr uint32_t kBaseSeedSalt = 0x9e3779b9U;
+    /// The error of `AnalyzePosition` when the position is fine but no world could be sampled for it (a caller that scans many positions
+    /// counts that one apart from a bad call).
+    inline constexpr StringView kNoWorldReason = "no world could be sampled for this position";
 
     /// The base seed of the worlds and of their rollouts is a function of `seed` alone, never the machine's randomness.
     struct AnalyzerConfig {
@@ -19,6 +22,10 @@ namespace BECore::Mahjong::Analyzer {
         uint32_t seed = kDefaultSeed;
         uint32_t normalSeed = kNormalChoiceSeed;
     };
+
+    /// The base seed of the worlds: a fixed function of the seed of the run (`AnalyzerConfig::seed`), so a tool that runs the search
+    /// itself (`BeginSearchOver`) can play the very worlds `AnalyzePosition` plays for that seed.
+    [[nodiscard]] uint32_t BaseSeedOf(uint32_t seed);
 
     /// A per-world difference between two actions; a row has none to itself: `interval` is empty and `significant` false.
     struct ActionDifference {

@@ -5,6 +5,8 @@ seat, the expected points at the end of the hand with a 95 percent interval, and
 action a Normal player would take. It is a ruler for a decision, the way the bot arena (`docs/bot-arena.md`) is a ruler for a player:
 "was this discard worse than that one, and by how much" is answered by a number with an interval, not by a feeling.
 
+The charts of many decisions, one table per class of position instead of one position: `docs/charts-claims.md` (claims) and `docs/charts-discards.md` (own-turn discards).
+
 ## What it is for, and its limit
 
 The idea is the poker chart: a table of what each action is worth in this spot. The limit is that the chart is against a **known
