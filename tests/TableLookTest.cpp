@@ -1,5 +1,4 @@
 #include <Mahjong/Table/TableLook.h>
-#include <Mahjong/Table/UiPalette.h>
 #include <gtest/gtest.h>
 
 namespace BECore::Mahjong::Tests {
@@ -8,6 +7,8 @@ namespace BECore::Mahjong::Tests {
 
         constexpr uint32_t kWidth = 64;
         constexpr uint32_t kHeight = 36;
+        /// A green felt, like the shipped `classic` one.
+        constexpr Color kBase{22, 92, 62, 255};
 
         /// The channel `channel` (0 red .. 3 alpha) of the pixel (x, y).
         int Pixel(const FeltPixels& felt, uint32_t x, uint32_t y, size_t channel) {
@@ -32,7 +33,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(TableLookTest, TheImageHasTheSizeAskedForAndEveryPixelIsOpaque) {
-        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight);
+        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight, kBase);
 
         EXPECT_EQ(felt.width, kWidth);
         EXPECT_EQ(felt.height, kHeight);
@@ -43,11 +44,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLookTest, TheSameSizeGivesTheSameBytes) {
-        EXPECT_EQ(MakeFeltPixels(kWidth, kHeight).rgba, MakeFeltPixels(kWidth, kHeight).rgba);
+        EXPECT_EQ(MakeFeltPixels(kWidth, kHeight, kBase).rgba, MakeFeltPixels(kWidth, kHeight, kBase).rgba);
     }
 
     TEST(TableLookTest, TheImageIsSymmetricLeftToRightAndTopToBottom) {
-        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight);
+        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight, kBase);
 
         for (uint32_t y = 0; y < kHeight; ++y) {
             for (uint32_t x = 0; x < kWidth; ++x) {
@@ -60,7 +61,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLookTest, TheMiddleIsBrighterThanTheCornersAndTheEdgesAreInBetween) {
-        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight);
+        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight, kBase);
         constexpr uint32_t kSide = 4;
 
         const int middle = Patch(felt, kWidth / 2 - kSide / 2, kHeight / 2 - kSide / 2, kSide);
@@ -74,7 +75,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLookTest, TheColourStaysGreenFeltWithAGrainNoStrongerThanTheLevelsSaid) {
-        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight);
+        const FeltPixels felt = MakeFeltPixels(kWidth, kHeight, kBase);
 
         bool grain = false;
         for (uint32_t y = 0; y < kHeight; ++y) {
@@ -86,18 +87,28 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_TRUE(grain) << "the felt is not a flat colour";
         // The vignette is a whole step darker than the grain
-        EXPECT_LT(Pixel(MakeFeltPixels(kWidth, kHeight), 0, 0, 1), static_cast<int>(kFelt.g));
+        EXPECT_LT(Pixel(MakeFeltPixels(kWidth, kHeight, kBase), 0, 0, 1), static_cast<int>(kBase.g));
+    }
+
+    TEST(TableLookTest, TheBaseColourIsTheColourOfTheFelt) {
+        const FeltPixels red = MakeFeltPixels(kWidth, kHeight, Color{120, 20, 20, 255});
+
+        EXPECT_NE(red.rgba, MakeFeltPixels(kWidth, kHeight, kBase).rgba);
+        for (uint32_t x = 1; x < kWidth / 2; ++x) {
+            EXPECT_GT(Pixel(red, x, kHeight / 2, 0), Pixel(red, x, kHeight / 2, 1)) << "red over green";
+            EXPECT_GT(Pixel(red, x, kHeight / 2, 0), Pixel(red, x, kHeight / 2, 2)) << "red over blue";
+        }
     }
 
     TEST(TableLookTest, ASizeOfZeroGivesNoPixels) {
-        EXPECT_TRUE(MakeFeltPixels(0, kHeight).rgba.empty());
-        EXPECT_TRUE(MakeFeltPixels(kWidth, 0).rgba.empty());
-        EXPECT_TRUE(MakeFeltPixels(0, 0).rgba.empty());
+        EXPECT_TRUE(MakeFeltPixels(0, kHeight, kBase).rgba.empty());
+        EXPECT_TRUE(MakeFeltPixels(kWidth, 0, kBase).rgba.empty());
+        EXPECT_TRUE(MakeFeltPixels(0, 0, kBase).rgba.empty());
     }
 
     TEST(TableLookTest, ASingleRowOrColumnIsMadeWithoutError) {
-        EXPECT_EQ(MakeFeltPixels(1, 1).rgba.size(), 4u);
-        EXPECT_EQ(MakeFeltPixels(kWidth, 1).rgba.size(), static_cast<size_t>(kWidth) * 4);
+        EXPECT_EQ(MakeFeltPixels(1, 1, kBase).rgba.size(), 4u);
+        EXPECT_EQ(MakeFeltPixels(kWidth, 1, kBase).rgba.size(), static_cast<size_t>(kWidth) * 4);
     }
 
 }  // namespace BECore::Mahjong::Tests

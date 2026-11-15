@@ -10,6 +10,7 @@
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/TablePalette.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <chrono>
@@ -180,6 +181,8 @@ namespace BECore::Mahjong {
 
         /// The felt texture for `renderer`, made on first use and again for another renderer (`GetId()`); null when the renderer gave none.
         [[nodiscard]] ITexture* FeltTexture(IRenderer& renderer);
+        /// Reads `_palette` again when the version of the themes moved: one integer compare in a steady frame.
+        void RefreshPalette();
         /// Frees the felt texture, with the GPU idle when the renderer is the one that made it.
         void ReleaseFelt();
 
@@ -289,6 +292,8 @@ namespace BECore::Mahjong {
         ResourceHandle<ITexture> _emblems;               // `Table/EmblemAtlas.h`
         IntrusivePtr<ITexture> _felt;                    // the felt made from pixels (`Table/TableLook.h`); empty when the renderer gave none
         uint64_t _feltRenderer = 0;                      // `IRenderer::GetId()` of the renderer `_felt` was asked of, 0 for none yet
+        TablePalette _palette;                           // the colours the table paints in, of the theme at `_paletteVersion`
+        uint64_t _paletteVersion = 0;                    // `UIThemes::GetVersion()` that `_palette` was read at; 0 for never
         TableSnapshot _shown;                            // what the last `OnDraw` drew
         TableSnapshot _previous;                         // `OnDraw` swaps the two and refills one, so their lists keep their capacity
         TableInput _input;                               // kept for the capacity of its lists

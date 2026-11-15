@@ -14,6 +14,7 @@
 #include <Games/GameManager.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/TablePalette.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TileFlights.h>
@@ -336,12 +337,12 @@ namespace BECore::Mahjong::Tests {
         return found;
     }
 
-    /// The index of the geometry call that is the base of a panel over `zone`: it carries the fill `kSeatPlate` and its border `kSeatPlateFrame` runs round the zone (the border is the one thing whose
-    /// vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
-    inline int PanelCallAt(const Vector<DrawCall>& calls, const Rect& zone) {
+    /// The index of the geometry call that is the base of a panel over `zone`: it carries the fill `seatPlate` and its border `seatPlateFrame` of the palette runs round the zone (the border is the
+    /// one thing whose vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
+    inline int PanelCallAt(const Vector<DrawCall>& calls, const Rect& zone, const TablePalette& palette) {
         for (size_t i = 0; i < calls.size(); ++i) {
-            const Optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
-            if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], kSeatPlate)) {
+            const Optional<Rect> frame = BoxOfColor(calls[i], palette.seatPlateFrame);
+            if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], palette.seatPlate)) {
                 return static_cast<int>(i);
             }
         }
@@ -349,11 +350,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// How many geometry calls are a panel base over `zone` (`PanelCallAt` finds the first): a panel is drawn once.
-    inline int PanelCountAt(const Vector<DrawCall>& calls, const Rect& zone) {
+    inline int PanelCountAt(const Vector<DrawCall>& calls, const Rect& zone, const TablePalette& palette) {
         int found = 0;
         for (const DrawCall& call : calls) {
-            const Optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
-            found += (frame && SameBox(*frame, zone) && BoxOfColor(call, kSeatPlate)) ? 1 : 0;
+            const Optional<Rect> frame = BoxOfColor(call, palette.seatPlateFrame);
+            found += (frame && SameBox(*frame, zone) && BoxOfColor(call, palette.seatPlate)) ? 1 : 0;
         }
         return found;
     }
@@ -411,6 +412,11 @@ namespace BECore::Mahjong::Tests {
             CoreManager::GetUIStrings().Clear();
             CoreManager::GetUIThemes().Clear();  // the table is global: the next test starts with none
             CoreManager::GetFontAtlasLibrary().Clear();
+        }
+
+        /// The colours the table paints in now: those of the themes `SetUp` loaded (the shipped `classic`).
+        TablePalette Palette() const {
+            return MakeTablePalette(CoreManager::GetUIThemes());
         }
 
         void Start(const SeatSetup& seats, uint32_t seed = kSeed, bool flowers = false) {

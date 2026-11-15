@@ -1,7 +1,5 @@
 #include "TableLook.h"
 
-#include <Mahjong/Table/UiPalette.h>
-
 namespace BECore::Mahjong {
 
     namespace {
@@ -33,7 +31,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    FeltPixels MakeFeltPixels(uint32_t width, uint32_t height) {
+    FeltPixels MakeFeltPixels(uint32_t width, uint32_t height, const Color& base) {
         FeltPixels felt;
         if (width == 0 || height == 0) {
             return felt;
@@ -51,9 +49,9 @@ namespace BECore::Mahjong {
                 const float gain = kFeltCentreGain + (kFeltEdgeGain - kFeltCentreGain) * away;
                 // -kFeltGrainLevels .. +kFeltGrainLevels, from the pixel nearest to the same place of the other half
                 const int grain = static_cast<int>(HashByte(nearestX, nearestY) * (2 * kFeltGrainLevels + 1) / (kHashByteMask + 1)) - kFeltGrainLevels;
-                felt.rgba.push_back(Channel(kFelt.r, gain, grain));
-                felt.rgba.push_back(Channel(kFelt.g, gain, grain));
-                felt.rgba.push_back(Channel(kFelt.b, gain, grain));
+                felt.rgba.push_back(Channel(base.r, gain, grain));
+                felt.rgba.push_back(Channel(base.g, gain, grain));
+                felt.rgba.push_back(Channel(base.b, gain, grain));
                 felt.rgba.push_back(kOpaque);
             }
         }

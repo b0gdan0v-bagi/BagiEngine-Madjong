@@ -1010,7 +1010,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableFlightTest, TheTurnBackdropTheCallingFrameAndTheSeatPlatesAreTheSameWithAFlightAsWithout) {
-        const Vector<Color> colors = {kTurnMark, kSeatPlate, kSeatTurnFrame, kDealerMark, kCallingFrame};
+        const Vector<Color> colors = {kTurnMark, Palette().seatPlate, kSeatTurnFrame, kDealerMark, kCallingFrame};
         const auto play = [&](bool flights, Vector<Vector<Rect>>& seen) {
             _table->SetTileFlightSeconds(flights ? kTileFlightSeconds : 0.0f);
             ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, ViewerDeclaredModel()));

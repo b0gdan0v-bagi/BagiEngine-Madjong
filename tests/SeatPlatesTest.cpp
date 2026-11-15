@@ -340,10 +340,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(SeatPlatesTest, ThePlateColoursAreTheHudPanelTheGoldOfTheTurnAndADealerMarkThatIsNotGold) {
-        EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
         EXPECT_EQ(kSeatPlateCorner, static_cast<float>(kCornerMiddle));
         EXPECT_EQ(kSeatPlateBorder, static_cast<float>(kBorderWidth));
-        EXPECT_TRUE(SameColor(kSeatPlateDeep, PaletteColor("hudPanelDeep")));
         // The turn is gold: the frame is the gold of the other marks (the same red, green and blue as the turn mark) with an alpha of its own
         EXPECT_EQ(kSeatTurnFrame.r, kTurnMark.r);
         EXPECT_EQ(kSeatTurnFrame.g, kTurnMark.g);

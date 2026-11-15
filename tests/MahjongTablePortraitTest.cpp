@@ -219,7 +219,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(felt) << window.label.c_str() << ": the felt covers the view";
             // The rim is the four bars of `kRimWidth` units on the border of the view, as in landscape
             float area = 0.0f;
-            for (const Rect& rect : RectsOf(kFeltRim)) {
+            for (const Rect& rect : RectsOf(Palette().feltRim)) {
                 area += rect.w * rect.h;
             }
             const float scale = TableFit(window).scale;

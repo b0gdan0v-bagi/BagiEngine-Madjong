@@ -445,13 +445,21 @@ namespace BECore::Mahjong {
         ReleaseFelt();
     }
 
+    void MahjongTableComponent::RefreshPalette() {
+        const UIThemes& themes = CoreManager::GetUIThemes();
+        if (themes.GetVersion() != _paletteVersion) {
+            _palette = MakeTablePalette(themes);
+            _paletteVersion = themes.GetVersion();
+        }
+    }
+
     ITexture* MahjongTableComponent::FeltTexture(IRenderer& renderer) {
         BE_PROFILE_SCOPE("MahjongTable::FeltTexture");
         if (renderer.GetId() != _feltRenderer) {
             _felt = {};  // made by another renderer, which has its own way of freeing it
             _feltRenderer = renderer.GetId();
             // Once per renderer, even when it fails (the flat felt is drawn then)
-            const FeltPixels pixels = MakeFeltPixels(kFeltTextureWidth, kFeltTextureHeight);
+            const FeltPixels pixels = MakeFeltPixels(kFeltTextureWidth, kFeltTextureHeight, _palette.felt);
             _felt = renderer.CreateTexture(pixels.rgba.data(), pixels.width, pixels.height);
         }
         return _felt.Get();
@@ -1224,11 +1232,11 @@ namespace BECore::Mahjong {
         const float pixelsPerUnit = renderer.GetViewTransform().scale;
         const UICorners corners = PanelCorners(unit);
         // The order of `UIElement::DrawBoxIn`, with the marks of the turn over it
-        const UIShadowSpec shadow{0.0f, kShadowOffsetY * unit, kShadowBlur * unit, 0.0f, kSeatPlateShadow};
+        const UIShadowSpec shadow{0.0f, kShadowOffsetY * unit, kShadowBlur * unit, 0.0f, _palette.seatPlateShadow};
         UIBoxMesh::AppendShadow(_panelVertices, _panelIndices, rect, corners, shadow, pixelsPerUnit);
-        UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, corners, kSeatPlate, UIGradientSpec{UIGradientDirection::Vertical, kSeatPlateDeep}, pixelsPerUnit);
-        UIBoxMesh::AppendBorder(_panelVertices, _panelIndices, rect, corners, kSeatPlateBorder * unit, kSeatPlateFrame, pixelsPerUnit);
-        UIBoxMesh::AppendHighlight(_panelVertices, _panelIndices, rect, corners, kSeatPlateHighlight, pixelsPerUnit);
+        UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, corners, _palette.seatPlate, UIGradientSpec{UIGradientDirection::Vertical, _palette.seatPlateDeep}, pixelsPerUnit);
+        UIBoxMesh::AppendBorder(_panelVertices, _panelIndices, rect, corners, kSeatPlateBorder * unit, _palette.seatPlateFrame, pixelsPerUnit);
+        UIBoxMesh::AppendHighlight(_panelVertices, _panelIndices, rect, corners, _palette.seatPlateHighlight, pixelsPerUnit);
         if (turn) {
             UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, corners, kTurnMark, UIGradientSpec{}, pixelsPerUnit);
             UIBoxMesh::AppendBorder(_panelVertices, _panelIndices, rect, corners, kSeatTurnFrameWidth * unit, kSeatTurnFrame, pixelsPerUnit);
@@ -1257,6 +1265,7 @@ namespace BECore::Mahjong {
     void MahjongTableComponent::OnDraw() {
         BE_PROFILE_SCOPE("MahjongTable::OnDraw");
         PollTableLayoutSpec();
+        RefreshPalette();
         _drawnSmallHandTile = SmallHandTileNow();
         IRenderer& renderer = *CoreManager::GetRenderer();
         const ViewSize view = ActiveViewSize(GetScene());
@@ -1267,20 +1276,20 @@ namespace BECore::Mahjong {
         if (ITexture* felt = FeltTexture(renderer)) {
             renderer.DrawTexture(*felt, nullptr, 0.0f, 0.0f, viewWidth, viewHeight);
         } else {
-            renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
+            renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, _palette.felt);
         }
         // The layout is built in design units and scaled to the view: widths measured in units here are scaled the same way
         const float unit = LayoutScale(viewWidth, viewHeight);
         const float rim = kRimWidth * unit;
-        renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, rim, kFeltRim);
-        renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, kFeltRim);
-        renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
-        renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
+        renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, rim, _palette.feltRim);
+        renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, _palette.feltRim);
+        renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, _palette.feltRim);
+        renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, _palette.feltRim);
         const float lip = kFeltLipWidth * unit;
-        renderer.DrawFilledRect(rim, rim, viewWidth - 2.0f * rim, lip, kFeltLip);
-        renderer.DrawFilledRect(rim, viewHeight - rim - lip, viewWidth - 2.0f * rim, lip, kFeltLip);
-        renderer.DrawFilledRect(rim, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
-        renderer.DrawFilledRect(viewWidth - rim - lip, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
+        renderer.DrawFilledRect(rim, rim, viewWidth - 2.0f * rim, lip, _palette.feltLip);
+        renderer.DrawFilledRect(rim, viewHeight - rim - lip, viewWidth - 2.0f * rim, lip, _palette.feltLip);
+        renderer.DrawFilledRect(rim, rim + lip, lip, viewHeight - 2.0f * (rim + lip), _palette.feltLip);
+        renderer.DrawFilledRect(viewWidth - rim - lip, rim + lip, lip, viewHeight - 2.0f * (rim + lip), _palette.feltLip);
 
         // The two snapshots trade places and one is refilled in place, so a table at rest draws without the heap
         eastl::swap(_previous, _shown);
@@ -1444,8 +1453,8 @@ namespace BECore::Mahjong {
                 Rect plate = Padded(bounds, kRackPadding * unit);
                 plate.h = eastl::min(plate.h, viewHeight - rim - plate.y);
                 const float edge = kHandRackLipWidth * unit;
-                renderer.DrawFilledRect(plate.x, plate.y, plate.w, plate.h, kHandRackLip);
-                renderer.DrawFilledRect(plate.x + edge, plate.y, plate.w - 2.0f * edge, plate.h - edge, kHandRack);
+                renderer.DrawFilledRect(plate.x, plate.y, plate.w, plate.h, _palette.handRackLip);
+                renderer.DrawFilledRect(plate.x + edge, plate.y, plate.w - 2.0f * edge, plate.h - edge, _palette.handRack);
             }
         }
 
