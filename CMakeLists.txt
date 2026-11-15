@@ -59,11 +59,13 @@ function(mahjong_add_tool target source)
     endif()
 endfunction()
 
-# The bot arena (docs/bot-arena.md) and the EV analyzer of one position (docs/ev-analyzer.md).
+# The bot arena (docs/bot-arena.md), the EV analyzer of one position (docs/ev-analyzer.md) and the claim charts over many hands
+# (docs/charts-claims.md).
 # Not built for the web: a plain add_executable would link a second wasm without the content package.
 if(NOT ENGINE_TARGET_WEB)
     mahjong_add_tool(BagiMahjongArena tools/arena/main.cpp)
     mahjong_add_tool(BagiMahjongAnalyzer tools/analyzer/main.cpp)
+    mahjong_add_tool(BagiMahjongCharts tools/charts/main.cpp)
 endif()
 
 # The room server of online play (README.md, "Online play, the server"): the headless program of the engine's server main with MahjongSeatedGame

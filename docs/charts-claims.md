@@ -48,6 +48,22 @@ kind alone (a cell of a one-way table sums every row with that value, so one row
 interval over a handful of seeds says nothing. The number is a guess at where the normal approximation of the interval stops being
 absurd, and it is fixed here, not tuned to a result. A kong cell may well stay `few`: that is a result, not a defect.
 
+## Build and run
+
+```bash
+export PATH="$PWD/engine/.venv/bin:$PATH"          # the reflection generator needs jinja2
+cmake --preset macos-release
+cmake --build --preset macos-release --target BagiMahjongCharts
+build/macos-release/bin/BagiMahjongCharts --first 1 --seeds 4 --worlds 50 --jobs 0
+```
+
+Options: `--first` (the first seed), `--seeds` (one hand each), `--worlds` (per window), `--jobs` (threads in all, 0 = one per core; whole
+seeds each, so it helps up to the number of seeds), `--markdown` (the tables as markdown: the numbers of this doc are pasted from it,
+never typed), `--help`. The same arguments give the same bytes at any `--jobs`. Exit codes as the arena: 0, 1 (a refused action or a
+window that cannot be measured: a defect, the seed is printed), 2 (bad arguments). The program is not part of `ctest`; the code
+(`src/Mahjong/Arena/ArenaCharts*`) is tested by `ArenaChartsClassesTest`, `ArenaChartsWindowsTest`, `ArenaChartsRunTest` and
+`ArenaChartsReportTest`. Run it in Release: a window costs `--worlds` rollouts of whole hands.
+
 ## Caveats
 
 - **Against Normal bots.** The three other seats and the seat itself after the claim play Normal (level 5). A number says "against this

@@ -8,11 +8,13 @@ namespace BECore::Mahjong::Arena {
 
     /// The worlds per window of a run that does not say; the study's own number is in the protocol of `docs/charts-claims.md`.
     inline constexpr int kDefaultChartWorlds = 100;
+    /// The seeds of a run that does not say; a window costs `worlds` rollouts, so the arena's default of 250 seeds would run for hours.
+    inline constexpr int kDefaultChartSeeds = 20;
 
     /// The seeds `first .. first + count - 1`, one hand each with four Normal seats, every claim window measured with `worlds` worlds.
     struct ChartsConfig {
         uint32_t first = kDefaultFirstSeed;
-        int count = kDefaultSeedCount;
+        int count = kDefaultChartSeeds;
         int worlds = kDefaultChartWorlds;
         /// The threads in all, 1 to `kMaxJobs`: `min(jobs, count)` threads each take whole seeds and play the worlds of their windows
         /// themselves. The result does not depend on it.
