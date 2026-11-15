@@ -42,8 +42,8 @@ namespace BECore::Mahjong {
             return nullptr;
         }
 
-        /// The unseen winning copies of the 13 tiles that stay after the discard `taken`, when they wait (as `WaitingDiscards` lists it for the
-        /// kind of discard, declaring or not).
+        /// The unseen winning copies of the 13 tiles that stay after the discard `taken`, when they wait (`WaitingDiscards` for its kind,
+        /// declaring or not).
         Optional<int> WaitingCopiesOf(const TableView& before, const HandAction& taken, bool readDanger) {
             for (const WaitingDiscard& discard : WaitingDiscards(before, taken.declareCalling, readDanger)) {
                 if (discard.tile == taken.tile) {

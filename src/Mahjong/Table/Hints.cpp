@@ -9,10 +9,9 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// A hand that waits holds sets of `kTilesPerSet` and one tile over (3n + 1 concealed tiles); with the tile to discard (3n + 2) it does not wait yet.
+        /// A hand that waits holds sets and one tile over (3n + 1 concealed tiles); with the tile to discard (3n + 2) it does not wait yet.
         constexpr size_t kWaitingRemainder = 1;
 
-        /// The key of the advice for `advice`, one per kind of action (and per kind of claim).
         const char* AdviceKey(const HandAction& advice) noexcept {
             switch (advice.kind) {
                 case ActionKind::Discard:

@@ -5,20 +5,19 @@
 namespace BECore::Mahjong {
 
     /**
-     * The coach: after an accepted action of a person that is not what the computer player would have done, a short note says what it
-     * would have done and what the two cost. Plain C++ over the `TableView` the person had **before** the action (`MakeTableView`), so
-     * the judge knows nothing the person did not see; no scene, no game. The judge (`JudgeMove`) is here; the ledger (`CoachLedger`)
-     * holds the note and the tally for the table (`MahjongGame` owns one, the components read it); the card of the table words a note
-     * (`MakeNoteCard`, `Table/HintCard.h`).
+     * The coach: after an accepted action of a person that is not what the computer player would have done, a note says what it would
+     * have done and what the two cost. Plain C++ over the `TableView` the person had **before** the action (`MakeTableView`), so the
+     * judge knows nothing the person did not see; no scene, no game. The ledger (`CoachLedger`) holds the note and the tally
+     * (`MahjongGame` owns one, the components read it); `MakeNoteCard` (`HintCard.h`) words a note.
      */
 
-    /// What the hints of the table do: nothing, the hints (`Hint`, the waiting row, the marks), or the hints and the coach's notes. Kept on
-    /// the game and in the saved preferences, never a rule of the match and unknown to the control API.
+    /// Nothing, the hints (the waiting row, the marks), or the hints and the coach's notes. Kept on the game and in the saved
+    /// preferences, never a rule of the match and unknown to the control API.
     CORE_ENUM(HintsMode, uint8_t, Off, Hints, Coach)
 
     inline constexpr HintsMode kDefaultHintsMode = HintsMode::Hints;
 
-    /// The id of a mode in the saved preferences, the variable `hintsChoice` and the values of the buttons of the page: `off`, `hints`, `coach`.
+    /// The id of a mode in the saved preferences, the variable `hintsChoice` and the values of the buttons of the page.
     [[nodiscard]] constexpr StringView HintsModeText(HintsMode mode) noexcept {
         switch (mode) {
             case HintsMode::Off:
@@ -41,11 +40,11 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    /// What the numbers of one side of a note are: none (a pass, a complete hand), the steps to a ready hand after the move with the unseen
-    /// copies that help (`Rated`), or the unseen copies of the tiles a ready hand waits on (`Waiting`).
+    /// What the numbers of one side of a note are: none (a pass, a complete hand), the steps after the move with the unseen copies that
+    /// help (`Rated`), or the unseen copies of the tiles a ready hand waits on (`Waiting`).
     CORE_ENUM(CoachNumbers, uint8_t, None, Rated, Waiting)
 
-    /// The numbers of one move: `steps` and `copies` for `Rated` (the shanten and the acceptance of the hand after it), `copies` for `Waiting`.
+    /// `steps` and `copies` (the shanten and the acceptance of the hand after the move) for `Rated`, `copies` for `Waiting`.
     struct CoachSide {
         CoachNumbers numbers = CoachNumbers::None;
         int steps = 0;
@@ -57,10 +56,10 @@ namespace BECore::Mahjong {
     /**
      * @brief A move that differs from the computer's choice: plain data, no text (`MakeNoteCard` words it).
      *
-     * `pending` is the discard of a claim window (invalid in a turn). `stepsBefore` is the shanten of the hand as it was (of the 14 tiles
-     * of a turn, of the hand of a window). `handWaits`: the advice is to pass a claim because the hand waits (and not for lack of gain).
-     * `byPoints`: the advice of a waiting hand offered a kong that keeps its wait was decided by points (`RateWaitingKong`). The pass of a
-     * waiting hand has the numbers of the wait (`Waiting`: ready, the unseen winning copies), so it compares with a claim's row.
+     * `pending` is the discard of a claim window (invalid in a turn). `stepsBefore` is the shanten of the hand before the move (of the 14
+     * tiles in a turn). `handWaits`: the advice is to pass a claim because the hand waits (not for lack of gain). `byPoints`: the advice
+     * of a waiting hand offered a kong that keeps its wait was decided by points (`RateWaitingKong`). The pass of a waiting hand has the
+     * numbers of the wait (`Waiting`), so it compares with a claim's row.
      */
     struct CoachNote {
         Seat seat = kNoSeat;
@@ -76,19 +75,18 @@ namespace BECore::Mahjong {
         bool operator==(const CoachNote&) const = default;
     };
 
-    /// Whether `taken` is something `before` can judge: `before.legal` lists it.
+    /// Whether `before.legal` lists `taken`.
     [[nodiscard]] bool CanJudge(const TableView& before, const HandAction& taken);
 
     /**
      * @brief Whether an accepted action of a person agrees with the computer's choice on the same view; the note when it does not.
      *
-     * The advice is `AdviceFor(before)` with the numbers of `ExplainAdviceFor`. A move agrees when it is the advice, or has the same
-     * numbers, rated by the chooser's own pieces (no second rule): a discard of a kind with the shanten and the acceptance of the advised
-     * kind; for a declaring or keeping-waiting turn the waiting copies, and only a declaring discard declared (a declaring advice with
-     * the same tile not declared differs); a claim with the shanten and the acceptance after it of the advised claim; a pass when the
-     * advice is a pass; a kong when the advice is a kong and the hand without it is no worse (`KongIsNoWorse`). The advice of a
-     * complete hand (`DeclareWin`, a mahjong claim) differs from anything else. nullopt when it agrees and when there is nothing to
-     * judge (`CanJudge` false).
+     * The advice is `AdviceFor(before)` with the numbers of `ExplainAdviceFor`. A move agrees when it is the advice or has the same
+     * numbers, rated by the chooser's own pieces (no second rule): a discard with the shanten and the acceptance of the advised kind;
+     * for a declaring or keeping-waiting turn the waiting copies, and a declaring advice with the same tile not declared differs; a
+     * claim with the shanten and acceptance after the advised claim; a pass when the advice is a pass; a kong when the advice is a kong
+     * and the hand without it is no worse (`KongIsNoWorse`). The advice of a complete hand (`DeclareWin`, a mahjong claim) differs from
+     * anything else. nullopt when it agrees and when there is nothing to judge (`CanJudge` false).
      */
     [[nodiscard]] Optional<CoachNote> JudgeMove(const TableView& before, const HandAction& taken);
 
@@ -100,7 +98,7 @@ namespace BECore::Mahjong {
         bool operator==(const CoachTally&) const = default;
     };
 
-    /// One hand of one match, as `MahjongTableComponent::SeenHand` tells it: a replayed drawn hand is not the hand it replays.
+    /// One hand of one match, as `MahjongTableComponent::SeenHand` tells it: a replayed drawn hand is a hand of its own.
     struct CoachHandKey {
         uint64_t starts = 0;
         int handsPlayed = 0;
@@ -109,12 +107,10 @@ namespace BECore::Mahjong {
         bool operator==(const CoachHandKey&) const = default;
     };
 
-    /// The key of the hand a move was made in.
     [[nodiscard]] constexpr CoachHandKey HandKeyOf(const MoveContext& context) noexcept {
         return {context.startCount, context.handsPlayed, context.historySize};
     }
 
-    /// The key of the hand the session is in now.
     [[nodiscard]] inline CoachHandKey HandKeyOf(const TableSession& session) {
         return HandKeyOf(session.Context());
     }
@@ -122,11 +118,10 @@ namespace BECore::Mahjong {
     /**
      * @brief The note and the tally of the coach, fed by the session (`TableSession::SetMoveObserver`).
      *
-     * Records only while enabled and with exactly one person at the table (two would see each other's hand in a note). Every recorded move
-     * drops the note before it and judges itself (`JudgeMove`): an agreeing one counts, a differing one counts and keeps its note. A new
-     * hand starts the hand tally over, a new match both. `SetEnabled` with a changed value drops the note and the tallies (a mode change
-     * starts no tally of the past); while disabled nothing is held. `Version()` grows whenever the note changes, so a front end
-     * publishes only when it moved.
+     * Records only while enabled and with exactly one person at the table (two would see each other's hand in a note). Every recorded
+     * move drops the note before it and judges itself (`JudgeMove`): an agreeing one counts, a differing one counts and keeps its note.
+     * A new hand starts the hand tally over, a new match both. `SetEnabled` with a changed value drops the note and the tallies; while
+     * disabled nothing is held. `Version()` grows whenever the note changes, so a front end publishes only when it moved.
      */
     class CoachLedger final : public IPersonMoveObserver {
     public:
