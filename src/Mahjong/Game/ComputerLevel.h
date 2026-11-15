@@ -144,10 +144,16 @@ namespace BECore::Mahjong {
         /// Step 2 of the own turn: the discard that declares the calling hand is the one with the best expected value (`ValueWaits`), not
         /// the one with the most unseen winning copies; false = Normal's step 2. Draws nothing from the rng when on. Off in every level.
         bool ownDrawsPickWait = false;
-        /// The own-draws value (`ownDrawsDepth`, `ownDrawsPickWait`) also counts the win on a discard of another seat: in each round the
-        /// three others discard before the seat draws, and a discard of a winning kind wins (`OwnDrawsModel::discardWins`, `OwnDraws.h`).
-        /// Alone it changes nothing. Draws nothing from the rng. Off in every level.
+        /// The own-draws value (`ownDrawsDepth`, `ownDrawsPickWait`, `ownDrawsClaimDepth`) also counts the win on a discard of another
+        /// seat: in each round the three others discard before the seat draws, and a discard of a winning kind wins
+        /// (`OwnDrawsModel::discardWins`, `OwnDraws.h`). Alone it changes nothing. Draws nothing from the rng. Off in every level.
         bool ownDrawsDiscardWins = false;
+        /// Step 3 of a claim window (after a mahjong claim and the pass of a waiting hand): the number of the seat's own next draws that
+        /// each answer, the pass and every listed pung, kong and chow, is rated over (`ValueClaims`, `OwnDraws.h`, at most
+        /// `kOwnDrawsMaxDepth`), in expected points; a claim is taken only when worth strictly more than the pass. 0 = Normal's steps 3
+        /// and 4, nothing of the new code runs; a window with nothing rated falls back to them. Draws nothing from the rng, and
+        /// `skipClaimPercent` and `takeValueClaimsAtEqualShanten` do not apply (the value decides). Off in every level.
+        int ownDrawsClaimDepth = 0;
         /// Steps 2, 4 and 5 of the own turn: among discards equal in what each step ranks by (unseen winning copies; shanten and
         /// acceptance), the one with the lowest `Danger` against the declared opponents (`DiscardDanger.h`) is chosen, then the lowest
         /// `KeepValue`, then the rng. A tie-break only: it never changes the shanten or the acceptance of the choice. Draws nothing from

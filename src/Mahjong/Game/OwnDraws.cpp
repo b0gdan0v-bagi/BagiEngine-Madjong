@@ -2,6 +2,7 @@
 
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
+#include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/Score.h>
 
@@ -87,7 +88,7 @@ namespace BECore::Mahjong {
         public:
             Evaluator(const TableView& view, int depth, bool discardWins, int extraDraws = 0)
                 : _view(view), _depth(depth), _discardWins(discardWins), _meldCount(MeldCountOf(view)), _meldTiles(CountMeldTiles(view.own.melds)), _root(CountTiles(view.own.concealed)),
-                  _east(view.seatWind == Wind::East), _draws(view.liveCount / kSeatCount + extraDraws) {
+                  _east(view.seatWind == Wind::East), _extraDraws(extraDraws), _draws(view.liveCount / kSeatCount + extraDraws) {
                 int declared = 0;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     declared += (seat != view.seat && view.seats[seat].callingDeclared) ? 1 : 0;
@@ -282,7 +283,8 @@ namespace BECore::Mahjong {
             /// The closed form of a hand that waits, after `used` draws, over the draws the wall leaves: a draw wins with the chance `p`
             /// of the unseen winning copies, the hand does not change, and what is left of the chance is another seat's win (the standing
             /// hand, worth `notWinning`) or a drawn hand. With `discardWins` each round also starts with the three discards of the
-            /// others, which win with `DiscardRoundChance(p)` (scored as a win on a discard) before the seat draws.
+            /// others, which win with `DiscardRoundChance(p)` (scored as a win on a discard) before the seat draws; the first
+            /// `_extraDraws` draws (a kong's loose tile) come with no discard before them.
             [[nodiscard]] Value Waiting(const TileCounts& counts, const Line& line, int used, const Vector<Tile>& winning, int64_t notWinning) const {
                 const WinKinds drawKinds = MeanWin(counts, line, used, winning, WinSource::SelfDraw);
                 const int64_t total = UnseenTotal(line);
@@ -298,7 +300,7 @@ namespace BECore::Mahjong {
                 int64_t discardMass = 0;
                 int64_t stay = kOwnDrawsProbBase;  // the chance that the hand has not won after the rounds so far
                 for (int draw = used + 1; draw <= _draws; ++draw) {
-                    if (_discardWins) {
+                    if (_discardWins && draw > _extraDraws) {
                         discardMass += ProbTimes(ProbTimes(_alive[draw - 1], stay), discardChance);
                         stay = ProbTimes(stay, kOwnDrawsProbBase - discardChance);
                     }
@@ -395,6 +397,8 @@ namespace BECore::Mahjong {
             TileCounts _meldTiles{};
             TileCounts _root{};
             bool _east = false;
+            /// The draws that follow no discard of the others: the loose tile of a kong.
+            int _extraDraws = 0;
             /// The draws the seat has left at the start: the wall's hard limit.
             int _draws = 0;
             Vector<int64_t> _alive;
@@ -502,8 +506,52 @@ namespace BECore::Mahjong {
         if (!IsSeat(view.seat)) {
             return 0;
         }
-        Evaluator evaluator(view, 0, model.discardWins, eastl::max(0, extraDraws));
+        Evaluator evaluator(view, eastl::clamp(model.depth, 0, kOwnDrawsMaxDepth), model.discardWins, eastl::max(0, extraDraws));
         return evaluator.Start(CountTiles(view.own.concealed)).Expected();
+    }
+
+    Vector<ClaimValue> ValueClaims(const TableView& view, const OwnDrawsModel& model) {
+        if (model.depth < 1 || view.phase != Phase::Claim || !IsSeat(view.seat) || view.seat == view.currentSeat) {
+            return {};
+        }
+        const bool anyClaim = eastl::any_of(view.legal.begin(), view.legal.end(), [](const HandAction& action) { return action.kind == ActionKind::Claim && action.claim != ClaimKind::Mahjong; });
+        if (!anyClaim) {
+            return {};
+        }
+        struct Ranked {
+            ClaimValue claim;
+            int order = 0;
+        };
+        Vector<Ranked> ranked;
+        // The pass first: it holds a tie, so a claim in front of it is worth strictly more.
+        const OwnDrawsModel held{.depth = eastl::min(model.depth, kOwnDrawsMaxDepth), .discardWins = model.discardWins};
+        {
+            Evaluator evaluator(view, held.depth, held.discardWins);
+            ranked.push_back({{HandAction::MakePass(), MakeDiscardValue(Tile{}, evaluator.Start(CountTiles(view.own.concealed)))}, 0});
+        }
+        for (const HandAction& action : view.legal) {
+            if (action.kind != ActionKind::Claim || action.claim == ClaimKind::Mahjong) {
+                continue;
+            }
+            const TableView after = ViewAfterClaim(view, action);
+            if (action.claim == ClaimKind::Kong) {
+                // The loose tile is the first of the draws (the convention of `RateWaitingKong`), the best discard follows it.
+                Evaluator evaluator(after, held.depth, held.discardWins, kKongLooseDraws);
+                ranked.push_back({{action, MakeDiscardValue(Tile{}, evaluator.Start(CountTiles(after.own.concealed)))}, static_cast<int>(ranked.size())});
+                continue;
+            }
+            const Vector<DiscardValue> discards = ValueDiscards(after, held);
+            if (!discards.empty()) {
+                ranked.push_back({{action, discards.front()}, static_cast<int>(ranked.size())});
+            }
+        }
+        eastl::sort(ranked.begin(), ranked.end(),
+                    [](const Ranked& a, const Ranked& b) { return a.claim.value.expected != b.claim.value.expected ? a.claim.value.expected > b.claim.value.expected : a.order < b.order; });
+        Vector<ClaimValue> values;
+        for (const Ranked& entry : ranked) {
+            values.push_back(entry.claim);
+        }
+        return values;
     }
 
 }  // namespace BECore::Mahjong

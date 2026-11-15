@@ -9,7 +9,7 @@ namespace BECore::Mahjong::Arena {
         // The binding below names every field, so it stops compiling when a field of `LevelProfile` has no row in `kProfileKnobs`.
         constexpr bool ProfileHasKnownFields() {
             [[maybe_unused]] const auto& [skipAcceptance, skipDeclaration, skipClaim, takeValue, searchWorlds, searchCandidates, searchMargin, ownDrawsDepth, ownDrawsPickWait, ownDrawsDiscardWins,
-                                          readDanger, waitingKongByPoints] = kNormalProfile;
+                                          ownDrawsClaimDepth, readDanger, waitingKongByPoints] = kNormalProfile;
             return true;
         }
         static_assert(ProfileHasKnownFields());

@@ -76,10 +76,32 @@ namespace BECore::Mahjong {
      * @brief The seat's hand as it is held (3n + 1 tiles: in a claim window, or a view made for a claim), in milli-points, in the
      *        closed form of a waiting hand (taken as declared) over the draws the wall leaves plus `extraDraws` (a kong's loose tile).
      *
-     * No search (a hand that does not wait wins nothing and is worth its standing value when another seat wins). For the kong of a
-     * waiting hand (`RateWaitingKong`, `ComputerClaim.h`): the same arithmetic as `ValueWaits`, so the two choices agree. 0 for a view
-     * of no seat.
+     * Without `model.depth` no search (a hand that does not wait wins nothing and is worth its standing value when another seat
+     * wins); with it the draws are searched as `ValueDiscards` does (the value of a pass, `ValueClaims`). For the kong of a waiting hand (`RateWaitingKong`, `ComputerClaim.h`): the same arithmetic as
+     * `ValueWaits`, so the two choices agree. 0 for a view of no seat.
      */
     [[nodiscard]] int64_t ValueOfHeldHand(const TableView& view, int extraDraws = 0, const OwnDrawsModel& model = {});
+
+    /// What one answer to a claim window is worth: `Pass`, or a pung, kong or chow of `TableView::legal`.
+    struct ClaimValue {
+        HandAction action;
+        /// `tile` is the discard that follows a pung or a chow (the best one) and is invalid for a pass and for a kong (the search
+        /// after a kong chooses its discard inside).
+        DiscardValue value;
+    };
+
+    /**
+     * @brief `Pass` and every listed pung, kong and chow of a claim window, rated in the same points over the same `model.depth` draws,
+     *        best first. Empty for `depth` below 1, for a view that is not `Phase::Claim` with the seat in the window (not the
+     *        discarder), and for a seat without any claim to make besides the pass.
+     *
+     * A pure function of the `TableView`, no rng. **The pass** is the hand as it is held over `depth` draws (`ValueOfHeldHand`'s
+     * evaluator). **A pung or a chow** is the view after it (`ViewAfterClaim`) valued as a discard turn (`ValueDiscards`: the best of
+     * its discards). **A kong** is the view after it valued with its loose tile as an extra draw (`kKongLooseDraws`, the convention of
+     * `RateWaitingKong`, so the two agree) and the best discard after it. A claim takes the seat's turn out of the order, but its next
+     * draw still comes after three other discards, as it does after a pass, so every answer is valued against the same `Alive`.
+     * Ties keep the order pass, then `view.legal`'s; so a claim in front of the pass is worth strictly more than it.
+     */
+    [[nodiscard]] Vector<ClaimValue> ValueClaims(const TableView& view, const OwnDrawsModel& model);
 
 }  // namespace BECore::Mahjong

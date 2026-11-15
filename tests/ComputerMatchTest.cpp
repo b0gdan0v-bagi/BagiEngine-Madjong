@@ -238,6 +238,12 @@ namespace BECore::Mahjong::Tests {
         PlayOwnDrawsMatch(valued, "own-draws match with the wins on a discard");
     }
 
+    TEST(ComputerMatchTest, OneSeatThatValuesItsClaimsPlaysAShortMatchLegally) {
+        LevelProfile valued = kNormalProfile;
+        valued.ownDrawsClaimDepth = kOwnDrawsTestDepth;
+        PlayOwnDrawsMatch(valued, "own-draws claims match");
+    }
+
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {
         const MahjongSettings settings = SettingsOf(2);
         Match first;
