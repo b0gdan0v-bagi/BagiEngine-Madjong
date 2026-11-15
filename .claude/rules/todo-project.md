@@ -10,12 +10,12 @@ Read by the skills `todo-loop`, `todo-merge`, `todo-add`, `todo-db` and by the a
 
 ## Areas
 
-| Area | `<area>` (todo store) | `<R>` (git repository) | `<base>` | Vikunja project (the service's) |
-|------|-----------------------|------------------------|----------|---------------------------------|
-| game | `mahjong` | `.` | `main` | `BagiEngine-Madjong` |
-| engine | `engine` | `engine` | `games/mahjong` (the `branch` of `.gitmodules`) | `BagiEngine` |
+| Area | `<area>` (todo store) | `<R>` (git repository) | `<base>` |
+|------|-----------------------|------------------------|----------|
+| game | `mahjong` | `.` | `main` |
+| engine | `engine` | `engine` | `games/mahjong` (the `branch` of `.gitmodules`) |
 
-`<engine>` is `engine`. The CLI runs from this repository's root as `python3 engine/tools/todo/todo.py <command>` for both areas (an entry knows its area; `list --area mahjong|engine` narrows); `TODO_API_URL` and `TODO_API_TOKEN` come from the git-ignored `.env` of this repository (`.env.example`). The Vikunja project of an area is a setting of the store, not of the CLI: there is no push and no pull.
+`<engine>` is `engine`. The CLI runs from this repository's root as `python3 engine/tools/todo/todo.py <command>` for both areas (an entry knows its area; `list --area mahjong|engine` narrows); `TODO_API_URL` and `TODO_API_TOKEN` come from the git-ignored `.env` of this repository (`.env.example`); the token is this checkout's own, limited to its areas. `engine/tools/todo/todo.py` is the loader of the CLI the service hands out (`engine/tools/todo/CLAUDE.md`); there is no push and no pull.
 
 An engine entry's branch `todo/<id>` is cut in `engine/` from `games/mahjong`; its commits and the merge are in the engine repository, its status is in the store. The game repository only ever changes the pointer of `engine/`, and only `todo-merge` does it, as a commit of its own, after the merge and the owner's yes (`Update engine: <title>`). A game entry that needs engine work waits (skip reason below) until the engine entry for it is merged.
 
