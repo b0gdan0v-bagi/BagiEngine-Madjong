@@ -6,14 +6,24 @@
 #   function                                          callables-move-only
 #   fstream, include-stream, getline                  engine-file-layer
 #   directory-iterator                                engine-file-layer, engine-path-type
+#   thread, lock                                      mahjong-engine-threads (the rules came with ci-raw-locks-check)
 # Whoever empties a rule deletes its lines here.
+src/Mahjong/Analyzer/AnalyzerCli.cpp thread 1
 src/Mahjong/Analyzer/AnalyzerCli.h function 1
+src/Mahjong/Arena/ArenaCli.cpp thread 1
 src/Mahjong/Arena/ArenaHand.h function 1
 src/Mahjong/Arena/ArenaLogs.h function 1
+src/Mahjong/Arena/ArenaLogsReport.cpp thread 2
 src/Mahjong/Arena/ArenaOracle.cpp function 1
+src/Mahjong/Arena/ArenaRun.cpp thread 2
 src/Mahjong/Arena/ArenaRun.h function 1
+src/Mahjong/Arena/ArenaTable.cpp thread 2
 src/Mahjong/Arena/ArenaWorlds.cpp function 4
+src/Mahjong/Arena/ArenaWorlds.cpp lock 4
+src/Mahjong/Arena/ArenaWorlds.cpp thread 1
 src/Mahjong/Arena/ArenaWorlds.h function 3
+src/Mahjong/Arena/ArenaWorlds.h lock 3
+src/Mahjong/Arena/ArenaWorlds.h thread 1
 src/Mahjong/Game/ComputerSearch.h function 3
 src/Mahjong/Game/Seats.h function 1
 src/Mahjong/MatchLogWriter.h fstream 1
