@@ -4,6 +4,7 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
+        constexpr StringView kKindOption = "--kind";
         constexpr StringView kFirstOption = "--first";
         constexpr StringView kSeedsOption = "--seeds";
         constexpr StringView kWorldsOption = "--worlds";
@@ -32,6 +33,15 @@ namespace BECore::Mahjong::Arena {
             return *number;
         }
 
+        std::expected<ChartKind, String> ParseKind(StringView value) {
+            for (const ChartKind kind : EnumUtils<ChartKind>::Values()) {
+                if (value == ChartKindName(kind)) {
+                    return kind;
+                }
+            }
+            return std::unexpected(Format("{}: \"{}\" is not a kind, use {} or {}", kKindOption, value, ChartKindName(ChartKind::Claims), ChartKindName(ChartKind::Discards)));
+        }
+
         /// 0 is the hardware concurrency.
         std::expected<int, String> ParseJobs(StringView value) {
             const Optional<uint32_t> number = ParseWhole<uint32_t>(value);
@@ -46,27 +56,36 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
+    StringView ChartKindName(ChartKind kind) noexcept {
+        return kind == ChartKind::Claims ? "claims" : "discards";
+    }
+
     String ChartsUsage() {
         return Format("usage: BagiMahjongCharts [options]\n"
                       "\n"
-                      "Plays one hand per seed with four Normal seats and measures every claim window (a chow, pung or kong of the discard against\n"
-                      "passing) with the EV analyzer. Prints, per class of claim, the mean points the claim gains over passing with a 95 percent\n"
-                      "interval over the seeds, and the same split by whether Normal takes the claim (docs/charts-claims.md).\n"
+                      "Plays one hand per seed with four Normal seats and prints, per class, the mean points a choice gains with a 95 percent\n"
+                      "interval over the seeds. What is measured is the kind:\n"
+                      "  claims    every claim window: a chow, pung or kong of the discard against passing, the same split by whether Normal takes\n"
+                      "            the claim (docs/charts-claims.md)\n"
+                      "  discards  every own turn where Normal's rule picks a discard and the value reading picks another: the value reading's\n"
+                      "            discard against Normal's (docs/charts-discards.md)\n"
                       "\n"
                       "options:\n"
+                      "  {kind} KIND     claims or discards; default {kindDefault}\n"
                       "  {first} N       the first seed; default {firstDefault}\n"
                       "  {seeds} COUNT   the number of seeds, one hand each; default {seedsDefault}\n"
-                      "  {worlds} N      the worlds (sampled hidden tiles, each with a rollout per action) per window; default {worldsDefault}\n"
+                      "  {worlds} N      the worlds (sampled hidden tiles, each with a rollout per action) per window or turn; default {worldsDefault}\n"
                       "  {jobs} N        N threads in all (1 to {maxJobs}; 0 is one per core), whole seeds each; the report is the same bytes whatever N is;\n"
                       "                  default {jobsDefault}\n"
                       "  {markdown}      print the tables as markdown (the numbers of the doc are pasted from it)\n"
                       "  {help}          this text\n"
                       "\n"
-                      "exit code: {ok} done, {refused} an action was refused by the rules or a window could not be measured (a defect; the seed is\n"
+                      "exit code: {ok} done, {refused} an action was refused by the rules or a window or turn could not be measured (a defect; the seed is\n"
                       "printed), {bad} bad arguments.\n",
-                      FormatArg("first", kFirstOption), FormatArg("seeds", kSeedsOption), FormatArg("worlds", kWorldsOption), FormatArg("jobs", kJobsOption), FormatArg("markdown", kMarkdownOption),
-                      FormatArg("help", kHelpOption), FormatArg("firstDefault", kDefaultFirstSeed), FormatArg("seedsDefault", kDefaultChartSeeds), FormatArg("worldsDefault", kDefaultChartWorlds),
-                      FormatArg("maxJobs", kMaxJobs), FormatArg("jobsDefault", kDefaultJobs), FormatArg("ok", kExitOk), FormatArg("refused", kExitRefusedAction), FormatArg("bad", kExitBadArguments));
+                      FormatArg("kind", kKindOption), FormatArg("kindDefault", ChartKindName(ChartKind::Claims)), FormatArg("first", kFirstOption), FormatArg("seeds", kSeedsOption),
+                      FormatArg("worlds", kWorldsOption), FormatArg("jobs", kJobsOption), FormatArg("markdown", kMarkdownOption), FormatArg("help", kHelpOption),
+                      FormatArg("firstDefault", kDefaultFirstSeed), FormatArg("seedsDefault", kDefaultChartSeeds), FormatArg("worldsDefault", kDefaultChartWorlds), FormatArg("maxJobs", kMaxJobs),
+                      FormatArg("jobsDefault", kDefaultJobs), FormatArg("ok", kExitOk), FormatArg("refused", kExitRefusedAction), FormatArg("bad", kExitBadArguments));
     }
 
     std::expected<ChartsArgs, String> ParseChartsArgs(Span<const StringView> args) {
@@ -81,7 +100,7 @@ namespace BECore::Mahjong::Arena {
                 parsed.markdown = true;
                 continue;
             }
-            const bool takesValue = option == kFirstOption || option == kSeedsOption || option == kWorldsOption || option == kJobsOption;
+            const bool takesValue = option == kKindOption || option == kFirstOption || option == kSeedsOption || option == kWorldsOption || option == kJobsOption;
             if (!takesValue) {
                 return std::unexpected(Format("unknown argument \"{}\"", option));
             }
@@ -89,7 +108,13 @@ namespace BECore::Mahjong::Arena {
                 return std::unexpected(Format("{} needs a value", option));
             }
             const StringView value = args[++index];
-            if (option == kJobsOption) {
+            if (option == kKindOption) {
+                const std::expected<ChartKind, String> kind = ParseKind(value);
+                if (!kind.has_value()) {
+                    return std::unexpected(kind.error());
+                }
+                parsed.kind = *kind;
+            } else if (option == kJobsOption) {
                 const std::expected<int, String> jobs = ParseJobs(value);
                 if (!jobs.has_value()) {
                     return std::unexpected(jobs.error());
@@ -124,6 +149,15 @@ namespace BECore::Mahjong::Arena {
         }
         if (parsed->help) {
             output.out = ChartsUsage();
+            return kExitOk;
+        }
+        if (parsed->kind == ChartKind::Discards) {
+            const std::expected<DiscardChartsResult, String> result = RunDiscardCharts(parsed->config);
+            if (!result.has_value()) {
+                output.err = Format("error: {}\n", result.error().c_str());
+                return kExitRefusedAction;
+            }
+            output.out = parsed->markdown ? FormatDiscardChartsMarkdown(*result) : FormatDiscardChartsReport(*result);
             return kExitOk;
         }
         const std::expected<ChartsResult, String> result = RunCharts(parsed->config);

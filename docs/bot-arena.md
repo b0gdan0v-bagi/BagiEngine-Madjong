@@ -4,7 +4,7 @@
 confidence intervals. It is the ruler for every change of a computer player (a level, a knob of `LevelProfile`, a stronger level, a
 coach): "is it better, and by how much" is answered by a number with an interval, not by a feeling.
 
-The charts of many decisions (when a claim gains points over passing, by class) are a program of their own: `docs/charts-claims.md`.
+The charts of many decisions (when a claim gains points over passing, by class) are a program of their own: `docs/charts-claims.md`, and for the own-turn discard `docs/charts-discards.md`.
 
 ## What it is for
 

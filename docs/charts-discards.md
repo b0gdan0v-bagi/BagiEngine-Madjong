@@ -88,3 +88,27 @@ ranges and the commands of the study go into a "Protocol" section of this doc, w
 - **Many cells, so some are significant by chance.** About one cell in twenty is `significant` at 95 percent with no effect at all,
   and the tables hold well over fifty cells. A single `significant` cell is a lead; only a class that holds in both ranges of the
   protocol is read as a finding.
+
+## Build and run
+
+```bash
+export PATH="$PWD/engine/.venv/bin:$PATH"          # the reflection generator needs jinja2
+cmake --preset macos-release
+cmake --build --preset macos-release --target BagiMahjongCharts
+build/macos-release/bin/BagiMahjongCharts --kind discards --first 1 --seeds 4 --worlds 50 --jobs 0
+```
+
+The program is the one of `docs/charts-claims.md` with `--kind discards` (the default kind is `claims`, so the old command lines and
+their bytes stand; any other value is an error that names `--kind`). `--first`, `--seeds`, `--worlds` (per own turn here), `--jobs`
+(threads in all, 0 = one per core; whole seeds each), `--markdown` (the tables as markdown: the numbers of this doc are pasted from
+it, never typed) and `--help` are as there; the same arguments give the same bytes at any `--jobs`, and the exit codes are the arena's
+(0, 1 a refused action or a turn that cannot be measured: a defect, the seed and the turn are printed, 2 bad arguments).
+
+The header gives the range, the worlds, the gain rule and the counters: hands, own turns, **other step** (Normal's step is not 5:
+not charted), **no valued discard**, **same as Normal** (the valued tile is one of Normal's ties), **not analysable** (no world to
+sample) and **rows**; own turns are the sum of the five that follow it. Then the main table (value held x shanten after Normal's
+discard x cost, 18 cells) and the one-way tables (stage, open sets, East, shanten, cost, value held). A cell is one line: its rows,
+the seeds that have one, `gain +- half` and the word `significant` or `few`; there is no `Normal takes` / `Normal passes` split,
+Normal always takes its own discard. The code (`src/Mahjong/Arena/ArenaChartsDiscards.*`, `ArenaChartsRun.*`,
+`ArenaChartsReport.*`) is tested by `ArenaChartsDiscardsTest`, `ArenaChartsRunTest` and `ArenaChartsReportTest`. Run it in Release: a
+turn costs `2 x --worlds` rollouts of whole hands.

@@ -5,20 +5,27 @@
 
 namespace BECore::Mahjong::Arena {
 
+    /// What the program measures: `Claims` is the default, so the old command lines and their bytes stand.
+    CORE_ENUM(ChartKind, uint8_t, Claims, Discards)
+
+    /// The word of `--kind`.
+    [[nodiscard]] StringView ChartKindName(ChartKind kind) noexcept;
+
     struct ChartsArgs {
-        /// Valid for `RunCharts` (`ValidateChartsConfig` is empty).
+        /// Valid for `RunCharts` and `RunDiscardCharts` (`ValidateChartsConfig` is empty).
         ChartsConfig config;
+        ChartKind kind = ChartKind::Claims;
         /// The tables as markdown (for the doc) instead of the fixed-width text.
         bool markdown = false;
         bool help = false;
     };
 
-    /// The options of `--help`; `docs/charts-claims.md` ("Build and run") has the same with an example.
+    /// The options of `--help`; `docs/charts-claims.md` and `docs/charts-discards.md` ("Build and run") have the same with an example.
     [[nodiscard]] String ChartsUsage();
 
     /**
-     * @brief Reads the arguments (without the name of the program): `--first`, `--seeds`, `--worlds`, `--jobs` (0 = hardware
-     *        concurrency), `--markdown`, `--help`.
+     * @brief Reads the arguments (without the name of the program): `--kind claims|discards` (default `claims`), `--first`,
+     *        `--seeds`, `--worlds`, `--jobs` (0 = hardware concurrency), `--markdown`, `--help`.
      *
      * `--help` wins over everything after it. A bad argument is an error text that names the option.
      */

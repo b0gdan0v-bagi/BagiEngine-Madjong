@@ -5,7 +5,8 @@
 `BagiMahjongCharts` answers one question over many hands: **in a claim window, when does a claim gain points over passing, and where
 does the Normal player's rule disagree?** It is the poker chart of `docs/ev-analyzer.md` made for a whole class of positions: a table
 of classes (kind of claim, tile, shanten before, stage of the wall, ...) with the mean points a claim gains over `Pass`, its 95 percent
-interval and the number of decisions behind it.
+interval and the number of decisions behind it. The same program with `--kind discards` charts the own-turn discard instead
+(`docs/charts-discards.md`).
 
 How the numbers are made:
 
