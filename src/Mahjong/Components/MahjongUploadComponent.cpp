@@ -32,9 +32,9 @@ namespace BECore::Mahjong {
         constexpr StringView kOptionsPlate = "Plate";
         constexpr StringView kNicknameField = "NicknameField";
         constexpr StringView kOptionsRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
-        // 376 high without the rows, plus what the file's header comment counts for them: two rows of 64 and a note of 24, three gaps of 8
+        // The height of the plate without the rows (`MahjongOptions.xml`) plus the two rows, the note and the three gaps they add
         constexpr float kOptionsPlateMaxHeight = 376.0f + 2.0f * 64.0f + 24.0f + 3.0f * 8.0f;
-        // The roles `text` and `textMuted` in `kUiPalette` / `kUiPaletteNames`
+        // The roles `text` and `textMuted` in `kUiPalette`
         constexpr size_t kTextIndex = 9;
         constexpr size_t kTextMutedIndex = 10;
         constexpr StringView kNicknameNoneKey = "options.nicknameNone";
@@ -112,7 +112,7 @@ namespace BECore::Mahjong {
             return;
         }
         game->GetUploadPrefs().consent = consent;
-        // A failed write (no folder) leaves the choice for this visit only; the screen comes back at the next one
+        // A failed write (no folder) leaves the choice for this visit only
         StoreUploadPrefs(_folder, game->GetUploadPrefs());
         Apply(*game);
         PublishConsentScreen(consent == UploadConsent::Unasked);
@@ -181,7 +181,7 @@ namespace BECore::Mahjong {
 
     void MahjongUploadComponent::OnDraw() {
         if (_started && !_running) {
-            return;  // the page cannot post: nothing of this component is ever done
+            return;
         }
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
@@ -205,7 +205,7 @@ namespace BECore::Mahjong {
         }
         const StringView action = event.action.ToStringView();
         if (action == kSetUploadAction || action == kNicknameAction) {
-            // The rows of `Options`; a click that arrives when the page is not up, or under the question, is stale
+            // A click when the page is not up, or under the question, is stale
             const MahjongGame* game = MahjongGame::GetActive();
             if (game == nullptr || !game->IsOptionsOpen() || _consentShown) {
                 return;
@@ -220,7 +220,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (!_consentShown) {
-            return;  // not ours, or a click that arrives while the question is not up
+            return;
         }
         if (action == kAcceptAction) {
             Choose(UploadConsent::Granted);

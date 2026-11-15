@@ -30,33 +30,25 @@ namespace BECore::Mahjong {
     /**
      * @brief The online panel: the nodes `Online` and `OnlineEntry` (`config/nodes/MahjongOnline.xml`, `MahjongOnlineEntry.xml`) show what this component publishes and emit the
      *        actions it answers. The pages, the fields and the pad are `OnlineScreens` (pure); the client is `MahjongGame::GetOnline()`. This component only shows the one and
-     *        feeds the other.
+     *        feeds the other. Every callback runs on the main thread (scene and clipboard events). The panel as a whole: `src/Mahjong/Online/CLAUDE.md`, "The screens".
      *
-     * **Frame.** Every `SceneUpdateEvent` (the active game only, whether or not the panel is open) calls `OnlineClient::Update()`, `MahjongGame::SyncOnlineTable()` (the room's table, which closes the
-     * panel when it goes live) and `OnlineScreens::Sync`, so a room is kept alive and a reconnect runs behind the table. The save flush stays the HUD's.
+     * **Frame.** Every `SceneUpdateEvent` of the active game, whether or not the panel is open, calls `OnlineClient::Update()`, `MahjongGame::SyncOnlineTable()`
+     * (which closes the panel when the room's table goes live) and `OnlineScreens::Sync`, so a room is kept alive and a reconnect runs behind the table.
      *
-     * **Open.** `MahjongGame::IsOnlineOpen()` is the owner of the state: the `Online` button of `Setup` (`MahjongOnline`, only while `Setup` is open, never in the browser build)
-     * sets it and this component opens the pages; `Start()` and `Stop()` of the game clear it and the pages close. `OnlineClose` hides the panel and leaves the room as it is. The
-     * canvas `Online` shows the page `Menu`, `Host`, `Join`, `Rooms` or `Lobby`, the canvas `OnlineEntry` the page `Entry` (the first one is hidden meanwhile: the second has a dim of its own).
+     * **Open.** `MahjongGame::IsOnlineOpen()` owns the state; this component opens and closes the pages after it. `OnlineClose` hides the panel and leaves the room as it
+     * is. `Online` is hidden while `OnlineEntry` is up: the second has a dim of its own.
      *
-     * **Input.** The actions of the panel (`MahjongOnlineHost` ... `MahjongOnlineLeave`) are ignored while it is closed, and each asks `OnlineScreens` again what is on offer, so a
-     * stale click does nothing. On the `Entry` page the keyboard types too (`SDLEvents::KeyDownEvent`: Latin letters, digits, space, Backspace (may repeat), Enter = Done); Escape
-     * goes one page back, and in the `Lobby` does nothing. A key held with Ctrl or Cmd types nothing (the paste shortcut reaches here as a `v`). The name the player typed is handed to
-     * `MahjongGame::SetOnlineName` once they leave the field or send a form.
+     * **Input.** Each action asks `OnlineScreens` again what is on offer, so a stale click does nothing. A key held with Ctrl or Cmd types nothing (the paste shortcut
+     * reaches here as a `v`). The name the player typed goes to `MahjongGame::SetOnlineName` once they leave the field or send a form.
      *
-     * **The nickname.** The same pad types the tester's nickname (`OpenNicknameEntry`, from `MahjongUploadComponent` on the page `Options`): a `TextEntry` of kind `Name` of its own, no
-     * `OnlineScreens` page, keys, Backspace, Done and the keyboard act on it while it is up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname`; the pad goes at the
-     * next frame (the HUD hears the same Escape and must find it still up) and `Options` is under it as it was. It also goes when `Options` closes under it, with nothing stored.
+     * **The nickname.** The same pad types the tester's nickname (`OpenNicknameEntry`): a `TextEntry` of its own, no `OnlineScreens` page. The pad goes at the next frame
+     * after `Done` or Escape, because the HUD hears the same Escape and must find it still up; it also goes, with nothing stored, when `Options` closes under it.
      *
-     * **Clipboard.** `MahjongOnlineCopy` (the button `OnlineCopy` and a click on the title of the lobby) writes the room code with `Clipboard::SetText` and tells `OnlineScreens` how it went.
-     * A paste reaches the code from two sides: `ClipboardEvents::PasteEvent` (the shortcut, on the `Join` form or the code pad) and the key `MahjongOnlinePaste` of the code pad, which
-     * asks `Clipboard::RequestText`. That request cannot be cancelled and is answered from a later `Update()`, so its callback holds a `weak_ptr` of `_alive` and finds the component again
-     * through `GetActive()`: a scene torn down with a read pending leaves nothing to call.
+     * **Clipboard.** A paste read cannot be cancelled and is answered from a later `Update()`, so its callback holds a `weak_ptr` of `_alive` and finds the component
+     * again through `GetActive()`: a scene torn down with a read pending leaves nothing to call.
      *
-     * **Variables** (set only when `OnlineScreens::Version()`, `OnlineClient::Version()`, the version of `UIStrings` or the open state moved; the elements likewise): `onlineNotice`,
-     * `onlineStatus`, `onlineName`, `onlineCode`, `onlineRoom`, `onlineSeat0..3`, `onlineHands`, `onlineLevel`, `onlineHints` (`allowed` | `off`), `onlineHostLine`, `onlineWaiting`,
-     * `onlineOpen` (`code` | `open`: the visibility of the room to host), `onlineListRow0..2` and `onlineMore` (the `Rooms` page; a host's name is a value of a text, never the text),
-     * `onlineEntryValue`, `onlineEntryNote`, `onlineCopy` and `padKey0..47` (while the `Entry` page is up and the pad, its field or the language moved). The token of a session is never published.
+     * **Variables** are set only when `OnlineScreens::Version()`, `OnlineClient::Version()`, the version of `UIStrings` or the open state moved; the elements likewise.
+     * A host's name is a value of a text, never the text. The token of a session is never published.
      */
     class MahjongOnlineComponent : public IComponent {
         BE_CLASS(MahjongOnlineComponent)
@@ -72,15 +64,14 @@ namespace BECore::Mahjong {
             return _screens;
         }
 
-        /// Opens the pad on the tester's nickname (`MahjongUploadComponent`, the row of `Options`) with @p current typed; false unless `Options` is open and the pad is not
-        /// already up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname` and go back to `Options`. The online screens are not involved.
+        /// Opens the pad on the tester's nickname (the row of `Options`) with @p current typed; false unless `Options` is open and the pad is not
+        /// already up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname`.
         bool OpenNicknameEntry(StringView current);
         /// Whether the pad is up for the nickname (until the frame after `Done` or Escape, so the HUD, which hears the same Escape, leaves `Options` open).
         [[nodiscard]] bool IsNicknameEntryOpen() const noexcept {
             return _nicknameActive;
         }
 
-        /// The attached component, if any; the game assumes a single one.
         static MahjongOnlineComponent* GetActive() noexcept {
             return s_active;
         }
@@ -90,28 +81,21 @@ namespace BECore::Mahjong {
         void OnKeyDown(const SDLEvents::KeyDownEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         void OnPaste(const ClipboardEvents::PasteEvent& event);
-        /// The answer to the `Paste` key's read of the clipboard.
         void OnClipboardAnswer(const ClipboardText& answer);
-        /// Asks the clipboard for its text; the answer goes to `OnClipboardAnswer`.
         void RequestPaste();
 
         void OnNicknameKey(MahjongGame& game, const SDLEvents::KeyDownEvent& event);
         void OnNicknameAction(MahjongGame& game, StringView action, StringView value);
-        /// Hands the typed nickname to the upload component and lets the pad go at the next `Follow`.
         void FinishNickname();
         void PublishNickname(const UIStrings& strings);
 
-        /// Opens or closes the pages after the flag of the game.
         void Follow(MahjongGame& game);
         void OpenPages(MahjongGame& game);
-        /// Hands the name the player typed to the game, which saves it.
         void StoreName(MahjongGame& game) const;
-        /// Shows or hides the canvases and the page, and sets the variables, when something moved since the last time.
         void Publish(MahjongGame* game);
         void PublishVariables(const OnlineClient& client, const UIStrings& strings);
         void PublishPages(const OnlineClient& client);
         void PublishPad(const UIStrings& strings);
-        /// The rows of the `Rooms` page and the page button: set when the list, the page or the language moved.
         void PublishRooms(const OnlineClient& client, const UIStrings& strings);
         void SetItem(size_t item, bool visible);
         void SetPadKey(size_t key, bool visible);
@@ -146,7 +130,6 @@ namespace BECore::Mahjong {
         bool _padPublished = false;
         OnlineField _padField = OnlineField::Name;
         uint64_t _padStrings = 0;
-        // The second use of the pad: the nickname of the tester (no `OnlineScreens` page)
         TextEntry _nicknameEntry{TextEntry::Kind::Name};
         Vector<String> _nicknamePad;
         uint64_t _nicknameStrings = 0;
