@@ -11,6 +11,10 @@ namespace BECore::Mahjong::Arena {
         constexpr int kShantenTwo = 2;
         constexpr int kCopiesSingle = 1;
         constexpr int kValueDepth = 1;
+        /// The rows of `SearchRun::Values()` of a turn: the candidates in the order they are given.
+        constexpr size_t kFastRow = 0;
+        constexpr size_t kValuedRow = 1;
+        constexpr size_t kPairSize = 2;
 
         Vector<DiscardOption> RatedDiscardsOf(const TableView& view) {
             return RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view);
@@ -25,6 +29,19 @@ namespace BECore::Mahjong::Arena {
             }
             ASSERT(false, "OptionOf: the tile is not a discard of the view");
             return rated.front();
+        }
+
+        Vector<double> AsDoubles(const Vector<int>& values) {
+            Vector<double> result;
+            result.reserve(values.size());
+            for (const int value : values) {
+                result.push_back(static_cast<double>(value));
+            }
+            return result;
+        }
+
+        bool Lists(const TableView& view, Tile tile) {
+            return eastl::find(view.legal.begin(), view.legal.end(), HandAction::MakeDiscard(tile)) != view.legal.end();
         }
 
         bool SameRating(const DiscardOption& a, const DiscardOption& b) noexcept {
@@ -108,6 +125,66 @@ namespace BECore::Mahjong::Arena {
         cls.openSets = OpenSetsBin(OpenMeldCount(view.own));
         cls.east = view.seatWind == Wind::East;
         return cls;
+    }
+
+    std::expected<DiscardTurns, String> CollectDiscardTurns(uint32_t seed, const ArenaPlayers& players) {
+        DiscardTurns collected;
+        const HandObserver observer = [&collected](const HandModel& hand, Seat actor) {
+            if (hand.GetPhase() != Phase::Discard) {
+                return;
+            }
+            TableView view = MakeTableView(hand, actor);
+            const int index = collected.ownTurns++;
+            const DiscardSelection selection = SelectDiscardPair(view);
+            switch (selection.outcome) {
+                case DiscardOutcome::Measured:
+                    collected.turns.push_back({index, eastl::move(view), selection.pair});
+                    break;
+                case DiscardOutcome::OtherStep:
+                    ++collected.otherStep;
+                    break;
+                case DiscardOutcome::NoValue:
+                    ++collected.noValue;
+                    break;
+                case DiscardOutcome::SameAsNormal:
+                    ++collected.sameAsNormal;
+                    break;
+            }
+        };
+        const std::expected<HandRecord, String> record = PlayArenaHand(seed, players, false, nullptr, &observer);
+        if (!record.has_value()) {
+            return std::unexpected(record.error());
+        }
+        return collected;
+    }
+
+    std::expected<DiscardMeasure, String> MeasureDiscardTurn(const TableView& view, const DiscardPair& pair, uint32_t handSeed, int turnIndex, int worlds, const WorldLoop& loop) {
+        const auto failure = [handSeed, turnIndex](const char* why) { return std::unexpected(Format("seed {} turn {}: {}", handSeed, turnIndex, why)); };
+        if (worlds < 1) {
+            return failure("the number of worlds must be at least 1");
+        }
+        if (view.phase != Phase::Discard || !IsSeat(view.seat) || view.currentSeat != view.seat || !Lists(view, pair.fast) || !Lists(view, pair.valued)) {
+            return failure("the view is not an own discard turn that lists both discards of the pair");
+        }
+        Optional<SearchRun> run = BeginSearchOver(view, {HandAction::MakeDiscard(pair.fast), HandAction::MakeDiscard(pair.valued)}, Analyzer::BaseSeedOf(AnalysisSeedOf(handSeed, turnIndex)), worlds);
+        if (!run.has_value()) {
+            return failure("the search over the two discards could not begin");
+        }
+        run->RunWorlds(loop);
+        const Vector<Vector<int>>& values = run->Values();
+        DiscardMeasure measured;
+        if (values.size() != kPairSize) {
+            return failure("the search gave no row for a discard of the pair");
+        }
+        if (values.front().empty()) {
+            measured.dropped = true;
+            measured.reason = String(Analyzer::kNoWorldReason);
+            return measured;
+        }
+        measured.row.cls = ClassifyDiscard(view, pair);
+        measured.row.pair = pair;
+        measured.row.gain = Arena::MeanCi(AsDoubles(values[kValuedRow])).mean - Arena::MeanCi(AsDoubles(values[kFastRow])).mean;
+        return measured;
     }
 
     StringView DiscardShantenName(DiscardShanten band) noexcept {

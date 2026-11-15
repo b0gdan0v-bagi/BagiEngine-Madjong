@@ -1,4 +1,5 @@
 #include <Mahjong/Arena/ArenaChartsDiscards.h>
+#include <Mahjong/Arena/ArenaWorlds.h>
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
 
@@ -9,6 +10,12 @@ namespace BECore::Mahjong::Arena {
         using namespace Tests;
 
         constexpr int kEnoughLiveTiles = 60;
+        constexpr uint32_t kFirstSeed = 1;
+        constexpr int kSeeds = 8;
+        constexpr int kWorlds = 24;
+        constexpr int kThreads = 3;
+        constexpr uint32_t kHandSeed = 77;
+        constexpr int kTurnIndex = 3;
 
         /// The own discard turn of seat 0 holding `concealed` (14 tiles less three a meld): every distinct tile is listed as a plain discard
         /// and the seat sees its own tiles only. A view of a real model is used where the legal list or the seen tiles matter.
@@ -76,6 +83,52 @@ namespace BECore::Mahjong::Arena {
             spec.hands[kSeat2] = seat2;
             spec.hands[kSeat3] = seat3;
             return MakeModel(spec);
+        }
+
+        ArenaPlayers NormalPlayers() {
+            const std::expected<ArenaPlayer, String> normal = ParseArenaPlayer("normal");
+            EXPECT_TRUE(normal.has_value());
+            ArenaPlayers players;
+            players.fill(normal.value_or(ArenaPlayer{}));
+            return players;
+        }
+
+        DiscardTurns Collect(uint32_t seed) {
+            const std::expected<DiscardTurns, String> turns = CollectDiscardTurns(seed, NormalPlayers());
+            EXPECT_TRUE(turns.has_value()) << (turns.has_value() ? "" : turns.error().c_str());
+            return turns.value_or(DiscardTurns{});
+        }
+
+        String Describe(const DiscardTurns& collected) {
+            String text = Format("{} {} {} {} {}", collected.hands, collected.ownTurns, collected.otherStep, collected.noValue, collected.sameAsNormal);
+            for (const DiscardTurn& turn : collected.turns) {
+                text += Format("\n{} seat {} live {} fast {} valued {} |", turn.index, static_cast<int>(turn.view.seat), turn.view.liveCount, ToString(turn.pair.fast), ToString(turn.pair.valued));
+                for (const Tile tile : turn.view.own.concealed) {
+                    text += Format(" {}", ToString(tile));
+                }
+            }
+            return text;
+        }
+
+        /// East holds the hand of `kHigherHand` less its last tile and draws it: the turn of the tests that measure a row.
+        TableView MeasuredTurn() {
+            const HandModel model = TurnModel("1p 2p 4p 5p 8p 8p 9p 1s 4s 4s 5s 7s Ew", "Wd Rd Wd 1p");
+            return MakeTableView(model, kSeat0);
+        }
+
+        DiscardMeasure Measure(const TableView& view, const DiscardPair& pair, const WorldLoop& loop = SerialWorldLoop) {
+            const std::expected<DiscardMeasure, String> measured = MeasureDiscardTurn(view, pair, kHandSeed, kTurnIndex, kWorlds, loop);
+            EXPECT_TRUE(measured.has_value()) << (measured.has_value() ? "" : measured.error().c_str());
+            return measured.value_or(DiscardMeasure{});
+        }
+
+        /// The mean points of `action` in the worlds of the two seeded runs the row is made of, played by the test itself.
+        double MeanOf(const Vector<Vector<int>>& values, size_t row) {
+            Vector<double> doubles;
+            for (const int value : values[row]) {
+                doubles.push_back(static_cast<double>(value));
+            }
+            return MeanCi(doubles).mean;
         }
 
     }  // namespace
@@ -258,6 +311,145 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(first.outcome, second.outcome);
         EXPECT_EQ(first.pair, second.pair);
         EXPECT_EQ(ClassifyDiscard(viewA, first.pair), ClassifyDiscard(viewB, second.pair));
+    }
+
+    TEST(ArenaChartsDiscardsTest, AHandCollectsTheSameTurnsTwice) {
+        for (uint32_t seed = kFirstSeed; seed < kFirstSeed + 3; ++seed) {
+            EXPECT_EQ(Describe(Collect(seed)), Describe(Collect(seed))) << "seed " << seed;
+        }
+    }
+
+    TEST(ArenaChartsDiscardsTest, TheCountersAddUpAndEveryKeptViewIsAnOwnDiscardTurnWithAMeasuredPair) {
+        int measured = 0;
+        int ownTurns = 0;
+        for (uint32_t seed = kFirstSeed; seed < kFirstSeed + kSeeds; ++seed) {
+            const DiscardTurns collected = Collect(seed);
+            EXPECT_EQ(collected.hands, 1);
+            EXPECT_EQ(collected.ownTurns, collected.otherStep + collected.noValue + collected.sameAsNormal + static_cast<int>(collected.turns.size())) << "seed " << seed;
+            int previous = -1;
+            for (const DiscardTurn& turn : collected.turns) {
+                EXPECT_GT(turn.index, previous);
+                EXPECT_LT(turn.index, collected.ownTurns);
+                previous = turn.index;
+                EXPECT_EQ(turn.view.phase, Phase::Discard);
+                EXPECT_EQ(turn.view.currentSeat, turn.view.seat);
+                const DiscardSelection selection = SelectDiscardPair(turn.view);
+                EXPECT_EQ(selection.outcome, DiscardOutcome::Measured) << "seed " << seed;
+                EXPECT_EQ(selection.pair, turn.pair);
+            }
+            measured += static_cast<int>(collected.turns.size());
+            ownTurns += collected.ownTurns;
+        }
+        EXPECT_GT(measured, 0);
+        EXPECT_GT(ownTurns, measured);
+    }
+
+    TEST(ArenaChartsDiscardsTest, TheIndexOfATurnCountsEveryOwnTurnOfTheHand) {
+        bool gap = false;
+        for (uint32_t seed = kFirstSeed; seed < kFirstSeed + kSeeds; ++seed) {
+            // The same hand watched turn by turn: the number of a measured turn is its place among all the own turns.
+            Vector<int> expected;
+            int own = 0;
+            const HandObserver observer = [&expected, &own](const HandModel& hand, Seat actor) {
+                if (hand.GetPhase() == Phase::Discard) {
+                    expected.push_back(SelectDiscardPair(MakeTableView(hand, actor)).outcome == DiscardOutcome::Measured ? own : -1);
+                    ++own;
+                }
+            };
+            ASSERT_TRUE(PlayArenaHand(seed, NormalPlayers(), false, nullptr, &observer).has_value());
+            const DiscardTurns collected = Collect(seed);
+            EXPECT_EQ(collected.ownTurns, own);
+            size_t next = 0;
+            for (size_t place = 0; place < expected.size(); ++place) {
+                if (expected[place] < 0) {
+                    continue;
+                }
+                ASSERT_LT(next, collected.turns.size());
+                EXPECT_EQ(collected.turns[next].index, expected[place]);
+                gap = gap || collected.turns[next].index != static_cast<int>(next);
+                ++next;
+            }
+            EXPECT_EQ(next, collected.turns.size());
+        }
+        // A turn that is left out lies before a measured one somewhere, so the numbers are not 0, 1, 2, ...
+        EXPECT_TRUE(gap);
+    }
+
+    TEST(ArenaChartsDiscardsTest, ATurnGivesItsClassAndTheDifferenceOfTheMeansOfTheTwoDiscards) {
+        const TableView view = MeasuredTurn();
+        const DiscardSelection selection = Select(view);
+        ASSERT_EQ(selection.outcome, DiscardOutcome::Measured);
+        const DiscardMeasure measured = Measure(view, selection.pair);
+        ASSERT_FALSE(measured.dropped);
+        EXPECT_EQ(measured.row.cls, ClassifyDiscard(view, selection.pair));
+        EXPECT_EQ(measured.row.pair, selection.pair);
+
+        // The same two actions over the same base seed, run by the test.
+        Optional<SearchRun> run =
+            BeginSearchOver(view, {HandAction::MakeDiscard(selection.pair.fast), HandAction::MakeDiscard(selection.pair.valued)}, Analyzer::BaseSeedOf(AnalysisSeedOf(kHandSeed, kTurnIndex)), kWorlds);
+        ASSERT_TRUE(run.has_value());
+        run->RunWorlds(SerialWorldLoop);
+        const double fast = MeanOf(run->Values(), 0);
+        const double valued = MeanOf(run->Values(), 1);
+        EXPECT_EQ(measured.row.gain, valued - fast);
+
+        // And the analyzer on the full view prices the two discards alike: its worlds and rollouts are the ones above.
+        Analyzer::AnalyzerConfig config;
+        config.worlds = kWorlds;
+        config.seed = AnalysisSeedOf(kHandSeed, kTurnIndex);
+        const std::expected<Analyzer::PositionAnalysis, String> analysis = Analyzer::AnalyzePosition(view, config, SerialWorldLoop);
+        ASSERT_TRUE(analysis.has_value());
+        const auto analysedMean = [&analysis](Tile tile) {
+            for (const Analyzer::ActionRow& row : analysis->rows) {
+                if (row.action == HandAction::MakeDiscard(tile)) {
+                    return row.ev.mean;
+                }
+            }
+            ADD_FAILURE() << "the analysis has no row for the discard";
+            return 0.0;
+        };
+        EXPECT_EQ(analysedMean(selection.pair.fast), fast);
+        EXPECT_EQ(analysedMean(selection.pair.valued), valued);
+    }
+
+    TEST(ArenaChartsDiscardsTest, TheSameTurnGivesTheSameRowOnAnyLoop) {
+        const TableView view = MeasuredTurn();
+        const DiscardSelection selection = Select(view);
+        ASSERT_EQ(selection.outcome, DiscardOutcome::Measured);
+        const DiscardMeasure serial = Measure(view, selection.pair);
+        ASSERT_FALSE(serial.dropped);
+        EXPECT_EQ(Measure(view, selection.pair).row.gain, serial.row.gain);
+        WorldThreads threads(kThreads);
+        const DiscardMeasure threaded = Measure(view, selection.pair, threads.AsLoop());
+        EXPECT_EQ(threaded.row.gain, serial.row.gain);
+        EXPECT_EQ(threaded.row.cls, serial.row.cls);
+    }
+
+    TEST(ArenaChartsDiscardsTest, ATurnThatCannotBeSampledIsDroppedAndTold) {
+        TableView view = MeasuredTurn();
+        const DiscardSelection selection = Select(view);
+        ASSERT_EQ(selection.outcome, DiscardOutcome::Measured);
+        view.visible.fill(kCopiesPerTile);
+        const DiscardMeasure measured = Measure(view, selection.pair);
+        EXPECT_TRUE(measured.dropped);
+        EXPECT_FALSE(measured.reason.empty());
+    }
+
+    TEST(ArenaChartsDiscardsTest, ABadCallIsAnErrorThatNamesTheSeedAndTheTurn) {
+        const TableView view = MeasuredTurn();
+        const DiscardSelection selection = Select(view);
+        ASSERT_EQ(selection.outcome, DiscardOutcome::Measured);
+        const auto expectError = [&](const TableView& turn, const DiscardPair& pair, int worlds) {
+            const std::expected<DiscardMeasure, String> measured = MeasureDiscardTurn(turn, pair, kHandSeed, kTurnIndex, worlds, SerialWorldLoop);
+            ASSERT_FALSE(measured.has_value());
+            EXPECT_NE(measured.error().find(Format("seed {} turn {}", kHandSeed, kTurnIndex)), String::npos) << measured.error().c_str();
+        };
+        expectError(view, selection.pair, 0);
+        // A tile the view does not list.
+        expectError(view, DiscardPair{selection.pair.fast, T("Nw")}, kWorlds);
+        TableView window = view;
+        window.phase = Phase::Claim;
+        expectError(window, selection.pair, kWorlds);
     }
 
 }  // namespace BECore::Mahjong::Arena

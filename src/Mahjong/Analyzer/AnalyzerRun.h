@@ -23,6 +23,10 @@ namespace BECore::Mahjong::Analyzer {
         uint32_t normalSeed = kNormalChoiceSeed;
     };
 
+    /// The base seed of the worlds: a fixed function of the seed of the run (`AnalyzerConfig::seed`), so a tool that runs the search
+    /// itself (`BeginSearchOver`) can play the very worlds `AnalyzePosition` plays for that seed.
+    [[nodiscard]] uint32_t BaseSeedOf(uint32_t seed);
+
     /// A per-world difference between two actions; a row has none to itself: `interval` is empty and `significant` false.
     struct ActionDifference {
         Arena::MeanInterval interval;
