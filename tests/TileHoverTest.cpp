@@ -2,11 +2,6 @@
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
 
-/**
- * `Table/TileHover.h` (pure logic): the slot under a point (the later of two that overlap, never a wall stack), the tile a slot shows
- * face up (the rule of the draw, so none for a back: the no-peeking rule held against hands with known tiles) and the place of the
- * name plate. The layouts are made from real models through `MakeTableLayout`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

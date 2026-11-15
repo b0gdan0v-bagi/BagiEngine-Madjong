@@ -10,11 +10,6 @@
 #include <tests/ScoreTestSupport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The rules pages (`Table/RulesText.h`). Pure logic over the shipped string table: no engine services. The tests hold the limits of a page, the
- * examples to what the page says, the height to the plate and, above all, that no number is retyped in a text (the drift guard) and that
- * the numbers the pages print are what the scoring and the payments really do (`ScoreSeat`, `Settle`).
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -52,7 +47,6 @@ namespace BECore::Mahjong::Tests {
             });
         }
 
-        /// The whole text of a page in one string.
         String AllText(const RulesPage& page) {
             String text = page.title;
             for (const String& line : page.lines) {
@@ -72,7 +66,6 @@ namespace BECore::Mahjong::Tests {
             return text.find(word) != String::npos;
         }
 
-        /// The pages by name, as the tests below find them.
         constexpr int kPointsPage = 7;
         constexpr int kDoublesPage = 8;
         constexpr int kWinnerPage = 9;
@@ -155,11 +148,11 @@ namespace BECore::Mahjong::Tests {
         const UIStrings& strings = Words();
         const RulesPage tiles = FormatRulesPage(strings, 0);
         ASSERT_EQ(tiles.tileRows.size(), 2u);
-        ASSERT_EQ(tiles.tileRows[0].size(), static_cast<size_t>(kRanksPerSuit));  // one suit, from the lowest rank to the highest
+        ASSERT_EQ(tiles.tileRows[0].size(), static_cast<size_t>(kRanksPerSuit));
         for (int rank = 1; rank <= kRanksPerSuit; ++rank) {
             EXPECT_EQ(tiles.tileRows[0][static_cast<size_t>(rank - 1)], Tile::Suited(TileSuit::Dots, rank));
         }
-        EXPECT_EQ(tiles.tileRows[1].size(), static_cast<size_t>(kWindCount + kDragonCount));  // the honours
+        EXPECT_EQ(tiles.tileRows[1].size(), static_cast<size_t>(kWindCount + kDragonCount));
         for (const Tile tile : tiles.tileRows[1]) {
             EXPECT_TRUE(tile.IsHonour());
         }
@@ -181,7 +174,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(TotalTiles(counts), kWinningHandTiles);
         EXPECT_TRUE(IsWinningShape(counts, 0));
         const Vector<Decomposition> splits = Decompose(counts, kSetsInHand);
-        ASSERT_FALSE(splits.empty());  // four sets and a pair, not one of the special hands
+        ASSERT_FALSE(splits.empty());
         // the page says: a chow, a pung, a chow, a pung of dragons and a pair
         const Decomposition& split = splits[0];
         ASSERT_EQ(split.sets.size(), static_cast<size_t>(kSetsInHand));
@@ -236,7 +229,7 @@ namespace BECore::Mahjong::Tests {
         page.lines.resize(3);
         EXPECT_EQ(PageHeight(page), head + kRulesBlockGap + 3 * kRulesLineHeight + 2 * kRulesLineGap);
 
-        page.items.resize(3);  // two columns: two rows
+        page.items.resize(3);
         const int withItems = head + kRulesBlockGap + 3 * kRulesLineHeight + 2 * kRulesLineGap + kRulesBlockGap + 2 * kRulesItemHeight + kRulesItemGap;
         EXPECT_EQ(PageHeight(page), withItems);
 
@@ -245,12 +238,12 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(RulesTextTest, TheLimitsOfAPageAreWhatThePlateHoldsOnlyInTheCombinationsThePagesUse) {
-        RulesPage lines;  // the lines with the tile rows
+        RulesPage lines;
         lines.lines.resize(kRulesMaxLines);
         lines.tileRows.resize(kRulesMaxTileRows);
         EXPECT_LE(PageHeight(lines), kRulesInnerHeight);
 
-        RulesPage items;  // at most four lines with all the items
+        RulesPage items;
         items.lines.resize(4);
         items.items.resize(kRulesMaxItems);
         EXPECT_LE(PageHeight(items), kRulesInnerHeight);
@@ -280,7 +273,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RulesPagerText(strings, 0), "Page 1 of 13");
         EXPECT_EQ(RulesPagerText(strings, 2), "Page 3 of 13");
         EXPECT_EQ(RulesPagerText(strings, RulesPageCount() - 1), "Page 13 of 13");
-        EXPECT_EQ(RulesPagerText(strings, -4), "Page 1 of 13");  // clamped
+        EXPECT_EQ(RulesPagerText(strings, -4), "Page 1 of 13");
         EXPECT_EQ(RulesPagerText(strings, 100), "Page 13 of 13");
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
         EXPECT_EQ(RulesPagerText(strings, 0), "Страница 1 из 13");
@@ -452,7 +445,6 @@ namespace BECore::Mahjong::Tests {
             const String where = Where(language, kPointsPage);
             const RulesPage page = FormatRulesPage(strings, kPointsPage);
 
-            // the examples: each is a hand scored by `ScoreSeat`, and the line it gives is in the items as the score table would print it
             struct Example {
                 ScoreInput input;
                 ScoreKind kind;
@@ -473,7 +465,6 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(page.items[i], PointsItem(strings, examples[i].prefixKey, line)) << where << ": item " << i;
             }
 
-            // the winner's points
             const ScoreBreakdown winner = ScoreSeat(MakeWinnerInput("1p 2p 3p 7m 8m 9m 5s 5s 5s Rd Rd Rd 9p 9p", "9p"));
             EXPECT_EQ(LinePoints(winner, ScoreKind::Win), kWinPoints) << where;
             EXPECT_EQ(LinePoints(winner, ScoreKind::WinTileFromWall), kWinTileFromWallPoints) << where;
@@ -516,7 +507,6 @@ namespace BECore::Mahjong::Tests {
 
     TEST(RulesTextTest, TheDoublesForTheWinnerAreTheDoublesTheScoringGives) {
         UIStrings& strings = Words();
-        // one hand per kind from `OnlyPungs` to `CallingFirstHand`, each win scored by `ScoreSeat`
         constexpr const char* kNoPointsTiles = "5s 6s 7s 7m 8m 9m 3m 4m 5m 2p 3p 4p Ww Ww";
         const auto win = [](const char* concealed, const char* tile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
             return MakeWinnerInput(concealed, tile, source, melds);
@@ -552,7 +542,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(page.items.size(), static_cast<size_t>(kWinnerKinds)) << where;
             for (size_t i = 0; i < cases.size(); ++i) {
                 const ScoreKind kind = static_cast<ScoreKind>(static_cast<int>(ScoreKind::OnlyPungs) + static_cast<int>(i));
-                ASSERT_EQ(cases[i].first, kind) << where;  // the cases run in the order of the enum, as the page does
+                ASSERT_EQ(cases[i].first, kind) << where;
                 const ScoreBreakdown breakdown = ScoreSeat(cases[i].second);
                 ASSERT_EQ(CountLines(breakdown, kind), 1) << where << ": " << Name(kind);
                 EXPECT_EQ(page.items[i], DoublesItem(strings, breakdown, kind)) << where << ": " << Name(kind);
@@ -601,20 +591,18 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(RulesTextTest, ThePaymentsPageSaysWhatSettleDoes) {
-        // The loser East pays the winner's score times the factor, a loser that is not East pays it once.
         constexpr int kWinnerScore = 100;
         const SeatScores deltas = Settle({0, kWinnerScore, 0, 0}, kSeat1, kSeat0);
         EXPECT_EQ(deltas[kSeat0], -kWinnerScore * kEastPaymentFactor);
         EXPECT_EQ(deltas[kSeat2], -kWinnerScore);
         EXPECT_EQ(deltas[kSeat3], -kWinnerScore);
-        EXPECT_EQ(Sum(deltas), 0);  // "the points of the table always add up to the same total"
+        EXPECT_EQ(Sum(deltas), 0);
         // East as the winner receives the factor from everyone; the losers settle among themselves once (seat 2 has 40 more than seats 1 and 3)
         constexpr int kLead = 40;
         const SeatScores eastWins = Settle({kWinnerScore, 0, kLead, 0}, kSeat0, kSeat0);
         EXPECT_EQ(eastWins[kSeat0], 3 * kWinnerScore * kEastPaymentFactor);
         EXPECT_EQ(eastWins[kSeat1], -kWinnerScore * kEastPaymentFactor - kLead);
         EXPECT_EQ(eastWins[kSeat2], -kWinnerScore * kEastPaymentFactor + 2 * kLead);
-        // a drawn hand pays nothing
         const SeatScores drawn = Settle({100, 50, 30, 0}, kNoSeat, kSeat0);
         for (const int delta : drawn) {
             EXPECT_EQ(delta, 0);

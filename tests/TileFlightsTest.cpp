@@ -3,13 +3,6 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `Table/TileFlights.h` (pure logic): which slots of the new frame fly and from where. The snapshots are made from `MakeTableLayout`
- * and hand-made melds: a discard of an opponent and of the viewer (a tile held twice, a tile drawn and discarded in one batch), a
- * claimed pung, chow and kong (from the pile slot, and from the discarder's hand when the discard and the claim fall into one batch),
- * the other tiles of the set, a concealed and an upgraded kong, the draw, and the cases that plan nothing. The turn a flight starts with;
- * `FlightRect` at its ends; `FlightPlacement`: the turn and the size of a tile in the air.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -248,7 +241,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(single.size(), 1u);
         ExpectRect(single[0].from, SlotRectOf(beforeSnapshot, Hand(0, 2)));
 
-        // two discards of the tile in one batch use the two copies, not one twice
         Scene two = before;
         two.viewerHand = Tiles({"1p", "2p", "6p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew", "Rd"});
         two.pile = {{0, T("5p")}, {0, T("5p")}};

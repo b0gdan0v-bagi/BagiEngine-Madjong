@@ -10,10 +10,6 @@
 #include <tests/ShippedScene.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The string table of the game (`config/UIStrings.xml`) and the helpers that read it (`Table/Words.h`). Pure logic over a `UIStrings` of the test's own: no scene and no engine
- * services. The parity checks read the shipped file, so they grow with every key that is added, in either language.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -232,7 +228,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
         EXPECT_EQ(Tr(strings, "greeting"), "Привет, {name}!");
-        EXPECT_EQ(Tr(strings, "only.en"), "English only");  // the default language fills the gap
+        EXPECT_EQ(Tr(strings, "only.en"), "English only");
         EXPECT_EQ(Tr(strings, "no.such.key"), "no.such.key");
     }
 

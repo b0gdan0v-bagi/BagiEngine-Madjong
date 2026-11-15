@@ -1,11 +1,7 @@
 #include <Mahjong/Game/Match.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The match: the start, the bookkeeping of the deal and the count (`NextProgress`, `RoundWindOf`, a table of cases), and the match fed
- * with made-up settlements, so that no hand has to be played. A few tests play one hand with random legal actions to check
- * `EndHand`. Pure logic: no engine services.
- */
+// The match: the bookkeeping of the deal and the count, and the match fed with made-up settlements (no hand is played).
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -41,7 +37,6 @@ namespace BECore::Mahjong::Tests {
             return status.has_value() ? std::nullopt : Optional<MatchError>(status.error());
         }
 
-        /// A settlement of the hand in progress that nobody played: the kind, the winner and the change of the points.
         HandSettlement MadeUp(const Match& match, ResultKind kind, Seat winner, const SeatScores& deltas = kNoChange) {
             HandSettlement settlement;
             settlement.kind = kind;
@@ -209,7 +204,6 @@ namespace BECore::Mahjong::Tests {
         for (int played = 0; played < kExpectedShortHands; ++played) {
             EXPECT_EQ(RoundWindOf(played, Settings(kExpectedShortHands)), static_cast<Wind>(played / kHandsPerRoundShort)) << played;
         }
-        // The edges: the first and the last hand of each quarter of the full game, and past the end.
         EXPECT_EQ(RoundWindOf(3, Settings(kExpectedFullHands)), Wind::East);
         EXPECT_EQ(RoundWindOf(4, Settings(kExpectedFullHands)), Wind::South);
         EXPECT_EQ(RoundWindOf(8, Settings(kExpectedFullHands)), Wind::West);
@@ -265,7 +259,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(match.HandsPlayed(), 0);
         EXPECT_EQ(match.History().size(), 1u);
         EXPECT_EQ(match.GetPhase(), MatchPhase::InHand);
-        EXPECT_NE(Snapshot(match.Hand()), firstHand);  // a new wall
+        EXPECT_NE(Snapshot(match.Hand()), firstHand);
     }
 
     TEST(MatchTest, ADrawnHandCountsAndMovesTheDealWhenItIsNotReplayed) {
@@ -302,7 +296,6 @@ namespace BECore::Mahjong::Tests {
                     int counted = 0;
                     int settled = 0;
                     while (match.GetPhase() == MatchPhase::InHand) {
-                        // A mix of East wins, other wins and drawn hands.
                         HandSettlement settlement = Drawn(match);
                         switch (mix.Below(3)) {
                             case 0:
@@ -370,7 +363,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, match.East(), kTransfer)).has_value());
 
         ASSERT_EQ(match.GetPhase(), MatchPhase::Finished);
-        EXPECT_EQ(Snapshot(match.Hand()), lastHand);  // no hand is dealt after the last one
+        EXPECT_EQ(Snapshot(match.Hand()), lastHand);
         const SeatScores scores = match.Scores();
         const size_t historySize = match.History().size();
         EXPECT_EQ(ErrorOf(match.ApplySettlement(SomeoneElseWins(match))), MatchError::NotInHand);
@@ -451,7 +444,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(match.HandsPlayed(), 1) << Name(mode);
             const bool eastWon = settlement.kind == ResultKind::Win && settlement.winner == east;
             EXPECT_EQ(match.East(), eastWon ? east : NextSeat(east)) << Name(mode);
-            EXPECT_EQ(match.Hand().GetPhase(), Phase::Discard) << Name(mode);  // the next hand is dealt
+            EXPECT_EQ(match.Hand().GetPhase(), Phase::Discard) << Name(mode);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_EQ(match.Scores()[seat], kExpectedStartingScore + settlement.deltas[seat]) << Name(mode) << " seat " << seat;
             }
@@ -474,7 +467,7 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(match.HandsPlayed(), 0);
         EXPECT_EQ(match.East(), east);
-        EXPECT_EQ(match.Hand().GetPhase(), Phase::Discard);  // a fresh wall, the same East
+        EXPECT_EQ(match.Hand().GetPhase(), Phase::Discard);
     }
 
     // ----- a match that is shown, not played -----
@@ -506,7 +499,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(shown.Hand().GetWall().Remaining(), real.Hand().GetWall().Remaining());
         EXPECT_EQ(shown.Hand().GetHand(kSeat2).concealed, real.Hand().GetHand(kSeat2).concealed);
 
-        // Nothing deals a real hand from it.
         EXPECT_EQ(ErrorOf(shown.ApplySettlement(Drawn(shown))), MatchError::NotInHand);
         EXPECT_EQ(shown.HandsPlayed(), 3);
         EXPECT_TRUE(shown.History().empty());

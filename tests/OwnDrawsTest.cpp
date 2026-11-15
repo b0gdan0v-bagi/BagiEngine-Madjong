@@ -9,11 +9,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `ValueDiscards` and `ValueWaits`: a discard rated in points from the seat's own draws, on positions worked out by hand (a comment
- * each). Views are made by hand (`MakeView`) so that the visible copies, the wall and the legal list are exactly what the case says;
- * the no-peeking case goes through two models. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -142,7 +137,7 @@ namespace BECore::Mahjong::Tests {
         const Vector<DiscardValue> waits = ValueWaits(MakeView(kTankiHand));
 
         ASSERT_EQ(waits.size(), 2u);
-        EXPECT_EQ(waits[0].tile, T("5p"));  // discarding 5p keeps the wait on Gd
+        EXPECT_EQ(waits[0].tile, T("5p"));
         EXPECT_EQ(waits[0].meanWinScore, 140);
         EXPECT_EQ(waits[1].tile, T("Gd"));
         EXPECT_EQ(waits[1].meanWinScore, 130);
@@ -306,7 +301,6 @@ namespace BECore::Mahjong::Tests {
         for (const DiscardValue& wait : waits) {
             EXPECT_TRUE(Has(view.legal, HandAction::MakeDiscard(wait.tile, true))) << ToString(wait.tile).data();
         }
-        // A hand that does not wait has no declaring discard.
         EXPECT_TRUE(ValueWaits(MakeView(kPairsHand)).empty());
     }
 

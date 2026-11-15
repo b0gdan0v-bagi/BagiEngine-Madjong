@@ -3,12 +3,6 @@
 #include <Mahjong/Game/Match.h>
 #include <tests/ScoreTestSupport.h>
 
-/**
- * What the tests that play whole matches share (`MatchPlayoutTest`, `ComputerMatchTest`): the settings of match number `index`, and
- * `MatchAudit`, which checks the invariants of a match around every hand (the points of the table add up, the count and the deal moved
- * as `NextProgress` says, the settlement is well formed) and at the end (finished after exactly `handsPerMatch` counted hands, the
- * round winds a quarter each, the deal went round when East never won, the standings list every seat). Header only.
- */
 namespace BECore::Mahjong::Tests {
 
     inline constexpr int kTableTotal = kSeatCount * kExpectedStartingScore;
@@ -22,7 +16,6 @@ namespace BECore::Mahjong::Tests {
         return settings;
     }
 
-    /// What happened over the matches audited so far.
     struct MatchTotals {
         int wins = 0;
         int draws = 0;
@@ -31,7 +24,6 @@ namespace BECore::Mahjong::Tests {
         int dealtRoundChecks = 0;
     };
 
-    /// The settlement of one hand is what the rules of scoring promise, whoever won.
     inline void ExpectWellFormed(const HandSettlement& settlement, const MahjongSettings& settings) {
         ExpectConsistent(settlement);
         const bool won = settlement.kind == ResultKind::Win;
@@ -59,7 +51,6 @@ namespace BECore::Mahjong::Tests {
         MatchAudit(const MahjongSettings& settings, String where, MatchTotals& totals)
             : _settings(settings), _where(std::move(where)), _totals(totals), _handsPerRound(settings.handsPerMatch / kRoundsPerMatch) {}
 
-        /// Before the hand is played: remembers where the match stands and checks the hand was dealt for it.
         void BeforeHand(const Match& match) {
             _before = MatchProgress{match.HandsPlayed(), match.East()};
             _roundWind = match.RoundWind();
@@ -67,20 +58,16 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(match.Hand().RoundWind(), _roundWind) << HandWhere();
         }
 
-        /// After `EndHand` returned `settlement` for hand number `_handIndex` of the match (replayed draws included).
         void AfterHand(const Match& match, const HandSettlement& settlement) {
             const String where = HandWhere();
-            // The settlement is of this hand and well formed.
             EXPECT_EQ(settlement.east, _before.east) << where;
             EXPECT_EQ(settlement.roundWind, _roundWind) << where;
             ExpectWellFormed(settlement, _settings);
 
-            // The points of the table add up and moved by the change of this hand only.
             EXPECT_EQ(Sum(match.Scores()), kTableTotal) << where;
             ASSERT_EQ(match.History().size(), static_cast<size_t>(_handIndex + 1)) << where;
             EXPECT_EQ(match.History().back().deltas, settlement.deltas) << where;
 
-            // The count and the deal moved exactly as the rules say; a count grows by 0 (a replayed draw) or 1.
             const MatchProgress expected = NextProgress(_before, settlement.kind, settlement.winner, _settings);
             EXPECT_EQ(match.HandsPlayed(), expected.handsPlayed) << where;
             EXPECT_EQ(match.East(), expected.east) << where;
@@ -90,7 +77,6 @@ namespace BECore::Mahjong::Tests {
 
             Count(settlement, grew);
 
-            // The next hand is dealt for the new deal and round wind, or the match is over.
             if (match.GetPhase() == MatchPhase::InHand) {
                 EXPECT_EQ(match.Hand().GetPhase(), Phase::Discard) << where;
                 EXPECT_EQ(match.Hand().East(), match.East()) << where;
@@ -99,7 +85,6 @@ namespace BECore::Mahjong::Tests {
             ++_handIndex;
         }
 
-        /// The match is over: finished after exactly `handsPerMatch` counted hands, and the rest of the end-of-match checks.
         void AtEnd(Match& match) {
             EXPECT_EQ(match.GetPhase(), MatchPhase::Finished) << _where;
             EXPECT_EQ(match.HandsPlayed(), _settings.handsPerMatch) << _where;
@@ -107,18 +92,15 @@ namespace BECore::Mahjong::Tests {
             const auto refused = match.EndHand();
             ASSERT_FALSE(refused.has_value()) << _where;
             EXPECT_EQ(refused.error(), MatchError::NotInHand) << _where;
-            // The round winds ran East to North, a quarter of the hands each.
             for (int round = 0; round < kRoundsPerMatch; ++round) {
                 EXPECT_EQ(_roundHands[static_cast<size_t>(round)], _handsPerRound) << _where << " round " << round;
             }
-            // When East never won, the deal went round: every seat was East of the same number of hands.
             if (!_eastWon) {
                 ++_totals.dealtRoundChecks;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     EXPECT_EQ(_eastHands[static_cast<size_t>(seat)], _handsPerRound) << _where << " seat " << seat;
                 }
             }
-            // The standings list every seat once, best first.
             const Array<Seat, kSeatCount> standings = match.Standings();
             int listed = 0;
             for (size_t place = 0; place < standings.size(); ++place) {

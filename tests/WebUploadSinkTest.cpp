@@ -6,10 +6,6 @@
 #include <map>
 #include <vector>
 
-/**
- * The sink that posts the pieces of a match to the page's server (`WebUploadSink.h`): the order, the answers and what each one
- * does, the bounds. A fake poster answers from a script and a fake clock is a number the test moves.
- */
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;

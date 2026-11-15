@@ -3,9 +3,6 @@
 #include <gtest/gtest.h>
 #include <set>
 
-/**
- * Seat arithmetic and the draw for East. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -99,7 +96,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(winds, MakeSeatWinds(east)) << "seed " << seed;
             easts.insert(east);
         }
-        EXPECT_EQ(easts.size(), static_cast<size_t>(kSeatCount));  // every seat can be East
+        EXPECT_EQ(easts.size(), static_cast<size_t>(kSeatCount));
     }
 
     TEST(SeatsTest, RollSeatWindsIsReproducible) {

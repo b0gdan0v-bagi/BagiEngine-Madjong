@@ -4,10 +4,6 @@
 #include <tests/HandTestSupport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The move line of the HUD (`Table/MoveText.h`). Pure logic: no engine services. The English and Russian sentences are written out here,
- * and every kind of move is asked in every language of the table.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -50,7 +46,6 @@ namespace BECore::Mahjong::Tests {
             return HandMove{.kind = MoveKind::UpgradeKong, .seat = seat, .tile = T(tile), .meld = 0};
         }
 
-        /// Every kind of move, with the tiles and seats the sentences name.
         Vector<HandMove> EveryMove() {
             return {Discard(1, "5p"), Discard(2, "Ew", true), Claim(MoveKind::ClaimChow, 2, "4s", 1), Claim(MoveKind::ClaimPung, 3, "Rd", 1), Claim(MoveKind::ClaimKong, 0, "9m", 2),
                     ConcealedKong(3), UpgradeKong(1, "F1")};
@@ -100,7 +95,6 @@ namespace BECore::Mahjong::Tests {
         for (const UIStrings* strings : {&Words("en"), &Words("ru")}) {
             const HandMove concealed = ConcealedKong(2);
             const String kong = MoveText(*strings, concealed, Wind::West);
-            // No tile of the four: not a rank, not a suit, not a dragon, not a wind
             for (const char* word : {"Dots", "Bamboo", "Characters", "Dragon", "Wind", "Круги", "Бамбук", "Знаки", "дракон", "Ветер"}) {
                 EXPECT_EQ(kong.find(word), String::npos) << kong;
             }
@@ -112,7 +106,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MoveTextTest, TheRussianWordsKeepTheirOrderOfTheTranslation) {
-        // The tile is not at the end in every sentence: the order belongs to the translation, the code joins nothing
         const String chow = Ru(Claim(MoveKind::ClaimChow, 1, "1s", 0), Wind::South);
         EXPECT_LT(chow.find("Бамбук 1"), chow.find("в чи"));
         const String upgrade = Ru(UpgradeKong(1, "5p"), Wind::South);

@@ -6,10 +6,6 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-/**
- * The in-memory recording of a match (`MatchUpload.h`): off unless the consent is `Granted`, pieces after each hand, the pieces of a
- * match reassemble into the log the file writer makes, and what is given up is told. No network: a fake sink keeps the pieces.
- */
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;
@@ -49,7 +45,6 @@ namespace BECore::Mahjong::Tests {
             return FromStdString(text.str());
         }
 
-        /// A session of four computers whose events go to a recording uploader, and from it to an in-memory log.
         struct UploadTable {
             Match match;
             TableSession session{match};
@@ -70,7 +65,6 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(session.StartMatch(ShortMatch(), seed, kAllComputers).has_value());
             }
 
-            /// The computers play the hand to its end and the next one is dealt (or the match ends).
             void PlayHand() {
                 session.RunComputers();
                 ASSERT_EQ(session.GetPhase(), SessionPhase::HandOver);
@@ -88,7 +82,6 @@ namespace BECore::Mahjong::Tests {
             }
         };
 
-        /// Parses and replays `text`: the log is whole as far as it goes. Returns the events.
         Vector<MatchLogEvent> ExpectReplays(const String& text) {
             const auto events = ParseMatchLog(View(text));
             EXPECT_TRUE(events.has_value()) << (events.has_value() ? "" : events.error().c_str());

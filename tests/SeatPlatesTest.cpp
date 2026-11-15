@@ -12,11 +12,7 @@
 #include <tests/StringsTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The plates of the seats (`Table/SeatPlates.h`): which seat lies at each side of the table, and what its plate says (the name and the
- * turn, the kind, the level and the declared hand; the wind, the score and the dealer are the centre panel's, `CenterPanelTest`). Pure logic over a `Match` and its `TableSession`; the shipped words
- * are loaded into a `UIStrings` of the test, so no engine services are needed. The expectations are worked out here from the match and the session, not taken from the function under test.
- */
+// The expectations are worked out here from the match and the session, not taken from the function under test.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -178,7 +174,6 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_GT(covered, 0);
         EXPECT_EQ(bottoms.size(), 2u) << "the bottom seat never moved to the other person";
-        // Both people keep the bottom after their action, and nobody is "you" among two
         for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
             EXPECT_EQ(plate.name.find("You"), String::npos);
         }
@@ -239,7 +234,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(SeatPlatesTest, TheLevelOfAPlateIsTheLevelOfItsSeat) {
-        // Every seat a level of its own, the numbers apart, and a table where the seats at the bottom differ
         const SeatLevels levelSets[] = {{{{1}, {4}, {7}, {10}}}, {{{10}, {9}, {2}, {5}}}, UniformLevels(ComputerLevel{3})};
         for (const SeatLevels& levels : levelSets) {
             for (Seat person = 0; person < kSeatCount; ++person) {
@@ -318,10 +312,8 @@ namespace BECore::Mahjong::Tests {
                         EXPECT_LE(box.x + box.w, plate.x + plate.w + kTolerance);
                         EXPECT_LE(box.y + box.h, plate.y + plate.h + kTolerance);
                     }
-                    // The emblem lies above the name, below the dealer bar, and the two do not overlap
                     EXPECT_LE(emblem.y + emblem.h, name.y + kTolerance) << view.width << "x" << view.height << " seat " << seat;
                     EXPECT_GE(emblem.y, plate.y + kDealerMarkHeight * unit - kTolerance);
-                    // Both are on the grid of the design, in plate units
                     EXPECT_TRUE(OnTheGrid((emblem.y - plate.y) / unit));
                     EXPECT_TRUE(OnTheGrid((name.y - plate.y) / unit));
                     EXPECT_TRUE(OnTheGrid(emblem.h / unit));
@@ -344,13 +336,11 @@ namespace BECore::Mahjong::Tests {
                 names.insert(plate.name);
             }
         });
-        // Four seats in each of the two languages, and no word is shared between them
         EXPECT_EQ(names.size(), 2u * kSeatCount);
     }
 
     TEST(SeatPlatesTest, ThePlateColoursAreTheHudPanelTheGoldOfTheTurnAndADealerMarkThatIsNotGold) {
         EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
-        // The panels' skin is the scale of the scene file: its radius and border, and the bottom of the gradient is the HUD panel's
         EXPECT_EQ(kSeatPlateCorner, static_cast<float>(kCornerMiddle));
         EXPECT_EQ(kSeatPlateBorder, static_cast<float>(kBorderWidth));
         EXPECT_TRUE(SameColor(kSeatPlateDeep, PaletteColor("hudPanelDeep")));
@@ -360,7 +350,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kSeatTurnFrame.b, kTurnMark.b);
         EXPECT_GT(kSeatTurnFrame.a, kTurnMark.a);
         EXPECT_GT(kSeatTurnFrameWidth, 0.0f);
-        // The dealer mark is a colour of its own, gold in none of the channels, and opaque
         EXPECT_FALSE(SameColor(Color{kDealerMark.r, kDealerMark.g, kDealerMark.b, kSeatTurnFrame.a}, kSeatTurnFrame));
         EXPECT_LT(kDealerMark.g, kTurnMark.g / 2);
         EXPECT_LT(kDealerMark.b, kTurnMark.b);
@@ -387,14 +376,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(plates[2].name, "Ann");
         EXPECT_EQ(plates[3].name, "Seat 2") << "a computer keeps its number";
 
-        // The sentences that name a seat say the same
         EXPECT_EQ(SeatLabel(Words(), 0, Wind::South, SeatWho(session)), "Ann (South)");
         EXPECT_EQ(SeatLabel(Words(), 2, Wind::East, SeatWho(session)), "Cy (East) You");
         EXPECT_EQ(SeatLabel(Words(), 1, Wind::West, SeatWho(session)), "Seat 2 (West)");
         const StandingsTable standings = FormatStandings(Words(), match, SeatWho(session));
         EXPECT_EQ(standings.headline, "Tied for first: Ann, Seat 2, Cy You, Seat 4");
 
-        // A table with no room knows no names: the one person is "you", as before
         const SeatSetup local{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         EXPECT_EQ(SeatLabel(Words(), 0, SeatWho(local)), "Seat 1 You");
     }

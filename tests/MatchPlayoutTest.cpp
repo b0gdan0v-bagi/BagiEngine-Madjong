@@ -1,12 +1,7 @@
 #include <Mahjong/Game/Match.h>
 #include <tests/MatchTestSupport.h>
 
-/**
- * Whole matches played with random legal actions to the end, for several seeds (flowers off and on, 16 and 8 hands, a drawn hand
- * replayed or counted). After every hand the invariants of a match hold: the points of the table still add up, the count and the deal
- * moved exactly as `NextProgress` says, the settlement is well formed; at the end the match is finished after exactly
- * `handsPerMatch` counted hands and the round winds ran East to North. Pure logic: no engine services.
- */
+// Whole matches played with random legal actions, audited after every hand by MatchAudit.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -19,7 +14,6 @@ namespace BECore::Mahjong::Tests {
         /// Far more hands than a match of 16 counted ones needs, replayed draws included.
         constexpr int kHandLimit = 400;
 
-        /// Plays one whole match; the checks run after every hand. A failed ASSERT ends the function.
         void PlayMatch(int index, MatchTotals& totals) {
             const MahjongSettings settings = SettingsOf(index);
             const Mode mode = index == kNeverWinMatch ? Mode::NeverWin : Mode::SeekWin;

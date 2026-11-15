@@ -2,9 +2,6 @@
 #include <Mahjong/Table/UiPalette.h>
 #include <gtest/gtest.h>
 
-/**
- * The felt of the table (`Table/TableLook.h`): pure pixels, so no engine services are needed.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

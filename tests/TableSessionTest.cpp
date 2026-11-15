@@ -5,11 +5,6 @@
 #include <thread>
 #include <vector>
 
-/**
- * `TableSession` (`Game/TableSession.h`): the start, `Actor` in a turn and in a claim window, `StepComputer` and `RunComputers` (a
- * computer plays, a person is waited for), `PerformPerson`, `NextHand` and the end of the match, the version, the hot-seat viewer, and
- * whole matches played by people (a chooser of `HandTestSupport.h`) against computers. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -35,7 +30,6 @@ namespace BECore::Mahjong::Tests {
             return settings;
         }
 
-        /// A setup with one person at `seat`.
         SeatSetup PersonAt(Seat seat) {
             SeatSetup setup = kAllComputers;
             setup[static_cast<size_t>(seat)] = SeatKind::Person;
@@ -50,7 +44,6 @@ namespace BECore::Mahjong::Tests {
             return profile;
         }
 
-        /// A match and its session, started.
         struct Table {
             Match match;
             TableSession session{match};
@@ -89,7 +82,6 @@ namespace BECore::Mahjong::Tests {
             return session.PerformPerson(Choose(legal, mode, rng));
         }
 
-        /// A tile the seat does not hold.
         Tile TileNotHeldBy(const PlayerHand& hand) {
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 if (eastl::find(hand.concealed.begin(), hand.concealed.end(), Tile{id}) == hand.concealed.end()) {
@@ -388,14 +380,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
         const Seat east = table.match.East();
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(east)));
-        // The actor is a person: a step is refused and changes nothing.
         const String before = State(table);
         const StepResult refused = table.session.StepComputer();
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), HandError::NotYourTurn);
         EXPECT_EQ(State(table), before);
 
-        // The actor is a computer: the step is one of its legal actions, applied, and moves the version once.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
         const Seat actor = table.session.Actor();
         const Vector<HandAction> legal = table.match.Hand().LegalActions(actor);
@@ -445,7 +435,6 @@ namespace BECore::Mahjong::Tests {
         Table table;
         ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
         const Seat east = table.match.East();
-        // The actor is a computer: refused.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
         String before = State(table);
         const Vector<HandAction> legal = table.match.Hand().LegalActions(east);
@@ -453,7 +442,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Error(table.session.PerformPerson(legal.front())), HandError::NotYourTurn);
         EXPECT_EQ(State(table), before);
 
-        // The actor is a person: an action that is not listed is refused with the error of the model, and nothing moves.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(east)));
         before = State(table);
         const Tile missing = TileNotHeldBy(table.match.Hand().GetHand(east));
@@ -461,7 +449,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Error(table.session.PerformPerson(HandAction::MakePass())), HandError::WrongPhase);
         EXPECT_EQ(State(table), before);
 
-        // A listed one is accepted and moves the version once.
         const uint64_t version = table.session.Version();
         const Vector<HandAction> listed = table.match.Hand().LegalActions(east);
         ASSERT_TRUE(table.session.PerformPerson(listed.front()).has_value());
@@ -910,18 +897,15 @@ namespace BECore::Mahjong::Tests {
         Table& table = observed.table;
         RecordingObserver& observer = observed.observer;
 
-        // A computer's step and the run of the computers up to the person.
         ASSERT_TRUE(table.session.StepComputer().has_value());
         table.session.RunComputers();
         ASSERT_TRUE(table.session.ActorIsPerson());
-        // A refused action: another seat's, an unlisted one, one in the wrong phase.
         EXPECT_FALSE(table.session.PerformPerson(HandAction::MakePass()).has_value());
         const Tile missing = TileNotHeldBy(table.match.Hand().GetHand(table.session.Actor()));
         EXPECT_FALSE(table.session.PerformPerson(HandAction::MakeDiscard(missing)).has_value());
         table.session.Reveal();
         EXPECT_TRUE(observer.records.empty());
 
-        // NextHand and a resume.
         ObservedTable computers;
         ASSERT_NO_FATAL_FAILURE(computers.Start(kAllComputers));
         computers.table.session.RunComputers();
@@ -932,7 +916,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(resumed.table.session.ResumeMatch(computers.log.Events(), kAllComputers, kDefaultLevel).has_value());
         EXPECT_TRUE(resumed.observer.records.empty());
 
-        // The person's accepted action is the only report.
         const HandAction action = MakeTableView(table.match.Hand(), table.session.Actor()).legal.front();
         ASSERT_TRUE(table.session.PerformPerson(action).has_value());
         EXPECT_EQ(observer.records.size(), 1u);
@@ -952,7 +935,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(with.table.session.Version(), without.table.session.Version());
         EXPECT_EQ(State(with.table), State(without.table));
         EXPECT_EQ(with.log.Events().size(), without.log.Events().size());
-        // The observer can be taken away again.
         with.table.session.SetMoveObserver(nullptr);
         with.table.session.RunComputers();
         const HandAction next = MakeTableView(with.table.match.Hand(), with.table.session.Actor()).legal.front();
@@ -1068,7 +1050,6 @@ namespace BECore::Mahjong::Tests {
         remote.Show(kSeat2, kSeat0, true);
         const uint64_t version = remote.session.Version();
 
-        // A refused start leaves the mode as it was.
         MahjongSettings bad;
         bad.handsPerMatch = 3;
         EXPECT_FALSE(remote.session.StartMatch(bad, kSeed, PersonAt(0)).has_value());

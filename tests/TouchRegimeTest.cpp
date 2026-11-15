@@ -5,12 +5,6 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-/**
- * `Table/TouchRegime.h` (pure logic): the one rule that picks the canvas of the action buttons, `Actions` (a `SceneView` canvas, scaled
- * with the table) or `ActionsCompact` (a `Screen` canvas on the bar under the table): compact where a button of `Actions` would be under
- * the touch minimum and the bar holds the compact row at its height at that canvas width (`CompactRowHeight`, the variants of the scene
- * file).
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
