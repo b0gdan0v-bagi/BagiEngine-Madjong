@@ -8,7 +8,7 @@ A helper is included as `<tests/Name.h>` (the repository root is the include roo
 
 | Header | Use it for |
 |--------|-----------|
-| `FixedWall.h` | `FixedWallSpec { hands[4], live, loose, liveAfterDeal }`, `MakeFixedWall`, `MakeModel`: **every test that needs to know what a seat holds or draws** (padding never exceeds four copies) |
+| `FixedWall.h` | `FixedWallSpec { hands[4], live, loose, liveAfterDeal }` (notation texts over `Game/FixedWall.h`; a problem is an `ADD_FAILURE`), `MakeFixedWall`, `MakeModel`: **every test that needs to know what a seat holds or draws** (padding never exceeds four copies) |
 | `HandTestSupport.h` | `kSeat0..3`, `T("5p")`, `Error`, `Has`, `Snapshot(model)`, `Lap`, the "accepted iff listed" checks, the random-play chooser (`Mode::SeekWin` ...) |
 | `ComputerTestSupport.h` | quiet hands `kQuiet1..3`, `SpecOf`, `OpenPungModel`, `UpgradeModel` |
 | `ScoreTestSupport.h` | `MakeInput` / `MakeWinnerInput` from notation, meld builders, line lookups, `ExpectConsistent`, the expected rule numbers |
