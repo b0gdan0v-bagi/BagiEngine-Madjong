@@ -41,6 +41,9 @@ view and the claim (`ClassifyClaim` in `ArenaChartsClasses.h`; it cannot see the
 | East | East or not | East pays and is paid double, so the same claim is worth more to it |
 | open sets | 0, 1, 2 or more | the open melds of the seat before the claim (a concealed kong is not open): an open hand has fewer ways to win and to score |
 
+Correction after the study: the "Why" text of the shanten-before row said Normal claims nothing but a win at 0; it was rewritten to what
+Normal's claim rule does there. The bins and the fields are unchanged.
+
 The main table is **kind x shanten before x stage** (36 cells); the one-way tables are tile group, shanten change, East, open sets and
 kind alone (a cell of a one-way table sums every row with that value, so one row is counted in each table).
 
@@ -117,7 +120,7 @@ the machine really gives, which on a loaded machine was about eight. For the tar
 | 250 | 15 120 | about 31 | about 21 600 |
 | 500 | 30 720 | about 64 | about 21 600 |
 
-W 250 or 500 would give 1 400 or 700 seeds in the same time, 12 600 or 6 300 rows: fewer rows and fewer seeds for an interval whose
+W 250 or 500 would give about 1 100 or 550 seeds in the same time, about 9 900 or 4 900 rows: fewer rows and fewer seeds for an interval whose
 width is set by the seeds and by the spread between windows, so W = 100 and 2400 seeds are chosen.
 
 ## Caveats
@@ -157,12 +160,13 @@ confirmation range one after the other:
   rule separates the good pungs from the bad ones.
 - **A chow at 2 shanten, middle of the wall: +3.4 +- 2.0 and +2.5 +- 1.8, a small gain on the whole.** The chows Normal takes gain
   +12.7 and +13.3, the ones it passes lose -11.9 and -12.9. A chow is worth taking only when it is the right one.
-- **A chow that raises the shanten ("higher"): -64.0 +- 5.1 and -62.5 +- 4.8.** Never take it; Normal never does.
+- **A claim (any kind) that raises the shanten ("higher"): -64.0 +- 5.1 and -62.5 +- 4.8.** Never take it; Normal never does (no row of
+  this class is one it takes).
 
 A class mean is the average of many different claims. Where the mean of the claims Normal takes is positive, some of them still lose
 in their own hand: the charts say which classes, not which claims. The `all` mean of a class depends on how often the table offers the
-good claims, and `Normal takes` is above `all` and `Normal passes` below it by construction, because the rule picks claims for a
-reason. The question the tables answer is whether the **sign** of a sub-row is the sign Normal acts on.
+good claims, and `Normal takes` is mostly above `all` and `Normal passes` below it, because the rule picks claims for a reason (a class
+where it is not is one where the rule picks badly). The question the tables answer is whether the **sign** of a sub-row is the sign Normal acts on.
 
 ## What Normal does against it
 
