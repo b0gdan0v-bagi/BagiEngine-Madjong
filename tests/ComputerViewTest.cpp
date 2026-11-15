@@ -6,12 +6,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `MakeTableView`: what a seat is allowed to see of a hand, on fixed walls. The visible copies (own tiles, piles, open melds, not a
- * concealed kong), the public facts about the others, the live count, the legal actions, and the main property: a view holds nothing
- * of the other hands or of the live wall, so two models that differ only there give equal views and equal choices. Pure logic: no
- * engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -33,7 +27,6 @@ namespace BECore::Mahjong::Tests {
             return view.visible[T(tile).Id()];
         }
 
-        /// Everything a view holds, as text, to compare two views.
         String ViewText(const TableView& view) {
             String text =
                 Format("seat {} phase {} current {} pending {} winds {}/{}", view.seat, Name(view.phase), view.currentSeat, ToString(view.pendingTile), Name(view.seatWind), Name(view.roundWind));

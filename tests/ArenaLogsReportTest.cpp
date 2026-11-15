@@ -2,12 +2,6 @@
 #include <gtest/gtest.h>
 #include <tests/ArenaLogTestSupport.h>
 
-/**
- * The report of the arena's log mode (`Arena/ArenaLogsReport.h`) beyond the corpus summary: the real-game numbers by the level of the
- * computers met (from the settlements and the logged `declareCalling`, the match the unit of the intervals), the analysis of a corpus
- * in threads (the same bytes at any `--jobs`) and the text. Pure logic: logs are played in memory, a person is a `ComputerPlayer` of a
- * known level.
- */
 namespace BECore::Mahjong::Arena {
 
     namespace {

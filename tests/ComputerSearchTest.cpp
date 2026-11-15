@@ -11,15 +11,7 @@
 #include <tests/MatchTestSupport.h>
 #include <thread>
 
-/**
- * The search chooser (Game/ComputerSearch.h) and the profile knobs it hangs on: with `searchWorlds` 0 nothing is drawn and the answer is
- * Normal's; with it on, one number is drawn per searched decision and none for the decisions that are not searched (a win, a mahjong
- * claim, the pass of a waiting hand, a window with only `Pass`, a single candidate); the answer is listed and repeatable, Normal's
- * choice is the first candidate, a huge margin always gives Normal's choice, nothing is seen that the view does not show, and a
- * search seat plays whole hands. The budgets are a few worlds and a few candidates, so a Debug run stays short. Pure logic: no engine
- * services. The seam for a source of worlds (`UseWorldSource`) is held here too: it changes nothing without a source, and no level's
- * player ever has one.
- */
+/// The budgets are a few worlds and a few candidates, so a Debug run stays short.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -1018,7 +1010,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(sourced.Done());
     }
 
-    // No level may peek (`CLAUDE.md`, "No peeking"): a source of worlds is for the arena's oracle players only, which `BeginTurnSearch`
+    // No level may peek: a source of worlds is for the arena's oracle players only, which `BeginTurnSearch`
     // and `BeginClaimSearch` never give. This holds every level 1..10 (and a search profile, so the check is not vacuous: the levels
     // do not search) to a run with no source.
     TEST(ComputerSearchTest, NoLevelMakesARunThatHasASourceOfWorlds) {

@@ -9,14 +9,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `ComputerPlayer` and `ComputerTable`: `Decide` (empty for a seat with nothing to do, an element of the list otherwise), `Choose` on
- * both kinds of phase, `SeatSeed`, `NextActor` (the discard, the first of a window, a finished hand), `Step` (the action it applied,
- * `WrongPhase` on a finished hand), the same seed the same actions on the same model, and a hand played by four players on a fixed wall
- * to a win that needs a declaration two turns earlier. `Begin` / `BeginStep` / `FinishStep`: a search decision comes back as a run that
- * finishes to what `Choose` gives (a whole hand, so the rng order is held), every other decision comes back ready. Pure logic: no
- * engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

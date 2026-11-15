@@ -4,19 +4,8 @@
 #include <tests/HandTestSupport.h>
 #include <tests/MatchTestSupport.h>
 
-/**
- * Whole matches played by four computer players (`ComputerTable`), for fixed seeds, flowers off and on, 16 and 8 hands, a drawn hand
- * replayed and counted (the eight combinations of `SettingsOf`). At every step the chosen action is in `LegalActions(actor)` and the
- * model accepts it (`Step` applies it through `Apply` and never falls back), a hand is bounded so that a loop fails fast, and after
- * every hand the invariants of `MatchAudit` hold (the points add up, the count and the deal as `NextProgress` says, the settlement is
- * well formed); at the end the match is finished after exactly `handsPerMatch` counted hands. The same seed played again, this time by
- * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Normal plays all
- * eight combinations, Easy the three of `kLevelSubset` (flowers off with 16 hands, flowers on with 8, flowers off with 8 and
- * counted draws), so the whole first test takes about 8 s in Debug. Easy plays another match than Normal on the same seed. One short
- * match of 4 hands is played with a search seat among three Normal ones (the search is a profile knob, no level: the entry
- * `mahjong-bot-search` found it no stronger than Normal, this keeps it working), with the same legality and audit checks. Pure
- * logic: no engine services.
- */
+/// Normal plays all eight combinations of `SettingsOf`, Easy the three of `kLevelSubset`: the first test takes about 8 s in Debug.
+/// A search seat is a profile knob, no level: one short match of 4 hands plays it among three Normal ones.
 namespace BECore::Mahjong::Tests {
 
     namespace {

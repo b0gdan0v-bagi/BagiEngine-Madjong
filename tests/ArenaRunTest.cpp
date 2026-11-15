@@ -6,25 +6,12 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-/**
- * The run of the arena over seeds (`src/Mahjong/Arena/ArenaRun.h`): `RunArena` plays the seeds `first .. first + count - 1` for every
- * focus player and each of the four seats against `others`, and sums them. Checked here: the totals are the sums of the per-seed rows,
- * one seed equals the four `PlayArenaHand` calls, the mirror identity (Normal against three Normal wins exactly one hand of the four
- * rotations of a seed), determinism, a focus player's result not depending on the other focus players, the numbers of
- * `ComputerStrengthTest` (seeds 4000..4059, Normal against three random seats: 190 wins of 240, the random seats 27 together, 23 drawn
- * hands, +35270 points, since the claim window that settles early), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
- * and a hand that fails gives the error of the lowest seed whatever the number of threads. The second level of threads (`WorldThreads`, the
- * worlds of a search decision): the pool runs every index once and serves many calls, a search focus player with few seeds (an oracle search player too)
- * gives the same result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about
- * 16 s in Debug (few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together; 7 s of it is the search case, the search seeds being the dear ones: a seed is four hands
- * of a search seat, about 1.2 s).
- */
+/// About 16 s in Debug: few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together; 7 s of it is the search case (a seed is four hands of a search seat, about 1.2 s).
 namespace BECore::Mahjong::Arena {
 
     namespace {
 
         constexpr uint32_t kFirstSeed = 4000;
-        /// The seeds of `ComputerStrengthTest`.
         constexpr int kStrengthSeeds = 60;
         constexpr int kFewSeeds = 4;
         constexpr int kTwoSeeds = 2;
@@ -426,8 +413,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaRunTest, NormalAgainstRandomIsTheStrengthTest) {
-        // The hands of `ComputerStrengthTest.cpp`, with Normal's `waitingKongByPoints` (its comment has the numbers of the first player:
-        // 186 wins, 27 drawn, +31730) and the claim window that settles early: 190 wins of 240 hands, the random seats 27, 23 drawn, +35270.
+        // The hands of `ComputerStrengthTest.cpp`: 190 wins of 240 hands, the random seats 27, 23 drawn, +35270.
         const FocusResult& normal = StrengthRun().focus.at(0);
         EXPECT_EQ(normal.focus.hands, 240);
         EXPECT_EQ(normal.focus.wins, 190);

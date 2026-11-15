@@ -5,11 +5,6 @@
 #include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
 
-/**
- * Match logs made in memory for the tests of the arena's log mode (`Arena/ArenaLogs.h`): a match played on a `TableSession` where
- * the seats that are `Person` are driven by a `ComputerPlayer` of the level the seat is given, so the log says `by: person` for
- * them and a test knows which player made every decision.
- */
 namespace BECore::Mahjong::Tests {
 
     inline constexpr SeatSetup kLogAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
@@ -17,7 +12,6 @@ namespace BECore::Mahjong::Tests {
     /// More steps than any match takes (a hand has a few hundred actions at most); a guard against a loop that does not end.
     inline constexpr int kLogStepLimit = 100000;
 
-    /// What a played log is made of.
     struct LogSpec {
         uint32_t seed = 41;
         SeatSetup seats = kLogAllComputers;
@@ -62,7 +56,6 @@ namespace BECore::Mahjong::Tests {
         return log.Events();
     }
 
-    /// The text of a log: one JSON line per event, as `MatchLogWriter` writes them.
     inline String LogText(const Vector<MatchLogEvent>& events) {
         String text;
         for (const MatchLogEvent& event : events) {

@@ -5,10 +5,6 @@
 #include <Mahjong/Table/UiPalette.h>
 #include <gtest/gtest.h>
 
-/**
- * The speed of the table (`Table/AnimationSpeed.h`): the factors and the scaled times, the ids, and the speed in the saved choices
- * (`MahjongPrefsSave`). The pace on the table itself is `MahjongTableSpeedTest`.
- */
 namespace BECore::Mahjong::Tests {
 
     // A flight stays inside the pause of the computers at every speed: the factor scales both

@@ -4,12 +4,6 @@
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
 
-/**
- * The analysis of one position (Analyzer/AnalyzerRun.h): one row per legal action in the order of `view.legal`, the EV of each over
- * the sampled worlds, the paired differences to the best row and to Normal's choice, the same bytes for any loop over the worlds,
- * and nothing seen that the view does not show. The positions are built with `FixedWall` and reduced with `MakeTableView`; the worlds
- * are a few hundred at most so a Debug run stays short. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -49,7 +43,6 @@ namespace BECore::Mahjong::Tests {
             return analysis.has_value() ? *analysis : PositionAnalysis{};
         }
 
-        /// An action as text for a failure message and for `Describe`.
         String Label(const HandAction& action) {
             return Format("{} {}{} {} {}", Name(action.kind), action.tile.IsValid() ? ToString(action.tile) : StringView("-"), action.declareCalling ? " declare" : "", Name(action.claim),
                           action.chowFirst.IsValid() ? ToString(action.chowFirst) : StringView("-"));
@@ -61,7 +54,6 @@ namespace BECore::Mahjong::Tests {
             return text;
         }
 
-        /// Every field of an analysis as text, to compare two analyses exactly.
         String Describe(const PositionAnalysis& analysis) {
             String text = Format("{} {} {}/{}/{} normal {}\n", analysis.seat, Name(analysis.phase), analysis.worldsAsked, analysis.worldsPlayed, analysis.worldsDropped, Label(analysis.normalChoice));
             for (const ActionRow& row : analysis.rows) {
@@ -166,7 +158,6 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(threaded.has_value());
             EXPECT_EQ(Describe(*threaded), reference);
 
-            // Another seed samples other worlds.
             EXPECT_NE(Describe(Analyze(*view, ConfigOf(kFewWorlds, kSeed + 1))), reference);
         }
     }

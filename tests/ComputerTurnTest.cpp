@@ -13,12 +13,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `ChooseTurnAction`: the choices of a computer player on its own turn, one case per rule, on fixed walls with the expected action
- * worked out by hand first (the waits of each hand, the unseen copies of each wait). Then the helpers (`UnseenCopies`, `KeepValue`,
- * `AcceptanceOf`) and a run over random hands: the answer is always listed, and the same view and rng seed give the same answer.
- * Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

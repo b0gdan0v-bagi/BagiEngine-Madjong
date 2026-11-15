@@ -4,12 +4,7 @@
 #include <tests/ArenaLogTestSupport.h>
 #include <thread>
 
-/**
- * The command line of the arena (`src/Mahjong/Arena/ArenaCli.h`, the program `BagiMahjongArena`): the arguments (defaults, every option,
- * a list of focus players with knobs, every refusal with its message), and the whole program on a few seeds: the report, twice the same
- * text, `--help`, the exit codes, `--time`; the log mode (`--logs`, `--check`) over a source of strings. Pure logic: no engine services; the file takes about 6 s in Debug (three seeds; 4 s of it the
- * one seed of a search focus player at `--jobs` 1 and 3).
- */
+/// Takes about 6 s in Debug: three seeds, 4 s of it the one seed of a search focus player at `--jobs` 1 and 3.
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -223,10 +218,8 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(kExitBadArguments, 2);
         EXPECT_TRUE(output.out.empty());
         EXPECT_TRUE(Contains(output.err, "error: the number of seeds is 0, it must be at least 1")) << output.err.c_str();
-        // The usage follows the message.
         EXPECT_TRUE(Contains(output.err, "usage: BagiMahjongArena")) << output.err.c_str();
         EXPECT_FALSE(Contains(output.err, "Bot arena"));
-        // A bad number of threads is the same: exit 2, the message, the usage, nothing played.
         ArenaCliOutput jobs;
         EXPECT_EQ(RunProgram({"--jobs", "300"}, jobs), kExitBadArguments);
         EXPECT_TRUE(jobs.out.empty());
@@ -243,7 +236,6 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(text, "focus: normal; others: random"));
         EXPECT_TRUE(Contains(text, "avg win score"));
         EXPECT_TRUE(Contains(text, "others (per seat)"));
-        // One focus player: no paired table, no timing table.
         EXPECT_FALSE(Contains(text, "paired difference"));
         EXPECT_FALSE(Contains(text, "per decision"));
         EXPECT_FALSE(Contains(text, "wall clock"));
@@ -406,7 +398,6 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(RunLogs({"--logs", "folder", "--focus", "easy", "--differences", "1"}, SourceOf(SomeLogs()), one), kExitOk);
         EXPECT_TRUE(Contains(one.out, ", 1 listed"));
         EXPECT_EQ(std::count(one.out.begin(), one.out.end(), '\n') - std::count(none.out.begin(), none.out.end(), '\n'), 2);
-        // --check is only the verdicts.
         ArenaCliOutput checked;
         EXPECT_EQ(RunLogs({"--logs", "folder", "--check", "--differences", "1"}, SourceOf(SomeLogs()), checked), kExitOk);
         EXPECT_FALSE(Contains(checked.out, "Agreement"));
@@ -424,7 +415,6 @@ namespace BECore::Mahjong::Arena {
             EXPECT_TRUE(output.out.empty());
             EXPECT_EQ(output.err, "error: cannot read \"nowhere\"\n");
         }
-        // The program without a reader of files cannot read any.
         ArenaCliOutput output;
         EXPECT_EQ(RunProgram({"--logs", "x"}, output), kExitCannotRead);
         EXPECT_TRUE(output.out.empty());

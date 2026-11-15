@@ -4,12 +4,6 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The command line of the analyzer (Analyzer/AnalyzerCli.h, the program `BagiMahjongAnalyzer`): the arguments (defaults, every option,
- * every refusal with its message), and the whole program on the text of a played match and on a hand-written position through a reader
- * of strings: the report of one decision, one report per decision of a seat, the same bytes at any `--jobs`, a log without its `Hand`
- * events, the exit codes. A handful of worlds so Debug stays fast. Pure logic: no engine services, no file.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -32,7 +26,6 @@ namespace BECore::Mahjong::Tests {
                                                "discards 3 Ww\n"
                                                "pending 5p from 3\n";
 
-        /// The match log of four computers as the text of a log file.
         String PlayedLogText(bool withHandEvents) {
             Match match;
             TableSession session(match);
@@ -61,7 +54,6 @@ namespace BECore::Mahjong::Tests {
             return text;
         }
 
-        /// A reader over a few named strings.
         Analyzer::FileReader ReaderOf(Map<String, String> files) {
             return [files = std::move(files)](StringView path) -> std::expected<String, String> {
                 const auto found = files.find(path);

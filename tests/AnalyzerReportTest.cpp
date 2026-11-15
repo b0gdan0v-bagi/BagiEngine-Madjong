@@ -3,12 +3,6 @@
 #include <Mahjong/MahjongGameControl.h>
 #include <gtest/gtest.h>
 
-/**
- * The report of one analysis (Analyzer/AnalyzerReport.h): `ActionNotation` for every action kind, the fixed-column text and the JSON
- * of a hand-made `PositionAnalysis` against golden strings (no rollouts are played here), the order and the marks of the rows, blank
- * cells for what has no interval, the sentences of the header that state the approximations, and the JSON read back by the engine's
- * parser. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Analyzer {
 
     namespace {
@@ -119,7 +113,6 @@ namespace BECore::Mahjong::Analyzer {
             return StringView(text).find(part) != StringView::npos;
         }
 
-        /// The lines of `text` that start with `prefix` (the table rows are found by their action).
         String LineOf(const String& text, StringView prefix) {
             const StringView all(text.data(), text.size());
             size_t start = 0;
@@ -195,7 +188,6 @@ namespace BECore::Mahjong::Analyzer {
         EXPECT_LT(text.find("claim pung"), text.find("claim kong"));
         EXPECT_LT(text.find("claim kong"), text.find("claim mahjong"));
 
-        // The two rows of the same mean swap places when their order in `legal` does.
         eastl::swap(analysis.rows[0], analysis.rows[1]);
         const String swapped = FormatAnalysisReport(ClaimView(), analysis, PositionLabel{});
         EXPECT_LT(swapped.find("claim pung"), swapped.find("pass  "));
@@ -208,11 +200,9 @@ namespace BECore::Mahjong::Analyzer {
         EXPECT_TRUE(Has(LineOf(text, "claim pung").c_str(), "logged"));
         EXPECT_FALSE(Has(LineOf(text, "claim chow").c_str(), "logged"));
 
-        // No log: nothing is `logged`, no source line and no hand number.
         const String plain = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), PositionLabel{});
         EXPECT_FALSE(Has(plain, "logged"));
         EXPECT_FALSE(Has(plain, "position:"));
-        // A named hand-written text prints its name only.
         PositionLabel named;
         named.source = "tests/pung.txt";
         const String byName = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), named);
@@ -224,11 +214,9 @@ namespace BECore::Mahjong::Analyzer {
         const String text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
         EXPECT_FALSE(Has(text, "nan"));
         EXPECT_FALSE(Has(text, "inf"));
-        // The best row has no difference to itself, the kong has no interval at all.
         EXPECT_EQ(LineOf(text, "claim kong"), "claim kong                   0.50                -3.00                -0.73");
         EXPECT_FALSE(Has(LineOf(text, "claim chow").c_str(), "-0"));
 
-        // An analysis of nothing prints a table of the header only.
         const String empty = FormatAnalysisReport(TableView{}, PositionAnalysis{}, PositionLabel{});
         EXPECT_FALSE(Has(empty, "nan"));
     }
@@ -284,7 +272,6 @@ namespace BECore::Mahjong::Analyzer {
         EXPECT_EQ(GetJsonBool(actions[0], "best"), true);
         EXPECT_EQ(GetJsonBool(actions[1], "normal"), true);
         EXPECT_EQ(GetJsonBool(actions[2], "logged"), true);
-        // The best row has no difference to itself; the kong has a mean and no half-width.
         EXPECT_TRUE(FindJsonMember(actions[0], "vsBest")->is_null());
         EXPECT_TRUE(FindJsonMember(actions[1], "vsNormal")->is_null());
         EXPECT_TRUE(FindJsonMember(actions[3], "half")->is_null());

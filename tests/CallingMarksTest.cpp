@@ -9,11 +9,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The discards that keep a declared calling hand waiting (`Table/CallingMarks.h`, pure logic): all false before the declaration, off the
- * viewer's turn, in a window and for no seat; after it exactly the tiles worked out by hand on fixed walls, equal to a brute force on
- * seeded hands (with melds, seven pairs, a hand that has already won) and the same for models that differ only in what the viewer cannot see.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -50,7 +45,6 @@ namespace BECore::Mahjong::Tests {
             return model;
         }
 
-        /// The ids of the tiles that are marked.
         Set<int> Marked(const TableView& view) {
             Set<int> marked;
             const auto keeps = KeepsWaitingDiscards(view);
@@ -208,20 +202,17 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = DeclaredModel("9s");
         ASSERT_TRUE(MakeTableView(model, kSeat0).own.callingDeclared);
 
-        // The other seats have declared too, but it is not their turn
         for (const Seat seat : {kSeat1, kSeat2, kSeat3}) {
             const TableView view = MakeTableView(model, seat);
             ASSERT_TRUE(view.own.callingDeclared);
             EXPECT_TRUE(Marked(view).empty()) << "seat " << seat;
         }
 
-        // The viewer discards and it is the next seat's turn
         HandModel moved = model;
         ASSERT_TRUE(moved.Discard(kSeat0, T("9s")).has_value());
         ASSERT_EQ(moved.GetPhase(), Phase::Discard);
         EXPECT_TRUE(Marked(MakeTableView(moved, kSeat0)).empty());
 
-        // A claim window and a robbing window: no discard to mark in them
         TableView claim = MakeTableView(model, kSeat0);
         claim.phase = Phase::Claim;
         claim.currentSeat = kSeat1;
@@ -229,7 +220,6 @@ namespace BECore::Mahjong::Tests {
         claim.phase = Phase::RobKong;
         EXPECT_TRUE(Marked(claim).empty());
 
-        // No actions to choose from, no seat
         TableView idle = MakeTableView(model, kSeat0);
         idle.legal.clear();
         EXPECT_TRUE(Marked(idle).empty());
