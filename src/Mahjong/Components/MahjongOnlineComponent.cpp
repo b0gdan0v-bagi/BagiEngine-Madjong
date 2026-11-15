@@ -1,6 +1,7 @@
 #include "MahjongOnlineComponent.h"
 
 #include <BECore/GameManager/CoreManager.h>
+#include <BECore/RefCounted/New.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <CoreSDL/SDLEvents.h>
@@ -183,13 +184,16 @@ namespace BECore::Mahjong {
         if (s_active == this) {
             s_active = nullptr;
         }
-        _alive.reset();
+        if (_alive != nullptr) {
+            _alive->alive = false;
+        }
+        _alive = nullptr;
     }
 
     void MahjongOnlineComponent::OnAttached() {
         static_assert(kItemCount == ItemCount, "the header sizes its arrays by the items");
         s_active = this;
-        _alive = MakeShared<int>(0);
+        _alive = New<AliveToken>();
         for (size_t i = 0; i < kItemCount; ++i) {
             _itemNames[i] = PoolString::Intern(kItemNames[i]);
             _items[i] = -1;
@@ -329,9 +333,8 @@ namespace BECore::Mahjong {
 
     void MahjongOnlineComponent::RequestPaste() {
         // The answer comes from a later `Update()` and the request cannot be withdrawn: the callback holds no pointer to this, only a token that dies with the component
-        const eastl::weak_ptr<int> alive = _alive;
-        CoreManager::GetClipboard().RequestText([alive](const ClipboardText& answer) {
-            if (alive.lock() == nullptr) {
+        CoreManager::GetClipboard().RequestText([alive = _alive](const ClipboardText& answer) {
+            if (alive == nullptr || !alive->alive) {
                 return;
             }
             if (MahjongOnlineComponent* component = MahjongOnlineComponent::GetActive()) {

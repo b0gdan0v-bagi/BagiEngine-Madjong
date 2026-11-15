@@ -1,5 +1,6 @@
 #include <BECore/Control/Json.h>
 #include <Common/Printers.h>
+#include <Common/SharedPtr.h>
 #include <EASTL/sort.h>
 #include <Mahjong/MahjongStateJson.h>
 #include <Mahjong/Online/MahjongSeatedGame.h>

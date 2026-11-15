@@ -1,5 +1,7 @@
 #pragma once
 
+#include <BECore/RefCounted/IntrusivePtr.h>
+#include <BECore/RefCounted/RefCounted.h>
 #include <BECore/Scene/IComponent.h>
 #include <Mahjong/Online/OnlineScreens.h>
 
@@ -44,7 +46,7 @@ namespace BECore::Mahjong {
      * **The nickname.** The same pad types the tester's nickname (`OpenNicknameEntry`): a `TextEntry` of its own, no `OnlineScreens` page. The pad goes at the next frame
      * after `Done` or Escape, because the HUD hears the same Escape and must find it still up; it also goes, with nothing stored, when `Options` closes under it.
      *
-     * **Clipboard.** A paste read cannot be cancelled and is answered from a later `Update()`, so its callback holds a `weak_ptr` of `_alive` and finds the component
+     * **Clipboard.** A paste read cannot be cancelled and is answered from a later `Update()`, so its callback holds the token `_alive` and finds the component
      * again through `GetActive()`: a scene torn down with a read pending leaves nothing to call.
      *
      * **Variables** are set only when `OnlineScreens::Version()`, `OnlineClient::Version()`, the version of `UIStrings` or the open state moved; the elements likewise.
@@ -105,8 +107,11 @@ namespace BECore::Mahjong {
         static constexpr size_t kItemCount = 46;
 
         OnlineScreens _screens;
-        /// Alive while the component is attached; a read of the clipboard that is still pending holds a `weak_ptr` of it.
-        SharedPtr<int> _alive;
+        /// Shared with a pending read of the clipboard, which answers nothing once the component cleared `alive`.
+        struct AliveToken : RefCounted {
+            bool alive = true;
+        };
+        IntrusivePtr<AliveToken> _alive;
         PoolString _seatVars[kSeatCount];
         static constexpr size_t kListRowCount = static_cast<size_t>(OnlineScreens::kRoomsPerPage);
         PoolString _listVars[kListRowCount];

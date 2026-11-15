@@ -94,9 +94,8 @@ namespace BECore::Mahjong::Arena {
     }  // namespace
 
     WorldSource MakeTrueWorlds(const HandModel& hand, bool wallOrderKnown) {
-        const SharedPtr<const HandState> real = MakeShared<const HandState>(hand.Capture());
-        return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> Optional<HandModel> {
-            HandState world = *real;
+        return [real = hand.Capture(), wallOrderKnown](const TableView&, MahjongRng& rng) -> Optional<HandModel> {
+            HandState world = real;
             if (!wallOrderKnown) {
                 const size_t looseCount = world.loose.size();
                 const size_t liveCount = world.live.size();

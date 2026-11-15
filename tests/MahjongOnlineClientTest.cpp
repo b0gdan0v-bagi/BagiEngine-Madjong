@@ -91,7 +91,7 @@ namespace BECore::Mahjong::Tests {
                 settings.backoffStart = kBackoff;
                 settings.backoffMax = kBackoff;
                 settings.reconnectGiveUp = kGiveUp;
-                _client = MakeUnique<OnlineClient>(settings);
+                _client = MakeUnique<OnlineClient>(eastl::move(settings));
             }
 
             void Pump() {
