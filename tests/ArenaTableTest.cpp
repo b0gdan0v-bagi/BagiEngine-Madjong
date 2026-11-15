@@ -1,5 +1,8 @@
 #include <Mahjong/Arena/ArenaTable.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /// About 2 s in Debug.
 namespace BECore::Mahjong::Arena {
@@ -150,6 +153,51 @@ namespace BECore::Mahjong::Arena {
         }
     }
 
+    /**
+     * Seat 1 holds 1p..9p 1s 2s 3s 5m (it waits on 5m only) and declares by discarding its drawn Rd. The wall deals: seat 0 Ew, seat 1
+     * Rd, seat 2 Ew, seat 3 5m, seat 0 Sw, seat 1 Gd, and every draw is discarded at once. Exposures of seat 1's wait, each from its
+     * view before the discard (13 own tiles; u = 136 - 13 - the pile; w = 4 - its own 5m - the 5m in the pile):
+     *  - seat 2 discards Ew: pile Ew, Rd = 2, u 121, w 3: 3000000 * 1/121 = 24793 millionths (the half of u added first, as the code rounds);
+     *  - seat 3 discards 5m, the hit (seat 1 passes): pile 3, u 120, w 3: 25000;
+     *  - seat 0 discards Sw: pile 4 (the 5m too), u 119, w 2: 16807.
+     * So 3 exposures, 66600 millionths expected, 1 hit. Seat 1's own draw Gd (the exposure of a draw, taken with the Gd counted
+     * unseen again: pile 5, 13 own tiles + the drawn one, so u 136 - 18 = 118, w 4 - 1 - 1 = 2): 16949, no hit.
+     */
+    TEST(ArenaTableTest, TheHitsOfADeclaredSeatAreCountedByHand) {
+        using Tests::kSeat1;
+        Tests::FixedWallSpec spec;
+        spec.hands[0] = Tests::kQuiet1;
+        spec.hands[1] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5m";
+        spec.hands[2] = Tests::kQuiet2;
+        spec.hands[3] = Tests::kQuiet3;
+        spec.live = "Ew Rd Ew 5m Sw Gd";
+        HandModel hand = Tests::MakeModel(spec);
+        HandHits hits;
+        const HandObserver observer = MakeHitObserver(hits);
+        const auto act = [&](Seat seat, const HandAction& action) {
+            observer(hand, seat);
+            ASSERT_TRUE(hand.Apply(seat, action).has_value());
+        };
+        act(0, HandAction::MakeDiscard(Tests::T("Ew")));
+        act(1, HandAction::MakeDiscard(Tests::T("Rd"), true));
+        act(2, HandAction::MakeDiscard(Tests::T("Ew")));
+        act(3, HandAction::MakeDiscard(Tests::T("5m")));
+        ASSERT_EQ(hand.GetPhase(), Phase::Claim);
+        act(kSeat1, HandAction{});
+        act(0, HandAction::MakeDiscard(Tests::T("Sw")));
+        ASSERT_EQ(hand.GetPhase(), Phase::Discard);
+        EXPECT_EQ(hand.CurrentSeat(), kSeat1);
+        observer(hand, kSeat1);
+        observer(hand, kNoSeat);
+
+        EXPECT_EQ(hits.discards.exposures, 3);
+        EXPECT_EQ(hits.discards.expectedMicro, 24793 + 25000 + 16807);
+        EXPECT_EQ(hits.discards.hits, 1);
+        EXPECT_EQ(hits.draws.exposures, 1);
+        EXPECT_EQ(hits.draws.expectedMicro, 16949);
+        EXPECT_EQ(hits.draws.hits, 0);
+    }
+
     TEST(ArenaTableTest, TheRunIsTheSameAtAnyNumberOfJobs) {
         const std::expected<TableStats, String> single = RunTableStats(ConfigOf(kFewSeeds, 1));
         const std::expected<TableStats, String> many = RunTableStats(ConfigOf(kFewSeeds, kManyJobs));
@@ -182,6 +230,8 @@ namespace BECore::Mahjong::Arena {
         EXPECT_NE(view.find("(1-h)^i"), StringView::npos);
         EXPECT_NE(view.find("winner, East"), StringView::npos);
         EXPECT_NE(view.find("standing, not East"), StringView::npos);
+        EXPECT_NE(view.find("discard of another"), StringView::npos);
+        EXPECT_NE(view.find("own draw (check)"), StringView::npos);
         EXPECT_EQ(FormatTableStats(*stats), text);
     }
 

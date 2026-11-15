@@ -119,6 +119,9 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
+        if (observer != nullptr) {
+            (*observer)(hand, kNoSeat);
+        }
         FillResult(hand, SettleHand(hand), record);
         return record;
     }

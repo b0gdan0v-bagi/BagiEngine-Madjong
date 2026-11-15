@@ -303,7 +303,9 @@ whatever the knob says.
 `--others` and `--time`) and prints what the own-draws value of `docs/own-draws-ev.md` needs as constants: for each number of declared
 opponents `d` (0..3) the own turns observed, the per mille chance that another seat wins in the next round and the survival after 1..4 rounds
 next to `(1 - h)^i`; the mean score of a winner and the mean standing score of a seat that did not win, East and not East, with intervals; the
-share of the won hands won on a discard, on a self-draw and on a robbed kong. A round is the stretch between a seat's own turn and its next one.
+share of the won hands won on a discard, on a self-draw and on a robbed kong; and, for a declared, waiting seat, how often a tile is a
+winning kind against what its unseen copies predict (exposures, expected hits, hits, hit per mille), for the discards of the other seats and, as
+a check, for the seat's own draws. A round is the stretch between a seat's own turn and its next one.
 The same bytes at any `--jobs`; the measured numbers are in `docs/own-draws-ev.md`.
 
 ## What is not built

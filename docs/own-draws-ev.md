@@ -113,3 +113,15 @@ By "The rule of the verdict" (all of: both ranges significantly above 0 on point
 ## For slice 2
 
 The gate is the result: no variant inside the time rule is positive, and the part that is cheap enough (the wait) is empty. Slice 2 would have to start with the resumable run (depth 2 is 4.4 times over the rule), and the claims, that is, the rule that Normal wins 76 % on discards, are where the value is not yet modelled. The owner decides whether that is worth building as it stands (`mahjong-own-draws-ev`, "Left for the owner").
+
+## Slice 2: the hit rate of a discard
+
+`--table-stats` also prints, for a declared, waiting seat, the tiles it could win on: an exposure is one discard of another seat (taken from the state before the discard, the seat's own view) or one of the seat's own draws; the expected hits are the sum of `unseen winning copies / unseen total` over the exposures. Measured with `$A --table-stats --first 4000 --seeds 1000 --jobs 14` (Release, 1.4 s):
+
+```
+                        exposures  expected hits       hits  hit per mille
+discard of another          16884       990.68        798        805.5
+own draw (check)             4627       273.39        238        870.6
+```
+
+`kDiscardHitPermille` is 806 (the discard row). The own draw is the check and should be about 1000 by the nature of the wall; it is 871 here and 888 on `--first 20000 --seeds 6000` (the discard row 803 there), so it is below 1000 by 4 standard errors. The count is right (a hand worked out by hand in `ArenaTableTest`); the likely reason is that the opponents hold back the winning kinds of a declared seat, so the unseen copies are over-represented in their hands, not in the wall. That is the same effect that makes the discard rate lower, and it is a hypothesis, not measured. This run also differs slightly from the slice 1 table above (761 wins on a discard against 763): Normal moved between the slices; the slice 2 rows are measured on the code of this branch.

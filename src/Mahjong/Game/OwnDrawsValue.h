@@ -32,6 +32,14 @@ namespace BECore::Mahjong {
      */
     inline constexpr int kOpponentWinPerRoundPermille[kSeatCount] = {7, 188, 336, 475};
 
+    /**
+     * How often an opponent's discard is a winning kind of a declared, waiting seat, in thousandths of what the unseen copies predict
+     * (a share `unseen winning copies / unseen total` of a random unseen tile is 1000). Below 1000 because the opponents hold back
+     * the tiles that are dangerous to a declared seat. The `hit per mille` of `discard of another` in
+     * `BagiMahjongArena --table-stats --first 4000 --seeds 1000 --jobs 14` (Release; `docs/own-draws-ev.md`, slice 2).
+     */
+    inline constexpr int kDiscardHitPermille = 806;
+
     /// A typical winner's score and a typical score of a seat that stands next to it (the losers' pairwise settlement is by the difference).
     struct TypicalScores {
         int winner = 0;
