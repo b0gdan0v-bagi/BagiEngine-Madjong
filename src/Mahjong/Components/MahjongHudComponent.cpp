@@ -28,7 +28,7 @@ namespace BECore::Mahjong {
         constexpr StringView kSetSeatPrefix = "MahjongSetSeat";
         constexpr StringView kSetSeatLevelPrefix = "MahjongSetSeatLevel";
         constexpr StringView kSetHandsAction = "MahjongSetHands";
-        // The ids of the two segments of `Hands` (the values of the buttons in the scene file): the numbers of `MahjongSettings.h` as text
+        // The values of the two `Hands` buttons of the scene file
         constexpr StringView kFullHandsId = "16";
         constexpr StringView kShortHandsId = "8";
         static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
@@ -72,7 +72,6 @@ namespace BECore::Mahjong {
             return kind == SeatKind::Person ? kPersonId : kComputerId;
         }
 
-        /// The seat that `MahjongSetSeatN` is about; nullopt for another action.
         Optional<Seat> SeatOfAction(StringView action) {
             if (action.size() != kSetSeatPrefix.size() + 1 || action.substr(0, kSetSeatPrefix.size()) != kSetSeatPrefix) {
                 return std::nullopt;
@@ -81,7 +80,6 @@ namespace BECore::Mahjong {
             return IsSeat(seat) ? Optional<Seat>(seat) : std::nullopt;
         }
 
-        /// The seat that `MahjongSetSeatLevelN` is about; nullopt for another action.
         Optional<Seat> SeatOfLevelAction(StringView action) {
             if (action.size() != kSetSeatLevelPrefix.size() + 1 || action.substr(0, kSetSeatLevelPrefix.size()) != kSetSeatLevelPrefix) {
                 return std::nullopt;
@@ -134,7 +132,6 @@ namespace BECore::Mahjong {
         _newGameWordPublished = true;
         _newGameWordRoom = room;
         _newGameWordStrings = stringsVersion;
-        // The button of the HUD menu and of the standings: in a room it leaves the room instead of dealing a new match
         const String word = Tr(CoreManager::GetUIStrings(), room ? "hud.leaveRoom" : "hud.newGame");
         CoreManager::GetUIVars().Set("newGameWord"_intern, StringView(word));
     }
@@ -199,8 +196,7 @@ namespace BECore::Mahjong {
         const Match& match = game->GetMatch();
         const HandModel& hand = match.Hand();
         UIVars& vars = CoreManager::GetUIVars();
-        // The line under the discards: in a room the connection or a word of the client first; else the last move, in words, only while a hand is
-        // played and has a move (the end screens speak after it)
+        // In a room the connection or a word of the client comes first; the end screens speak after the last move, so it shows only while a hand is played
         String lastMove;
         if (game->IsOnlineTable()) {
             lastMove = RoomLine(*game, strings);
@@ -214,7 +210,6 @@ namespace BECore::Mahjong {
         vars.Set("lastMove"_intern, StringView(lastMove));
         ShowMoveLine(!lastMove.empty());
 
-        // The plates' names and the centre panel, by screen position: the seat there, its wind letter and its score
         const auto plates = MakeSeatPlates(strings, session, match);
         const CenterPanelText panel = MakeCenterPanel(strings, session, match);
         vars.Set("panelRound"_intern, StringView(panel.round));
@@ -243,7 +238,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishSeatLevels() {
-        // The dropdown of a seat is there exactly while the seat is a computer; the level of a person's seat is kept, only not shown
+        // A person's seat keeps its level, only not shown
         UIVars& vars = CoreManager::GetUIVars();
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const StringView text = LevelText(_pendingLevels[seat]);
@@ -253,7 +248,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishHandsChoice() const {
-        // The number as text, also a number the panel does not offer: then no segment is selected
+        // A number the panel does not offer selects no segment
         CoreManager::GetUIVars().Set("handsChoice"_intern, _pendingHands);
     }
 
@@ -269,7 +264,7 @@ namespace BECore::Mahjong {
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
-            _pending = game->GetSeats();  // the panel opens on the seats of the last match
+            _pending = game->GetSeats();
             _pendingLevels = game->GetLevels();
             PublishSeatKinds();
             _pendingHands = game->GetSettings().handsPerMatch;
@@ -336,7 +331,7 @@ namespace BECore::Mahjong {
         const OnlineClient* room = game.IsOnlineTable() ? game.FindOnline() : nullptr;
         HandSettlement settlement = SettleHand(match.Hand());
         if (room != nullptr && room->Table().result.has_value()) {
-            // A display hand does not know everything the room scored with (`Online/CLAUDE.md`): the points are the server's
+            // A display hand does not know everything the room scored with (`src/Mahjong/Online/CLAUDE.md`): the points are the server's
             settlement.scores = room->Table().result->scores;
             settlement.deltas = room->Table().result->deltas;
         }
@@ -365,10 +360,9 @@ namespace BECore::Mahjong {
             vars.Set(PoolString::Intern(Format("scoreLine{}", i)), has ? StringView(table.lines[i]) : StringView());
         }
         ShowScoreLines(static_cast<int>(table.lines.size()));
-        // The last hand of the match ends it: the button says so
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
         vars.Set("handOverButton"_intern, StringView(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
-        // The row under the lines: in a room how many have read the plate (the coach is off there), else the coach's tally
+        // In a room how many have read the plate (the coach is off there), else the coach's tally
         String tally;
         if (room != nullptr) {
             tally = ReadyText(strings, room->Table());
@@ -551,7 +545,6 @@ namespace BECore::Mahjong {
         if (event.key != SDLK_ESCAPE || event.repeat) {
             return;
         }
-        // Escape closes the page `Options` or `Setup`, whichever is open; with neither open it is not ours
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr || game->IsOnlineOpen()) {
             return;  // the online panel owns Escape while it is up (`MahjongOnlineComponent`)
@@ -574,7 +567,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::SendNextHand(MahjongGame& game) {
-        // The server's own `next_hand` of the list now; none listed (already sent, the hand moved on, the link is down) and the click is ignored
+        // None listed (already sent, the hand moved on, the link is down) and the click is ignored
         OnlineClient& client = game.GetOnline();
         const auto& actions = client.Table().actions;
         for (size_t i = 0; i < actions.size(); ++i) {
@@ -594,28 +587,26 @@ namespace BECore::Mahjong {
         const StringView action = event.action.ToStringView();
         if (action == kNewGameAction) {
             if (game->IsOnlineTable()) {
-                LeaveRoom(*game);  // the room's table has no new game: the button leaves, and the end of the table opens `Setup`
+                LeaveRoom(*game);  // the end of the table, not the click, opens `Setup`
             } else {
                 game->OpenSetup();
             }
             return;
         }
         if (action == kOptionsAction) {
-            // The HUD button: under the dim of the seat choice or behind the rules it cannot be pressed, an event that says otherwise is
-            // out of date
+            // Under `Setup` or behind the rules the button cannot be pressed: such an event is out of date
             if (!game->IsSetupOpen() && !game->IsRulesOpen()) {
                 game->OpenOptions();
             }
             return;
         }
         if (action == kOptionsBackAction) {
-            game->CloseOptions();  // a click while the page is closed finds it closed
+            game->CloseOptions();
             return;
         }
         if (action == kRulesAction) {
-            // The HUD button, or the button of the page `Options` (the page gives way to the rules). Under the dim of `Setup`, the online panel or
-            // the rules themselves it cannot be pressed, an event that says otherwise is out of date. Over the score table and the standings
-            // the button is hidden, but an event of a control client is taken there: the rules open over them
+            // Under `Setup`, the online panel or the rules the button cannot be pressed: such an event is out of date. Over the score table
+            // and the standings it is hidden, but an event of a control client is taken: the rules open over them
             if (game->IsOptionsOpen() || !game->IsTablePaused()) {
                 game->CloseOptions();
                 if (!game->IsRulesOpen()) {
@@ -626,7 +617,6 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetSpeedAction) {
-            // The page is where the speed is set; client text is parsed by `TryParseSpeed`, anything else is ignored
             const StringView text = event.value.ToStringView();
             const Optional<AnimationSpeed> speed = TryParseSpeed(text);
             if (game->IsOptionsOpen() && speed) {
@@ -636,8 +626,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetLanguageAction) {
-            // The language row is on the page: a click that arrives while the page is closed is out of date. The game keeps the language
-            // and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
+            // An id the table does not have changes nothing, and `PublishLanguage` shows the language the game really has
             if (game->IsOptionsOpen()) {
                 game->SetLanguage(event.value);
                 PublishLanguage(*game);
@@ -645,7 +634,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kRulesNextAction || action == kRulesBackAction || action == kRulesCloseAction) {
-            // The pages turn only while they are open: a click that arrives after a control action closed them is out of date
+            // A click after a control action closed the screen is out of date
             if (!game->IsRulesOpen()) {
                 return;
             }
@@ -672,17 +661,15 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetupCloseAction) {
-            // The cross only goes back to where the player was: nothing of the pending choice is applied, nothing starts
             game->CloseSetup();
             return;
         }
         if (action == kContinueAction) {
-            game->ContinueMatch();  // ignored by the game when there is nothing to continue
+            game->ContinueMatch();
             return;
         }
         if (action == kStartAction) {
-            // The seats and the number of hands are the game's only when the match began with them (every other setting stays as it
-            // is); a refusal leaves the choice open on the old ones
+            // The pending choices become the game's only when the match began with them; a refusal puts the old ones back
             const SeatSetup seatsBefore = game->GetSeats();
             const SeatLevels levelsBefore = game->GetLevels();
             const MahjongSettings settingsBefore = game->GetSettings();
@@ -700,7 +687,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetHandsAction) {
-            // Only the two numbers the panel offers; client text is never parsed into another number
+            // Client text is never parsed into a number the panel does not offer
             const StringView value = event.value.ToStringView();
             if (value == kFullHandsId || value == kShortHandsId) {
                 _pendingHands = value == kFullHandsId ? kFullMatchHands : kShortMatchHands;
@@ -709,7 +696,6 @@ namespace BECore::Mahjong {
             return;
         }
         if (const Optional<Seat> levelSeat = SeatOfLevelAction(action)) {
-            // Only `1` .. `10` (`TryParseLevel`); the level is the panel's until `Start`
             const StringView text = event.value.ToStringView();
             if (const Optional<ComputerLevel> level = TryParseLevel(text)) {
                 _pendingLevels[*levelSeat] = *level;
