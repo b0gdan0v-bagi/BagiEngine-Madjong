@@ -9,37 +9,32 @@
 
 namespace BECore::Mahjong {
 
-    /// The id of the game in a save file (`SaveSchema::game`)
+    /// The id of the game in a save file (`SaveSchema::game`): part of the file format, never renamed
     inline constexpr StringView kMahjongSaveGame = "Mahjong";
 
-    /// The version of the state schema that is written now
+    /// Bumped when a field changes meaning; a new field needs none
     inline constexpr uint32_t kMahjongSaveVersion = 1;
 
-    /// The oldest version that is still read
+    /// The oldest version still read
     inline constexpr uint32_t kMahjongSaveMinVersion = 1;
 
-    /// What the save game service gets for both slots
+    /// What the save game service gets for every slot
     inline constexpr SaveSchema kMahjongSaveSchema{kMahjongSaveGame, kMahjongSaveVersion, kMahjongSaveMinVersion};
 
-    /// The slot of the match in progress and the slot of the choices of `Setup`
+    /// The slot names are the file names of saves already on a player's disk
     inline constexpr StringView kMatchSlot = "match";
     inline constexpr StringView kPrefsSlot = "settings";
-    /// The slot of the online play: the player's name and the session of the room to return to
     inline constexpr StringView kOnlineSlot = "online";
 
-    /// The most lines a saved match may have: a sanity cap on what is parsed (a 16-hand match of four players is a few thousand events)
+    /// A sanity cap on what is parsed, far above a 16-hand match
     inline constexpr size_t kMaxSavedEvents = 50000;
 
     /**
-     * @brief The match in progress as it is saved: the text of `MatchSaveText`, one JSON line per event.
-     *
-     * A log and not the table: the resume replays the actions on a fresh match (`TableSession::ResumeMatch`), and the settlements in
-     * the text are what the replay checks itself against.
+     * @brief The match in progress as the text of `MatchSaveText`: a log, not the table (`src/Mahjong/Save/CLAUDE.md`, "What is stored").
      */
     struct MahjongMatchSave {
         BE_CLASS(MahjongMatchSave)
 
-        /// The `Start`, `Action` and `Settlement` events of the match, one line each (`MatchSaveText`)
         BE_REFLECT_FIELD String log;
 
         bool operator==(const MahjongMatchSave& other) const {
@@ -48,32 +43,28 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The seven choices of the `Setup` panel and the `Options` page, saved so that the game opens on them. No rule that a control `reset` alone can set
-     * (`flowers`, `limit`, `replayDrawnHand`, `startingScore`) is here: the match slot has the settings of its match.
+     * @brief The choices of the `Setup` panel and the `Options` page. Rules only a control `reset` can set are not here: the match slot
+     * has the settings of its match.
      *
      * Adding a field needs no version (an old file keeps the default); changing what a field means does (`kMahjongSaveVersion`).
      */
     struct MahjongPrefsSave {
         BE_CLASS(MahjongPrefsSave)
 
-        /// The id of the language of the string table ("en", "ru"); the game checks it against the table
+        /// Checked by the game against the string table
         BE_REFLECT_FIELD String language = "en";
-        /// The hints switch
         BE_REFLECT_FIELD bool hintsOn = true;
-        /// The coach's notes (`HintsMode::Coach`); implies `hintsOn`, a copy written before the mode reads false
+        /// `HintsMode::Coach`; implies `hintsOn`; a file without it reads false
         BE_REFLECT_FIELD bool coach = false;
-        /// Who plays each seat, four letters as in the control `reset`: P a person, C a computer
+        /// Four letters as in the control `reset`: P a person, C a computer
         BE_REFLECT_FIELD String seats = "PCCC";
-        /// 16 or 8
         BE_REFLECT_FIELD int32_t hands = kFullMatchHands;
-        /// The level of the computer players, its number as text `1` .. `10` (`LevelText`); a copy of an older build holds `easy` or
-        /// `normal` (`TryParseLevelName`)
+        /// `LevelText`; an older file holds `easy` or `normal` (`TryParseLevelName`)
         BE_REFLECT_FIELD String level = "5";
-        /// The level of each seat, four numbers `1` .. `10` separated by commas ("5,2,6,10", seat 0 first; a person's seat too). Empty: all
-        /// four seats are at `level`, which is what an older copy and a table of one level hold (`MakePrefs` leaves it empty then). When it
-        /// is not empty it wins; `level` then holds the level of the lowest computer seat.
+        /// Four numbers, seat 0 first ("5,2,6,10"). Empty means all four seats are at `level` (an older file); when set it wins and
+        /// `level` is the lowest computer seat's.
         BE_REFLECT_FIELD String levels;
-        /// The speed of the table (`SpeedText`: `slow` | `normal` | `fast`); a copy written before the setting holds the default
+        /// `SpeedText`; a file without it holds the default
         BE_REFLECT_FIELD String speed = "normal";
 
         bool operator==(const MahjongPrefsSave& other) const {
@@ -83,17 +74,17 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The online play as it is saved: the name the player typed and the session of the room they may come back to (`Online/OnlineClient.h`).
+     * @brief The player's name and the session of the room they may come back to (`src/Mahjong/Online/OnlineClient.h`).
      *
-     * **The session holds the token, a secret**: the slot is a plain file like the others (`Save/CLAUDE.md`) and the token goes nowhere
-     * else, never into a log line or a message. Adding a field needs no version.
+     * **The session holds the token, a secret**: the slot is a plain file like the others (`src/Mahjong/Save/CLAUDE.md`) and the token
+     * goes nowhere else, never into a log line or a message. Adding a field needs no version.
      */
     struct MahjongOnlineSave {
         BE_CLASS(MahjongOnlineSave)
 
-        /// The player's name as the fields hold it (UTF-8); empty when none was typed
+        /// UTF-8; empty when none was typed
         BE_REFLECT_FIELD String name;
-        /// The session as the JSON text of `SessionToJson` (`url`, `room`, `token`); empty when no room is kept
+        /// The JSON text of `SessionToJson`; empty when no room is kept
         BE_REFLECT_FIELD String session;
 
         bool operator==(const MahjongOnlineSave& other) const {
@@ -101,13 +92,13 @@ namespace BECore::Mahjong {
         }
     };
 
-    /// What `MahjongOnlineSave` holds, checked and in the types the game uses: a name (empty: none) and a session (`IsValid()` false: none).
+    /// `MahjongOnlineSave`, checked: an empty name and an invalid session mean none.
     struct OnlineValues {
         String name;
         RoomSession session;
     };
 
-    /// The choices of `MahjongPrefsSave`, checked and in the types the game uses.
+    /// `MahjongPrefsSave`, checked.
     struct PrefsValues {
         String language;
         HintsMode hintsMode = kDefaultHintsMode;
@@ -118,46 +109,40 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The text of a match for the slot: the `Start`, `Action` and `Settlement` events of `events`, one `EventToJson` line each
-     * (the form of `MatchLogJson.h`, ending in a newline), with no `Hand` and `End` events (the replay deals again and ends the match)
-     * and no `seats` (the breakdowns) in a settlement (reading does not need them). Events of another kind are skipped.
+     * @brief The `Start`, `Action` and `Settlement` events as `EventToJson` lines (`MatchLogJson.h`). `Hand` and `End` are skipped (the
+     * replay deals and ends again), as are the breakdowns of a settlement.
      */
     [[nodiscard]] String MatchSaveText(const Vector<MatchLogEvent>& events);
 
     /**
-     * @brief The events of a saved text, or the error: the line number and what is wrong (not JSON, a member missing or wrong), that the
-     * first event is not a `Start`, that a `Hand` or `End` line is there, or that there are more than `kMaxSavedEvents` lines. Nothing is
-     * replayed here; `ReplayMatchLog` decides whether the match comes out.
+     * @brief The events of a saved text, or the line number and what is wrong. Nothing is replayed here; `ReplayMatchLog` decides
+     * whether the match comes out.
      */
     [[nodiscard]] std::expected<Vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text);
 
-    /// The state of the prefs slot from the choices of the game (`coach` implies `hintsOn`).
+    /// `coach` implies `hintsOn`.
     [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed = kDefaultAnimationSpeed,
                                              bool coach = false);
-    /// The same for a table of one level.
+    /// A table of one level.
     [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed,
                                              bool coach = false);
 
-    /// The choices of a prefs state (`coach` wins over `hintsOn`: Coach, else Hints or Off), or the first thing wrong: seats not four letters P / C, a `levels` text that is not four numbers `1` ..
-    /// `10`, a level that is not `1` .. `10` (or the old names `easy` / `normal`; not read when `levels` is there), a speed that is not `slow` / `normal` / `fast`, hands other than 16 and 8, an empty
-    /// language.
+    /// The choices of a prefs state (`coach` wins over `hintsOn`), or the first thing wrong; `level` is not read when `levels` is there.
     [[nodiscard]] std::expected<PrefsValues, String> ReadPrefs(const MahjongPrefsSave& prefs);
 
-    /// The state of the online slot: @p session invalid keeps no room.
+    /// An invalid @p session keeps no room.
     [[nodiscard]] MahjongOnlineSave MakeOnlineSave(StringView name, const RoomSession& session);
 
-    /// The values of an online state, or the first thing wrong: a name that `SanitizePlayerName` refuses, or a session text that is not a
-    /// room and a token (`SessionFromJson`). The error never repeats the token.
+    /// The values, or the first thing wrong (a name `SanitizePlayerName` refuses, a session `SessionFromJson` refuses). The error never
+    /// repeats the token.
     [[nodiscard]] std::expected<OnlineValues, String> ReadOnline(const MahjongOnlineSave& save);
 
     /**
-     * @brief The sink of a session that keeps the match for the save: the `Start`, `Action` and `Settlement` events of the current match.
+     * @brief The sink that keeps the events of the current match for the save.
      *
-     * Every event is first passed on to the next sink (`SetNext`, the match log writer), recorded or not. A `Start` clears the kept
-     * events; the other events are kept only in a match that was begun while `IsRecording()` (set by `SetRecording`, copied by a
-     * `Start`, so a change applies to the matches that begin after it). `Counter()` grows with every kept event and with every `Start`
-     * and `End`, so a writer that remembers the last counter it saved knows when something is new, whatever the number of events
-     * between two looks. `Finished()` is true from an `End` to the next `Start`.
+     * Every event is first passed on to the next sink, recorded or not. `SetRecording` applies to the matches that begin after it (a
+     * `Start` copies it). `Counter()` grows with every kept event, `Start` and `End`, so a writer that remembers the last counter it
+     * saved knows when something is new.
      *
      * Not thread safe (the thread that drives the table).
      */
@@ -170,23 +155,22 @@ namespace BECore::Mahjong {
             _next = next;
         }
 
-        /// Whether the matches that begin from now on are kept
         void SetRecording(bool recording) noexcept {
             _wantRecording = recording;
         }
-        /// Whether the match in progress is being kept (the flag as it was at its `Start`)
+        /// The flag as it was at the `Start` of the match in progress
         [[nodiscard]] bool IsRecording() const noexcept {
             return _recording;
         }
 
-        /// The `Start`, `Action` and `Settlement` events of the current match; empty for a match that is not kept
+        /// Empty for a match that is not kept
         [[nodiscard]] const Vector<MatchLogEvent>& Events() const noexcept {
             return _events;
         }
         [[nodiscard]] uint64_t Counter() const noexcept {
             return _counter;
         }
-        /// Whether the `End` of the match was seen
+        /// True from an `End` to the next `Start`
         [[nodiscard]] bool Finished() const noexcept {
             return _finished;
         }

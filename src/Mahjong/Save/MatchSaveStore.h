@@ -5,30 +5,24 @@
 
 namespace BECore::Mahjong {
 
-    /// The default save folder: `kWebSaveDirectory` (the engine's persistent folder of the page) in the browser build, whatever the
-    /// environment says, else `fromEnvironment` when it is not null (an empty value switches saving off), else `saves`.
-    /// `fromEnvironment` is the value of `BAGI_MAHJONG_SAVE_DIR` or null. Pure, so a test can drive both builds.
+    /// `kWebSaveDirectory` in the browser build whatever the environment says, else `fromEnvironment` (the value of
+    /// `BAGI_MAHJONG_SAVE_DIR` or null; empty switches saving off), else `saves`. Pure, so a test can drive both builds.
     [[nodiscard]] std::filesystem::path DefaultMatchSaveDirectory(bool browser, const char* fromEnvironment);
 
-    /// The folder the saves are written to, relative to the working directory unless absolute. The default is
-    /// `DefaultMatchSaveDirectory` (`saves`, or `BAGI_MAHJONG_SAVE_DIR`; `/bagi/saves` in the browser). An empty path switches saving
-    /// off. Process-wide: `MahjongGame` reads it when it opens its store.
+    /// Defaults to `DefaultMatchSaveDirectory`; an empty path switches saving off. Process-wide: `MahjongGame` reads it when it opens its store.
     [[nodiscard]] const std::filesystem::path& MatchSaveDirectory();
     void SetMatchSaveDirectory(std::filesystem::path directory);
 
-    /// Whether a save written under this state is there at the next visit: false only for `NotRemembered` (a browser whose storage
-    /// lives in memory, e.g. a private window). Pure.
+    /// False only for `NotRemembered` (a browser whose storage lives in memory, e.g. a private window). Pure.
     [[nodiscard]] constexpr bool SaveStorageRemembers(SaveStorageState state) noexcept {
         return state != SaveStorageState::NotRemembered;
     }
 
-    /// What the storage makes of the save folder, as `MahjongGame` reads it at `Start()`: `GetSaveStorageState()` of the engine
-    /// (`NotApplicable` off the browser) unless a test plays one with `SetMatchSaveStorage`; nullopt restores the engine's answer.
+    /// The engine's `GetSaveStorageState()` unless a test plays one with `SetMatchSaveStorage` (nullopt restores the engine's answer).
     [[nodiscard]] SaveStorageState MatchSaveStorage();
     void SetMatchSaveStorage(Optional<SaveStorageState> state);
 
-    /// Why a slot could not be read: `Missing` is the usual case (nothing saved yet, or saving is off), `Broken` is a file that is there
-    /// and cannot be used (damaged, of another game or version, or a state whose text is wrong); `detail` says what.
+    /// `Missing` is the usual case (nothing saved, or saving is off); `Broken` is a file that is there and cannot be used.
     CORE_ENUM(SaveProblemKind, uint8_t, Missing, Broken)
 
     struct SaveProblem {
@@ -37,42 +31,35 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The three slots of Mahjong (`match`, `settings` and `online`, `MatchSave.h`) over a `SaveGameService`.
+     * @brief The three slots of `MatchSave.h` over a `SaveGameService`; the game owns the store.
      *
-     * `Open(directory)` makes the folder and mounts it; an empty directory means saving is off, and then every call does nothing and
-     * answers "nothing there" (`Missing`, false). The store never throws and never fails the game: a folder that cannot be made, a
-     * write that fails or a file that cannot be read is one warning (a write) or a `SaveProblem` (a read) and the game goes on.
-     * Not thread safe (the main thread).
+     * With saving off every call does nothing and answers "nothing there". It never fails the game: a failed write is one warning
+     * and leaves the old file, a failed read is a `SaveProblem`. Not thread safe (the main thread).
      */
     class MatchSaveStore {
     public:
         explicit MatchSaveStore(FileSystem& fileSystem) : _service(fileSystem) {}
 
-        /// Opens (makes and mounts) `directory`. Asking again for the directory that is open, or that has failed, does nothing, so it is
-        /// cheap to call every frame. False, and one warning, when the folder cannot be made; an empty path is not an error and leaves
-        /// saving off.
+        /// Asking again for the directory that is open, or that has failed, does nothing, so it is cheap to call every frame. False, and
+        /// one warning, when the folder cannot be made; an empty path leaves saving off and is not an error.
         bool Open(const std::filesystem::path& directory);
 
-        /// Whether saves are written and read: a directory was opened.
         [[nodiscard]] bool IsOn() const noexcept {
             return _ready;
         }
 
-        /// The `Start`, `Action` and `Settlement` events of a match into the `match` slot. False, and one warning, when it was not written.
+        /// False, and one warning, when it was not written.
         bool SaveMatch(const Vector<MatchLogEvent>& events);
-        /// The events of the `match` slot, parsed (`ParseMatchSaveText`; whether they replay is for `ReplayMatchLog` to say).
+        /// Parsed only (`ParseMatchSaveText`); whether they replay is for `ReplayMatchLog`.
         [[nodiscard]] std::expected<Vector<MatchLogEvent>, SaveProblem> LoadMatch() const;
-        /// Removes the `match` slot (nothing when there is none).
         void ClearMatch();
 
         bool SavePrefs(const MahjongPrefsSave& prefs);
         [[nodiscard]] std::expected<MahjongPrefsSave, SaveProblem> LoadPrefs() const;
 
-        /// The `online` slot: the name and the session of a room (**a secret**, `MahjongOnlineSave`). `LoadOnline` is checked by
-        /// `ReadOnline`: a session that is not a room and a token is `Broken` (the detail never holds the token).
+        /// The session is **a secret** (`MahjongOnlineSave`); `LoadOnline` is checked by `ReadOnline`, and its `Broken` detail never holds the token.
         bool SaveOnline(const MahjongOnlineSave& save);
         [[nodiscard]] std::expected<OnlineValues, SaveProblem> LoadOnline() const;
-        /// Removes the `online` slot (nothing when there is none).
         void ClearOnline();
 
     private:
@@ -80,9 +67,9 @@ namespace BECore::Mahjong {
         bool Write(StringView slot, const State& state);
 
         SaveGameService _service;
-        std::filesystem::path _directory;  // the directory last asked for, also when it failed
+        std::filesystem::path _directory;  // also when opening failed
         bool _asked = false;
-        bool _ready = false;  // the directory is not empty and was opened
+        bool _ready = false;
     };
 
 }  // namespace BECore::Mahjong
