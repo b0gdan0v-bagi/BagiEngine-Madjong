@@ -5,7 +5,7 @@
 
 The game is started twice, once on the real clock and once with --manual-clock (game time moves only on `step`), headless (no window).
 Both runs play the same scenario: the methods of the control API, one whole hand chosen at random among `list_actions`, and a match of
-eight hands between four computers driven by `next_hand` alone; then the scene: the UI tree (the HUD, the seat choice closed by a reset,
+eight hands between four computers driven by `next_hand` alone; `set_state` (a robbing window, the last hand, a log prefix, bad requests); then the scene: the UI tree (the HUD, the seat choice closed by a reset,
 the score table of a finished hand and the standings of a finished match, shown and hidden by the game), a screenshot of the table and,
 on the manual clock, the screenshots of two seeds. Then the games are started again on the same save folder (a real restart: the previous game
 quits first) to see the match saved by one come back in the next with `Continue`, a finished match not offered, and a broken save ignored.
@@ -224,6 +224,146 @@ def play_mahjong(client: BagiControlClient) -> None:
 
     check_level(client)
     check_seat_levels(client)
+    check_set_state(client)
+
+
+HANDOFF_COVER = {"Handoff"}
+
+# `set_state` positions. A tile list is one notation text.
+ROBBING_DEAL = {
+    "hands": [
+        "5p 7p 8p 9p 4s 5s 6s 7s 8s 9s Ww Ww Nw",
+        "5p 5p 1m 2m 3m 4m 5m 6m Sw Sw Wd Wd Gd",
+        "1p 2p 3p 2m 3m 4m 6s 6s 6s Rd Wd Sw Ww",
+        "3p 4p 1s 2s 3s 7m 8m 9m Ew Ew Ew Rd Rd",
+    ],
+    "live": "1s 9s Nw Gd 5p",
+    "east": 0,
+}
+# Seat 1 pungs the 5p of seat 0, draws the fourth one and upgrades; seat 3 waits on it.
+ROBBING_ACTIONS = [
+    {"type": "discard", "tile": "5p", "declareCalling": False},
+    {"type": "claim", "claim": "pung"},
+    {"type": "discard", "tile": "Gd", "declareCalling": False},
+    {"type": "discard", "tile": "9s", "declareCalling": False},
+    {"type": "discard", "tile": "Nw", "declareCalling": True},
+    {"type": "discard", "tile": "Gd", "declareCalling": False},
+    {"type": "upgrade_kong", "tile": "5p"},
+]
+# Seat 0 holds four pungs of honours and wins on its second draw
+LIMIT_DEAL = {
+    "hands": [
+        "Ew Ew Ew Sw Sw Sw Ww Ww Ww Rd Rd Rd Nw",
+        "2p 5p 8p 2s 5s 8s 2m 5m 8m 3s 6s 9p 4m",
+        "3p 6p 9p 3s 6s 9s 3m 6m 9m 4p 7s 5m 1m",
+        "4p 7p 1s 4s 7s 1m 7m 9m 3m 6m 8s 5p 2m",
+    ],
+    "live": "Gd Wd 1p 9s Nw",
+    "east": 0,
+}
+LIMIT_ACTIONS = [
+    {"type": "discard", "tile": "Gd", "declareCalling": True},
+    {"type": "discard", "tile": "Wd", "declareCalling": False},
+    {"type": "discard", "tile": "1p", "declareCalling": False},
+    {"type": "discard", "tile": "9s", "declareCalling": False},
+    {"type": "win"},
+]
+# The log of a short match from ROBBING_DEAL by four people (the control API gives no log): the start with its state, the hand, three actions
+LOG_LINES = [
+    '{"build":"","event":"start","gameVersion":"","levels":[5,5,5,5],"platform":"unknown","seats":"PPPP","seed":1,"settings":{"flowers":false,"handsPerMatch":8,"limit":500,"replayDrawnHand":true,"startingScore":2000},"state":{"deal":{"east":0,"hands":[["5p","7p","8p","9p","4s","5s","6s","7s","8s","9s","Ww","Ww","Nw"],["5p","5p","1m","2m","3m","4m","5m","6m","Sw","Sw","Wd","Wd","Gd"],["1p","2p","3p","2m","3m","4m","6s","6s","6s","Rd","Wd","Sw","Ww"],["3p","4p","1s","2s","3s","7m","8m","9m","Ew","Ew","Ew","Rd","Rd"]],"live":["1s","9s","Nw","Gd","5p"],"loose":[]},"handsPlayed":0,"scores":[2000,2000,2000,2000]},"version":7}',
+    '{"deal":[{"bonus":[],"concealed":["5p","7p","8p","9p","1s","4s","5s","6s","7s","8s","9s","Ww","Ww","Nw"]},{"bonus":[],"concealed":["5p","5p","1m","2m","3m","4m","5m","6m","Sw","Sw","Wd","Wd","Gd"]},{"bonus":[],"concealed":["1p","2p","3p","6s","6s","6s","2m","3m","4m","Sw","Ww","Rd","Wd"]},{"bonus":[],"concealed":["3p","4p","1s","2s","3s","7m","8m","9m","Ew","Ew","Ew","Rd","Rd"]}],"east":0,"event":"hand","number":0,"roundWind":"East","winds":["East","South","West","North"]}',
+    '{"action":{"declareCalling":false,"tile":"5p","type":"discard"},"by":"person","event":"action","seat":0}',
+    '{"action":{"claim":"pung","type":"claim"},"by":"person","event":"action","seat":1}',
+    '{"action":{"declareCalling":false,"tile":"Gd","type":"discard"},"by":"person","event":"action","seat":1}',
+]
+LOG_TEXT = "\n".join(LOG_LINES) + "\n"
+LOG_EVENTS_AT_CLAIM = 4  # the start, the hand, the discard of 5p and the pung: seat 1 has to discard
+
+
+def check_set_state(client: BagiControlClient) -> None:
+    """`set_state` begins a match from a position: a fixed deal (a robbing window reached by the actions of the table, the last hand of a
+    match played to its end), or a prefix of a match log. A bad request changes nothing. No frame is stepped here (the manual clock's
+    first scenario part counts them): the screens are `check_set_state_screens`."""
+    people = {"seats": "PPPP", "settings": {"handsPerMatch": SHORT_MATCH_HANDS}}
+
+    client.call("set_state", {**people, "deal": ROBBING_DEAL})
+    state = get_state(client)
+    check_state_shape(state)
+    check(state["phase"] == "playing" and state["seat"] == 0 and state["handsPlayed"] == 0, f"a set deal is not the first hand of seat 0: {state['phase']}")
+    check(state["hand"].count("5p") == 1 and state["handsTotal"] == SHORT_MATCH_HANDS, f"the set deal is not the one asked for: {state['hand']}")
+    for action in ROBBING_ACTIONS:
+        check(action in client.call("list_actions")["actions"], f"{action} is not listed on the way to the robbing window")
+        client.call("perform_action", action)
+    state = get_state(client)
+    check(state["turn"]["phase"] == "rob_kong" and state["turn"]["pendingTile"] == "5p" and state["seat"] == 3, f"no robbing window for seat 3: {state['turn']}")
+    check({"type": "claim", "claim": "mahjong"} in client.call("list_actions")["actions"], "mahjong is not offered in the robbing window")
+    client.call("perform_action", {"type": "claim", "claim": "mahjong"})
+    result = get_state(client)["result"]
+    check(result["winner"] == 3 and result["source"] == "robbed_kong", f"the robbed kong was settled as {result['source']}")
+
+    # The last hand of the match: the hand ends the match
+    client.call("set_state", {**people, "deal": LIMIT_DEAL, "handsPlayed": SHORT_MATCH_HANDS - 1, "scores": [100, 200, 300, 400]})
+    state = get_state(client)
+    check(state["handsPlayed"] == SHORT_MATCH_HANDS - 1 and [seat["score"] for seat in state["seats"]] == [100, 200, 300, 400], "the set counts and scores are not in the state")
+    for action in LIMIT_ACTIONS:
+        client.call("perform_action", action)
+    check(get_state(client)["phase"] == "hand_over", "the winning hand did not end")
+    client.call("perform_action", {"type": "next_hand"})
+    state = get_state(client)
+    check(state["phase"] == "match_over" and state["handsPlayed"] == SHORT_MATCH_HANDS, f"the last hand left the match {state['phase']}")
+
+    # A prefix of a log, cut inside a hand; the match goes on from there
+    client.call("set_state", {"log": LOG_TEXT, "until": LOG_EVENTS_AT_CLAIM, "seats": "PPPP"})
+    state = get_state(client)
+    check(state["phase"] == "playing" and state["seat"] == 1 and state["turn"]["phase"] == "discard", f"the log cut at the pung left {state['phase']} {state['turn']}")
+    check(state["seats"][1]["melds"][0]["kind"] == "pung", "the pung of seat 1 is not on the table")
+    client.call("perform_action", {"type": "discard", "tile": "Gd", "declareCalling": False})
+    check(get_state(client)["seat"] == 2, "the match did not go on after a log prefix")
+    client.call("set_state", {"log": LOG_TEXT, "seats": "PPPP"})
+    check(get_state(client)["seat"] == 2, "a whole log does not leave the table where the log ends")
+
+    # Bad requests: invalid_params and the state, version included, as it was
+    version = client.call("get_state")["version"]
+    short_hand = {**ROBBING_DEAL, "hands": [ROBBING_DEAL["hands"][0][:-3]] + ROBBING_DEAL["hands"][1:]}
+    fifth_copy = {**ROBBING_DEAL, "live": "5p 5p 5p"}
+    bad_requests = [
+        {},
+        {"deal": ROBBING_DEAL, "log": LOG_TEXT},
+        {"deal": short_hand},
+        {"deal": fifth_copy},
+        {"deal": {**ROBBING_DEAL, "east": 4}},
+        {"deal": ROBBING_DEAL, "handsPlayed": -1},
+        {"deal": ROBBING_DEAL, "handsPlayed": SHORT_MATCH_HANDS},
+        {"deal": ROBBING_DEAL, "scores": [1, 2, 3]},
+        {"deal": ROBBING_DEAL, "level": 3, "levels": [1, 2, 3, 4]},
+        {"deal": ROBBING_DEAL, "settings": {"handsPerMatch": 10}},
+        {"log": LOG_TEXT, "until": 0},
+        {"log": LOG_TEXT, "until": len(LOG_LINES) + 1},
+        {"log": LOG_TEXT, "scores": [1, 2, 3, 4]},
+        {"log": "not a log"},
+        {"log": LOG_TEXT.replace('"tile":"5p"', '"tile":"1m"')},
+    ]
+    for bad in bad_requests:
+        expect_error("invalid_params", lambda bad=bad: client.call("set_state", bad), f"set_state {str(bad)[:80]}")
+    check(client.call("get_state")["version"] == version, "a refused set_state changed the state")
+
+
+def check_set_state_screens(client: BagiControlClient) -> None:
+    """After `set_state` the seat choice is closed and the table is shown; the end of a set match shows the standings."""
+    people = {"seats": "PPPP", "settings": {"handsPerMatch": SHORT_MATCH_HANDS}}
+    client.call("set_state", {**people, "deal": ROBBING_DEAL})
+    shown, tree = screens_shown(client)
+    check(shown <= HANDOFF_COVER, f"a set position shows {sorted(shown)}")  # four people share the screen: the cover of the hot seat may be up
+    check_hud(tree, get_state(client))
+    client.call("set_state", {"log": LOG_TEXT, "until": LOG_EVENTS_AT_CLAIM, "seats": "PPPP"})
+    shown, _ = screens_shown(client)
+    check(shown <= HANDOFF_COVER, f"a set log prefix shows {sorted(shown)}")
+    client.call("set_state", {**people, "deal": LIMIT_DEAL, "handsPlayed": SHORT_MATCH_HANDS - 1})
+    for action in LIMIT_ACTIONS:
+        client.call("perform_action", action)
+    client.call("perform_action", {"type": "next_hand"})
+    shown, _ = screens_shown(client)
+    check("MatchOver" in shown and "Setup" not in shown, f"the end of a set match shows {sorted(shown)}")
 
 
 def check_level(client: BagiControlClient) -> None:
@@ -334,6 +474,7 @@ def check_hud(tree: dict[str, Any], state: dict[str, Any]) -> None:
 
 def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random) -> None:
     """The seat choice is closed by a reset, the score table is shown exactly while a hand is over, the standings while the match is."""
+    check_set_state_screens(client)
     client.call("reset", {"seed": SEED, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
     shown, tree = screens_shown(client)
     check("Setup" not in shown, "the seat choice is still open after a reset")
