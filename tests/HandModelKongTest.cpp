@@ -6,9 +6,8 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * The two kongs of a seat's own turn (the open kong of a claim has `HandModelClaimTest`): the concealed kong, the upgraded kong and
- * its robbing window, and the loose tiles the kongs draw. Fixed walls say what every seat holds and draws. Pure logic: no engine
- * services.
+ * The two kongs of a seat's own turn (the open kong of a claim has `HandModelClaimTest`) and the robbing window. Pure logic: no
+ * engine services.
  *
  * The hands below are built so that a discard opens a window only where a test means it to: no two equal tiles in the hands of
  * different seats that a lap could discard, and the laps discard honours.
@@ -392,7 +391,7 @@ namespace BECore::Mahjong::Tests {
         for (const HandAction& action : model.LegalActions(kSeat1)) {
             EXPECT_NE(action.kind, ActionKind::UpgradeKong);
         }
-        ASSERT_TRUE(model.Discard(kSeat1, T(kNextDraw)).has_value());  // the turn goes on
+        ASSERT_TRUE(model.Discard(kSeat1, T(kNextDraw)).has_value());
     }
 
     TEST(HandModelKongTest, ACopyKeptRightAfterAPungClaimCannotUpgradeItEither) {
@@ -529,7 +528,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(result.winner, kSeat2);
         EXPECT_EQ(result.winningTile, T(kFifth));
         EXPECT_EQ(result.source, WinSource::RobbedKong);
-        EXPECT_EQ(result.from, kSeat1);  // the owner of the kong
+        EXPECT_EQ(result.from, kSeat1);
         EXPECT_FALSE(result.loose);
         // The tile was taken from the kong: the owner keeps a pung, the winner holds the tile.
         ASSERT_EQ(model.GetHand(kSeat1).melds.size(), 1u);

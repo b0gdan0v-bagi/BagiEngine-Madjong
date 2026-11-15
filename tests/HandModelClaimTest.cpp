@@ -6,8 +6,7 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * The claim window: who may claim a discard and how, passing, the priority of the claims, the seat that plays after a claim, and
- * winning on a discard. Fixed walls say what every seat holds and draws. Pure logic: no engine services.
+ * The claim window of `HandModel`. Pure logic: no engine services.
  *
  * The hands below are built so that a discard opens a window only where a test means it to: the quiet hands hold no pair and no two
  * tiles of one suit within reach of each other that the lap discards (honours and a few far tiles) could use.
@@ -146,7 +145,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(hand.concealed.size(), static_cast<size_t>(kTilesInHand) - kMeldedByChowOrPung);
         EXPECT_EQ(hand.CountConcealed(T("4p")), 0);
         EXPECT_EQ(hand.CountConcealed(T("6p")), 0);
-        EXPECT_TRUE(model.Discards().empty());  // the claimed tile left the pile
+        EXPECT_TRUE(model.Discards().empty());
         EXPECT_TRUE(model.PendingClaimSeats().empty());
         EXPECT_EQ(model.GetClaimStatus(kSeat1), ClaimStatus::NotInWindow);
 
@@ -311,7 +310,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.CurrentSeat(), kSeat1);
         EXPECT_TRUE(model.GetHand(kSeat2).melds.empty());
         EXPECT_EQ(model.GetHand(kSeat2).CountConcealed(T(kRed)), kPungTilesFromHand + 1);
-        EXPECT_EQ(model.Discards().back().tile, T(kRed));  // nobody took it
+        EXPECT_EQ(model.Discards().back().tile, T(kRed));
         EXPECT_EQ(model.GetHand(kSeat1).concealed.size(), static_cast<size_t>(kTilesInHand) + 1);
     }
 
@@ -366,7 +365,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(result.from, kSeat3);
         EXPECT_FALSE(result.loose);
         EXPECT_FALSE(result.lastLiveTile);
-        EXPECT_EQ(model.Discards().size(), 3u);  // the winning tile left the pile
+        EXPECT_EQ(model.Discards().size(), 3u);
         EXPECT_EQ(model.GetHand(kSeat0).concealed.size(), static_cast<size_t>(kTilesInHand) + 1);
         EXPECT_TRUE(IsWinningShape(CountTiles(model.GetHand(kSeat0).concealed), 0));
         EXPECT_EQ(Error(model.Pass(kSeat0)), HandError::WrongPhase);
@@ -506,7 +505,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.GetPhase(), Phase::Discard);
         EXPECT_EQ(model.CurrentSeat(), kSeat0);
         EXPECT_EQ(model.GetHand(kSeat0).concealed.size(), static_cast<size_t>(kTilesInHand) + 1);
-        EXPECT_EQ(model.Discards().back().tile, T(kPriorityTile));  // nobody took it
+        EXPECT_EQ(model.Discards().back().tile, T(kPriorityTile));
         EXPECT_TRUE(model.PendingClaimSeats().empty());
     }
 

@@ -16,9 +16,9 @@
 #include <vector>
 
 /**
- * The pure helper of the hints (`Table/Hints.h`): the waiting row, the discards that declare the calling hand, the advice and its words,
- * the card of the advice in the mode Coach (`Table/HintCard.h`, `MakeAdviceCard`) and the rule that says when hints are on screen. Fixed walls with the answers worked out by hand; the waiting hands
- * are seat 1 (13 tiles) seen while East acts, so no draw is needed. Pure logic: no engine services (the words are the shipped file).
+ * The pure helper of the hints (`Table/Hints.h`, `Table/HintCard.h`). Fixed walls with the answers worked out by hand; the waiting
+ * hands are seat 1 (13 tiles) seen while East acts, so no draw is needed. Pure logic: no engine services (the words are the
+ * shipped file).
  */
 namespace BECore::Mahjong::Tests {
 

@@ -9,7 +9,7 @@
 #include <tests/FixedWall.h>
 
 /**
- * The test helper `FixedWall.h` itself: the layout of the wall, the padding, the cut live wall. Pure logic: no engine services.
+ * The test helper `FixedWall.h` itself. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -137,7 +137,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(wall.LiveCount(), 5U);
         const Vector<Tile> live = wall.LiveTiles();
         EXPECT_EQ(Ids(Vector<Tile>(live.begin(), live.begin() + 2)), Ids("1p 2p"));
-        EXPECT_EQ(live.back().Id(), Ids("1s").front());  // the refill is the last live tile
+        EXPECT_EQ(live.back().Id(), Ids("1s").front());
         EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
 
         // Draining the live wall leaves the reserve and the dead wall.

@@ -173,7 +173,7 @@ namespace BECore::Mahjong::Tests {
             const PlayerHand& held = Hand().GetHand(_table->GetLayout().viewer);
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::HandTile && slot.seat == _table->GetLayout().viewer && tiles[held.concealed[slot.index].Id()]) {
-                    bars.push_back(Rect(slot.rect.x, slot.rect.y + slot.rect.h, slot.rect.w, 0.0f));  // the bar starts below the tile
+                    bars.push_back(Rect(slot.rect.x, slot.rect.y + slot.rect.h, slot.rect.w, 0.0f));
                 }
             }
             return bars;

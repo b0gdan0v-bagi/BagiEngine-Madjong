@@ -8,9 +8,7 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * The danger marks of the hand tiles (`Table/DangerMarks.h`, pure logic): the mapping from the grades of `DiscardDanger.h`, nothing off
- * the viewer's turn, in a window, with no declared opponent or for a kind not held, and the same for models that differ only in what the
- * viewer cannot see.
+ * The danger marks of the hand tiles (`Table/DangerMarks.h`, pure logic): the mapping from the grades of `DiscardDanger.h`.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -71,7 +69,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(DangerMarksTest, TheGradesMapToSafeNothingRiskyAndDangerous) {
         TableView view = MarkedView("5p 2p 1p Ew Rd 9m");
-        view.visible[T("Rd").Id()] = kCopiesPerTile;  // an honour all of whose copies are seen: Safe
+        view.visible[T("Rd").Id()] = kCopiesPerTile;
 
         EXPECT_EQ(MarkOf(view, "Rd"), DangerMark::Safe);
         EXPECT_EQ(MarkOf(view, "1p"), DangerMark::None) << "Low";

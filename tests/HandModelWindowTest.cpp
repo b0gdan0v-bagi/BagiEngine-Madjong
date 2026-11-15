@@ -5,8 +5,7 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * `HandModel::LastClaimWindow()`: how the last claim window was settled, with the claims that lost. Fixed walls say what every seat
- * holds and draws. Pure logic: no engine services.
+ * `HandModel::LastClaimWindow()`: how the last claim window was settled, with the claims that lost. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 

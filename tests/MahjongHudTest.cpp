@@ -16,9 +16,8 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The HUD and the seat choice of the shipped scene (`Components/MahjongHudComponent.h`): the variables follow the session and the language,
- * the labels show them, the panel `Setup` opens and closes with the game, and both canvases pass the size matrix with the longest texts
- * of every language.
+ * The HUD and the seat choice of the shipped scene (`Components/MahjongHudComponent.h`); both canvases pass the size matrix with the
+ * longest texts of every language.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -303,7 +302,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion) << "an unchanged table sets nothing";
 
         const uint64_t version = _game->GetSession().Version();
-        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());  // a discard
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
         ASSERT_GT(_game->GetSession().Version(), version);
         Draw();
 
@@ -844,7 +843,7 @@ namespace BECore::Mahjong::Tests {
 
             ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
                 SCOPED_TRACE(language.ToStringView().data());
-                Draw();                                            // laid out again with the words of this language
+                Draw();
                 LayOutOnTheTable({"CenterPanel", "Hud"}, window);  // and in the view of the window's shape
                 // The words of the centre panel lie on the plate of the wall ring on purpose (inside the ring: no tile there); the line of the last
                 // move is clear of every plate

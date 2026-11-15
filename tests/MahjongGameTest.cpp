@@ -136,7 +136,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(game->IsSetupOpen());
         EXPECT_FALSE(game->CanContinue());
         EXPECT_FALSE(game->ContinueMatch());
-        EXPECT_TRUE(game->IsSetupOpen());  // an ignored Continue changes nothing
+        EXPECT_TRUE(game->IsSetupOpen());
     }
 
     TEST_F(MahjongGameTest, StartMatchGoesThroughTheSessionWithTheSettingsAndTheSeats) {

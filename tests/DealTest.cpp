@@ -10,8 +10,7 @@
 #include <tests/FixedWall.h>
 
 /**
- * The deal: 13 tiles per seat, the order the wall is dealt in, bonus tiles replaced from the loose tiles. Pure logic: no engine
- * services.
+ * The deal: 13 tiles per seat, bonus tiles replaced from the loose tiles. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 

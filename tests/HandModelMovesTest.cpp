@@ -6,9 +6,7 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * What the model keeps for a front end besides the hands: `DrawnTile(seat)` (the tile just drawn, a regular or a loose one, nothing
- * after a claim) and the append-only log `Moves()` (discards, carried-out claims, the two kongs of the own turn). Fixed walls say what
- * every seat holds and draws. Pure logic: no engine services.
+ * `DrawnTile(seat)` and the append-only log `Moves()` of `HandModel`, kept for a front end. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -293,13 +291,13 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(model.Pass(kSeat1).has_value());
 
-        EXPECT_EQ(model.Moves().size(), 1u);  // only the discard
+        EXPECT_EQ(model.Moves().size(), 1u);
         EXPECT_EQ(model.GetPhase(), Phase::Discard);
 
         HandModel upgrade = UpgradeModel({kSeat2});
         ASSERT_TRUE(upgrade.UpgradeKong(kSeat1, T("5p")).has_value());
         const size_t logged = upgrade.Moves().size();
-        ASSERT_TRUE(upgrade.Pass(kSeat2).has_value());  // the robber lets the kong stand
+        ASSERT_TRUE(upgrade.Pass(kSeat2).has_value());
         EXPECT_EQ(upgrade.Moves().size(), logged);
     }
 

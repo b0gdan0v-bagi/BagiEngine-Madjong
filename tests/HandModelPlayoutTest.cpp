@@ -12,10 +12,9 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * Whole hands played with random legal actions, for many seeds. After every action the invariants of a hand hold: no tile is lost or
- * made, the hands have the size their state asks for, the dead wall is untouched, a result exists exactly when the hand is
- * finished, and every action of every `LegalActions` list is accepted by `Apply`; for the first seeds also the other way round, an action
- * is accepted only when it is listed. Pure logic: no engine services.
+ * Whole hands played with random legal actions, for many seeds: the invariants of a hand hold after every action, every listed
+ * action is accepted by `Apply` and, for the first seeds, an action is accepted only when it is listed. Pure logic: no engine
+ * services.
  */
 namespace BECore::Mahjong::Tests {
 

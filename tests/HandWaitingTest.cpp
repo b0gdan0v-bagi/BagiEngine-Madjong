@@ -5,10 +5,9 @@
 #include <gtest/gtest.h>
 
 /**
- * `IsWaiting` and the pruned `WinningTiles` against a reference kept here: the loop over all 34 kinds with `IsWinningShape` that
- * `WinningTiles` was before it probed only the kinds next to a held tile. Hands come from a seeded `MahjongRng`: random ones and
- * near-complete ones (sets and a pair with one tile taken out, so that most of them are waiting), seven pairs, thirteen orphans, hands
- * with copies in melds. Pure logic: no engine services.
+ * `IsWaiting` and the pruned `WinningTiles` against a reference kept here: the loop over all 34 kinds with `IsWinningShape`. Hands
+ * come from a seeded `MahjongRng`: random ones and near-complete ones (sets and a pair with one tile taken out, so that most of
+ * them are waiting), seven pairs, thirteen orphans, hands with copies in melds. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -39,7 +38,7 @@ namespace BECore::Mahjong::Tests {
             return text;
         }
 
-        /// What `WinningTiles` returned before the prune: every kind whose four copies are not all held is added and tried.
+        /// The reference: every kind whose four copies are not all held is added and tried.
         Vector<Tile> ReferenceWinningTiles(const Sample& sample) {
             Vector<Tile> tiles;
             if (TotalTiles(sample.counts) != kWinningHandTiles - 1 - sample.meldCount * kTilesPerSet) {
