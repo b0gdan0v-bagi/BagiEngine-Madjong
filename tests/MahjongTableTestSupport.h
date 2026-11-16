@@ -12,6 +12,7 @@
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Games/GameManager.h>
+#include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/TablePalette.h>
@@ -21,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 #include <tests/MahjongButtonSupport.h>
+#include <tests/ShippedHudValues.h>
 #include <tests/ShippedScene.h>
 #include <tests/StringsTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
@@ -391,6 +393,12 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(_game, nullptr);
             _table = MahjongTableComponent::GetActive();
             ASSERT_NE(_table, nullptr);
+            // The game's `config/` is not mounted, so the HUD's data is offered from the source tree: `MoveLine` and `MatchOver` show as in the game
+            MahjongHudComponent* hud = MahjongHudComponent::GetActive();
+            ASSERT_NE(hud, nullptr);
+            pugi::xml_document hudValues;
+            ASSERT_TRUE(LoadShippedHudValuesDocument(hudValues));
+            ASSERT_TRUE(hud->OfferHudValues(hudValues.document_element()));
             const Vector<uint8_t> pixels(kTextureSide * kTextureSide * 4, 255);
             IntrusivePtr<ITexture> atlas = _renderer->CreateTexture(pixels.data(), kTextureSide, kTextureSide);
             _atlasTexture = atlas.Get();

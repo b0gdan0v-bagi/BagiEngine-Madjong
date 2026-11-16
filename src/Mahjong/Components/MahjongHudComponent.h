@@ -3,6 +3,7 @@
 #include <BECore/Scene/IComponent.h>
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Online/OnlineClient.h>
+#include <Mahjong/Table/HudValues.h>
 
 namespace BECore {
 
@@ -35,6 +36,11 @@ namespace BECore::Mahjong {
      * language of the string table. Per screen position of the four seats (0 bottom; the seat there is the viewer's, `BottomSeat`) they are
      * the plate and panel words of `MakeCenterPanel`, and `lastMove`. They carry no tile a seat could not see (the last move is public: a
      * concealed kong names no tile).
+     *
+     * **Two fields are data** (`config/MahjongHudValues.xml`, `Table/HudValues.h`): `MoveLine` and `MatchOver` are shown by the values
+     * `moveLineShown` / `matchOverShown`, which read `HudFacts` (the level `view`, `Table/HudFacts.h`). The component only keeps the facts
+     * (`MakeHudFacts`, refreshed where its words are) and applies the values when their version key moved; it decides no visibility of
+     * these two itself. A file with an error is refused whole and both stay hidden.
      *
      * **Setup.** The component shows and hides the modal `Setup` every frame after `MahjongGame::IsSetupOpen()`. It changes the pending seats,
      * levels and hands and their variables; `MahjongStart` gives them to the game (`handsPerMatch` only: every other setting stays) and begins
@@ -71,6 +77,18 @@ namespace BECore::Mahjong {
 
         void OnAttached() override;
         void OnDraw() override;
+
+        /**
+         * Takes the HUD's data from the document node @p root (the root element of `MahjongHudValues`; never kept). A document with any error
+         * is refused whole: one `LOG_ERROR` per error, both elements stay hidden, false is returned. `OnAttached` offers the shipped config;
+         * a test without the game's `config/` offers the file.
+         */
+        bool OfferHudValues(const pugi::xml_node& root);
+
+        /// How many times the values were read; a frame where nothing the values depend on moved leaves it as it was.
+        [[nodiscard]] uint64_t ValueReadCount() const noexcept {
+            return _valueReads;
+        }
 
         /// The page of the rules the screen shows (0 while the rules are closed).
         [[nodiscard]] int CurrentRulesPage() const noexcept {
@@ -117,7 +135,12 @@ namespace BECore::Mahjong {
         /// Takes the setup of the game into the pending choices when the panel opens.
         void PublishSetup(const MahjongGame* game);
         void PublishOptions(const MahjongGame* game);
+        /// Makes the facts of the table again and counts the change for the context (the key of the values is the counter).
+        void SetFacts(const HudFacts& facts);
+        /// Reads the two values when the key of the context moved and shows or hides `MoveLine` and `MatchOver` as they say.
+        void ApplyValues();
         void ShowMoveLine(bool show);
+        void ShowMatchOver(bool show);
         void PublishSeatKinds();
         /// `SeatLevel<n>` is shown exactly for the pending computer seats.
         void PublishSeatLevels();
@@ -146,7 +169,15 @@ namespace BECore::Mahjong {
         uint64_t _numbersVersion = 0;
         uint64_t _numbersStrings = 0;  // the version of the string table the variables are worded in
         bool _numbersPublished = false;
-        bool _moveLineShown = false;
+        HudFacts _facts;             // the level `view` of `_context`
+        uint64_t _factsVersion = 0;  // grows whenever `_facts` changes: `TableSession::Version()` is a value, not a counter to point at
+        HudValues _values;           // the document of `config/MahjongHudValues.xml`, all false constants while none was accepted
+        Context _context;            // over `_values.context`; level 0 is `_facts`
+        LevelMask _valuesMask = 0;   // the levels the two values read
+        uint64_t _valuesKey = 0;     // the key of `_context` the shown state is for
+        bool _valuesKeyRead = false;
+        uint64_t _valueReads = 0;
+        bool _moveLineShown = false;  // what the elements are set to now
         bool _handOverShown = false;
         bool _matchOverShown = false;
         int _shownLines = 0;                         // the labels `ScoreLine0` .. that are visible

@@ -663,6 +663,39 @@ namespace BECore::Mahjong::Tests {
         });
     }
 
+    TEST_F(MahjongEndScreenTest, TheStandingsFollowTheMatchPhaseAsTheValueOfTheHudDataReadsIt) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        Draw();
+        EXPECT_FALSE(Shown("MatchOver")) << "a match in play";
+        const uint64_t reads = MahjongHudComponent::GetActive()->ValueReadCount();
+        Draw();
+        EXPECT_EQ(MahjongHudComponent::GetActive()->ValueReadCount(), reads) << "a steady frame reads no value";
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
+        Draw();
+        EXPECT_TRUE(Shown("MatchOver"));
+        EXPECT_GT(MahjongHudComponent::GetActive()->ValueReadCount(), reads);
+        const uint64_t reached = MahjongHudComponent::GetActive()->ValueReadCount();
+        Draw();
+        Draw();
+        EXPECT_EQ(MahjongHudComponent::GetActive()->ValueReadCount(), reached);
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        Draw();
+        EXPECT_FALSE(Shown("MatchOver")) << "a new match hides the standings";
+    }
+
+    TEST_F(MahjongEndScreenTest, ARefusedValuesFileLeavesTheStandingsHiddenAndTheHandOverScreenWorks) {
+        pugi::xml_document bad;
+        ASSERT_TRUE(bad.load_string(R"(<MahjongHudValues><context view="HudFacts"/><matchOverShown from="view.matchOvr"/></MahjongHudValues>)"));
+        ASSERT_FALSE(MahjongHudComponent::GetActive()->OfferHudValues(bad.document_element()));
+        LogEvent::Flush();  // the refusal's lines are this test's, not a recorder's of another
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        EXPECT_TRUE(Shown("HandOver")) << "the score table is not data";
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
+        Draw();
+        EXPECT_FALSE(Shown("MatchOver"));
+    }
+
     TEST_F(MahjongEndScreenTest, NewGameOnTheStandingsOpensTheSeatChoiceAndAStartHidesThem) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
