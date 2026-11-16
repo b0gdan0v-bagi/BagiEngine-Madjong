@@ -700,6 +700,161 @@ namespace BECore::Mahjong::Tests {
         refuse([](Json& view) { view["seats"][1]["melds"][0]["kind"] = "kong"; }, "seats[1].melds[0].tiles");
     }
 
+    namespace {
+
+        void ExpectReads(const Json& view, const String& what) {
+            SCOPED_TRACE(what);
+            OnlineTable table;
+            const auto read = ReadOnlineView(view, ActionsWithEverything(), table);
+            EXPECT_TRUE(read.has_value()) << (read ? "" : TextOf(read.error()).c_str());
+        }
+
+        /// @p path set to @p value in the finished hand of `RichHandOverView`, handsTotal 16 unless the change says otherwise.
+        Json WithValue(const String& path, const Json& value) {
+            Json view = RichHandOverView();
+            view["handsTotal"] = kFullMatchHands;
+            view["handsPlayed"] = 1;
+            Json* node = At(view, path);
+            EXPECT_NE(node, nullptr) << path;
+            if (node != nullptr) {
+                *node = value;
+            }
+            return view;
+        }
+
+        void Grow(Json& list, size_t size, const char* tile) {
+            while (list.size() < size) {
+                list.push_back(tile);
+            }
+            while (list.size() > size) {
+                list.erase(list.end() - 1);
+            }
+        }
+
+    }  // namespace
+
+    TEST(MahjongOnlineTableTest, CountsBeyondWhatTheRulesAllowAreRefusedWithTheKey) {
+        const Json actions = ActionsWithEverything();
+        constexpr int kMostSeen = std::numeric_limits<int>::max();
+        const struct {
+            const char* path;
+            int bound;
+        } kCounts[] = {
+            {"seats/0/concealedCount", kViewMaxConcealed}, {"seats/1/concealedKongs", kViewMaxMelds}, {"seats/2/discardCount", kViewMaxPile}, {"wall", kViewMaxPile}, {"handsPlayed", kFullMatchHands}};
+        for (const auto& count : kCounts) {
+            ExpectReads(WithValue(count.path, count.bound), String(count.path) + " at the bound");
+            for (const int beyond : {count.bound + 1, kMostSeen}) {
+                ExpectRefused(WithValue(count.path, beyond), actions, NamedPath(count.path), OnlineViewErrorKind::Malformed, Format("{} = {}", count.path, beyond));
+            }
+        }
+    }
+
+    TEST(MahjongOnlineTableTest, AMatchHasEightOrSixteenHandsAndNoMoreAreLeftToPlayThanThat) {
+        const Json actions = ActionsWithEverything();
+        for (const int total : {kShortMatchHands, kFullMatchHands}) {
+            Json view = WithValue("handsTotal", total);
+            view["handsPlayed"] = total;
+            ExpectReads(view, Format("all hands played of {}", total));
+        }
+        for (const int total : {0, 1, kShortMatchHands - 1, kShortMatchHands + 1, kFullMatchHands - 1, kFullMatchHands + 1, std::numeric_limits<int>::max(), -1}) {
+            ExpectRefused(WithValue("handsTotal", total), actions, "handsTotal", OnlineViewErrorKind::Malformed, Format("handsTotal = {}", total));
+        }
+        Json past = WithValue("handsTotal", kShortMatchHands);
+        past["handsPlayed"] = kShortMatchHands + 1;
+        ExpectRefused(past, actions, "handsPlayed", OnlineViewErrorKind::Malformed, "more hands played than in the match");
+    }
+
+    TEST(MahjongOnlineTableTest, ListsLongerThanARoomsTableCanHoldAreRefusedWithTheKey) {
+        const Json actions = ActionsWithEverything();
+        const struct {
+            const char* path;
+            const char* name;
+            size_t bound;
+            const char* item;
+        } kLists[] = {{"hand", "hand", kViewMaxConcealed, "1p"},
+                      {"result/seats/0/concealed", "result.seats[0].concealed", kViewMaxConcealed, "1p"},
+                      {"seats/2/bonus", "seats[2].bonus", kViewMaxBonus, "F1"},
+                      {"result/seats/3/bonus", "result.seats[3].bonus", kViewMaxBonus, "T1"},
+                      {"discards", "discards", kViewMaxPile, "1p"}};
+        for (const auto& list : kLists) {
+            Json atBound = RichHandOverView();
+            Grow(*At(atBound, list.path), list.bound, list.item);
+            if (String(list.path) == "discards") {
+                for (Json& entry : atBound["discards"]) {
+                    entry = Parse("{\"tile\":\"9s\",\"seat\":3}");
+                }
+            }
+            ExpectReads(atBound, String(list.name) + " at the bound");
+            Json beyond = atBound;
+            Json* node = At(beyond, list.path);
+            node->push_back(String(list.path) == "discards" ? Parse("{\"tile\":\"9s\",\"seat\":3}") : Json(list.item));
+            ExpectRefused(beyond, actions, list.name, OnlineViewErrorKind::Malformed, String(list.name) + " beyond the bound");
+        }
+        const Json meld = Parse("{\"kind\":\"pung\",\"tiles\":[\"1p\",\"1p\",\"1p\"],\"concealed\":false,\"from\":2,\"fromDiscard\":true,\"claimed\":\"1p\"}");
+        for (const char* path : {"seats/1/melds", "result/seats/0/melds"}) {
+            Json view = RichHandOverView();
+            Json& melds = *At(view, path);
+            while (melds.size() < static_cast<size_t>(kViewMaxMelds)) {
+                melds.push_back(meld);
+            }
+            ExpectReads(view, String(path) + " at the bound");
+            melds.push_back(meld);
+            ExpectRefused(view, actions, NamedPath(path), OnlineViewErrorKind::Malformed, String(path) + " beyond the bound");
+        }
+    }
+
+    TEST(MahjongOnlineTableTest, ARunningHandNeedsTheSeatThatActsAndAFinishedTurnDoesNot) {
+        MahjongSeatedGame game = Started();
+        const Json good = ViewJson(game, 0);
+        ASSERT_TRUE(good["turn"]["current"].is_number()) << "the start of a hand names the seat that acts";
+        const Json actions = ActionsJson(game, 0);
+        for (const char* phase : {"discard", "claim", "rob_kong"}) {
+            Json view = good;
+            view["turn"]["phase"] = phase;
+            ExpectReads(view, phase);
+            view["turn"]["current"] = nullptr;
+            ExpectRefused(view, actions, "turn.current", OnlineViewErrorKind::Malformed, String("playing, ") + phase + ", nobody acts");
+        }
+        Json finished = good;
+        finished["turn"]["phase"] = "finished";
+        finished["turn"]["current"] = nullptr;
+        ExpectReads(finished, "playing, finished");
+
+        Json over = RichHandOverView();
+        over["turn"]["phase"] = "discard";
+        over["turn"]["current"] = nullptr;
+        ExpectReads(over, "a view of a finished session says nothing about the turn");
+    }
+
+    TEST(MahjongOnlineTableTest, AWinOnADiscardNeedsTheWinningTileInTheWinnersHand) {
+        const Json actions = ActionsWithEverything();
+        Json win = RichHandOverView();
+        Json& result = win["result"];
+        result["kind"] = "win";
+        result["source"] = "discard";
+        result["winner"] = 2;
+        result["winningTile"] = "7s";
+        result["seats"][2]["concealed"] = Parse("[\"1p\",\"7s\",\"7s\"]");
+        ExpectReads(win, "the winner holds the tile");
+
+        Json other = win;
+        other["result"]["seats"][2]["concealed"] = Parse("[\"1p\",\"8s\"]");
+        ExpectRefused(other, actions, "winningTile", OnlineViewErrorKind::Malformed, "the winner lacks the winning tile");
+
+        Json elsewhere = win;
+        elsewhere["result"]["seats"][2]["concealed"] = Parse("[\"1p\"]");
+        elsewhere["result"]["seats"][1]["concealed"] = Parse("[\"7s\"]");
+        ExpectRefused(elsewhere, actions, "winningTile", OnlineViewErrorKind::Malformed, "another seat holds the tile");
+
+        Json nobody = win;
+        nobody["result"]["winner"] = nullptr;
+        ExpectRefused(nobody, actions, "winner", OnlineViewErrorKind::Malformed, "a win with no winner");
+
+        Json selfDraw = other;
+        selfDraw["result"]["source"] = "self_draw";
+        ExpectReads(selfDraw, "only a win on a discard is held to the tile");
+    }
+
     TEST(MahjongOnlineTableTest, AFinishedHandWithoutAResultIsRefusedAndAPlayedOneIgnoresIt) {
         Json view = RichHandOverView();
         view.erase("result");

@@ -20,7 +20,7 @@
 
 | File | Purpose |
 |------|---------|
-| `OnlineTable.h/.cpp` | `ListHandActions` (the hand actions of `actions`, no `next_hand`: the `legal` of the viewer's `TableView`); `ReadOnlineView(view, actions, out, scratch)`: the server's `view` and `actions` (untrusted JSON, checked helpers) into plain data with the game's value types; errors name the key; `out` is touched only on success, and both tables keep their lists' capacity |
+| `OnlineTable.h/.cpp` | `ListHandActions` (the hand actions of `actions`, no `next_hand`: the `legal` of the viewer's `TableView`); `ReadOnlineView(view, actions, out, scratch)`: the server's `view` and `actions` (untrusted JSON, checked helpers) into plain data with the game's value types; errors name the key; `out` is touched only on success, and both tables keep their lists' capacity. It also refuses what a table of the rules cannot hold (`kViewMax*`: counts and lists over a hand, a set or a pile, `handsTotal` not 8 or 16, no acting seat in a running hand, a win on a discard without the tile in the winner's hand); a good server never sends these, so the format number stays |
 | `OnlineWords.h/.cpp` | every code the client can meet (`kKnownOnlineCodes`) with its key in `config/UIStrings.xml` (`online.*`); several codes share a key where the player can do nothing different; `stale_action` alone is silent |
 | `OnlineClient.h/.cpp` | the model, and `SessionToJson` / `SessionFromJson` |
 | `TextEntry.h/.cpp` | one bounded text (a room code or a name), its pad of keys, `CharFromKeycode` |
