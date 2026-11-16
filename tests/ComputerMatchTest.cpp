@@ -1,6 +1,7 @@
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
 #include <tests/HandTestSupport.h>
 #include <tests/MatchTestSupport.h>
 
@@ -226,35 +227,6 @@ namespace BECore::Mahjong::Tests {
             if (scores != nullptr) {
                 *scores = match.Scores();
             }
-        }
-
-        /// A weighted profile with all eight weights drawn from the whole lattice `0..kWeightMax`.
-        LevelProfile RandomWeights(MahjongRng& rng) {
-            auto weight = [&rng] { return static_cast<int>(rng.Below(kWeightMax + 1)); };
-            LevelProfile profile = kNormalProfile;
-            profile.weighted = true;
-            profile.wShanten = weight();
-            profile.wAcceptance = weight();
-            profile.wKeep = weight();
-            profile.wSafe = weight();
-            profile.wClaimRank = weight();
-            profile.wClaimValue = weight();
-            profile.wClaimMargin = weight();
-            profile.wClaimWall = weight();
-            return profile;
-        }
-
-        LevelProfile Weighted(LevelProfile profile) {
-            profile.weighted = true;
-            return profile;
-        }
-
-        LevelProfile WeightedAt(int weight) {
-            LevelProfile profile = kNormalProfile;
-            profile.weighted = true;
-            profile.wShanten = profile.wAcceptance = profile.wKeep = profile.wSafe = weight;
-            profile.wClaimRank = profile.wClaimValue = profile.wClaimMargin = profile.wClaimWall = weight;
-            return profile;
         }
 
     }  // namespace

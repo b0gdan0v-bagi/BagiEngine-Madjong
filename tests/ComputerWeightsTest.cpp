@@ -22,11 +22,6 @@ namespace BECore::Mahjong::Tests {
         /// Above every count of the rng that a player draws in one decision.
         constexpr uint32_t kProbeRange = 1u << 30;
 
-        LevelProfile Weighted(LevelProfile profile) {
-            profile.weighted = true;
-            return profile;
-        }
-
         /// Whether the two rngs are at the same place of their streams: the next number of each is the same.
         bool SameStream(MahjongRng& a, MahjongRng& b) {
             return a.Below(kProbeRange) == b.Below(kProbeRange);
@@ -275,7 +270,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerWeightsTest, TheLevelsAreUnchangedWhenOnlyTheSwitchIsOn) {
-        // Levels 5..10 are Normal's profile: the first five are the different ones.
+        // Levels 5..10 are Normal's profile: the first four are the different ones.
         for (const LevelProfile* profile : {&kEasyProfile, &kLevel2Profile, &kLevel3Profile, &kLevel4Profile}) {
             EXPECT_GT(ExpectSameTurns(Weighted(*profile), *profile, 7).turns, 0);
         }
@@ -363,7 +358,7 @@ namespace BECore::Mahjong::Tests {
         const TableView single = DiscardView("1p 2p 3p 4p 5p 6p 7p 8p 9p 1m 2m Gd Rd 5s");
         MahjongRng rng(5);
         MahjongRng untouched(5);
-        (void)ChooseWeightedDiscard(single, rng, profile);
+        EXPECT_EQ(ChooseWeightedDiscard(single, rng, profile), T("5s"));
         EXPECT_TRUE(SameStream(rng, untouched)) << "one best discard draws nothing";
     }
 
@@ -374,12 +369,7 @@ namespace BECore::Mahjong::Tests {
         Vector<LevelProfile> profiles;
         profiles.push_back(Weighted(kNormalProfile));
         for (int i = 0; i < 6; ++i) {
-            LevelProfile profile = Weighted(kNormalProfile);
-            profile.wShanten = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wAcceptance = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wKeep = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wSafe = static_cast<int>(weights.Below(kWeightMax + 1));
-            profiles.push_back(profile);
+            profiles.push_back(RandomWeights(weights));
         }
         LevelProfile zeros = Weighted(kNormalProfile);
         zeros.wShanten = zeros.wAcceptance = zeros.wKeep = zeros.wSafe = 0;
@@ -473,7 +463,7 @@ namespace BECore::Mahjong::Tests {
         ExpectClaimForEverySeed(plain, huge, kPass);
     }
 
-    TEST(ComputerWeightsTest, TheWallSlopeMakesALateWallPassWhatAnEarlyWallTakes) {
+    TEST(ComputerWeightsTest, TheWallSlopeMakesAnEarlyWallPassWhatALateWallTakes) {
         TableView early = MakeTableView(WindowModel("5p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p"), kSeat1);
         const int before = Shanten(CountTiles(early.own.concealed), 0);
         const LevelProfile base = Weighted(kNormalProfile);
@@ -485,31 +475,22 @@ namespace BECore::Mahjong::Tests {
         // Slack per tile of the wall: the claim passes the gate while `wClaimWall * liveCount` is below `slack * kWallWeightUnit`.
         LevelProfile sloped = base;
         sloped.wClaimWall = static_cast<int>(slack * 2);
-        constexpr int kEarlyLive = 10;
-        constexpr int kLateLive = 100;
+        constexpr int kEarlyLive = 100;
+        constexpr int kLateLive = 10;
         TableView late = early;
         early.liveCount = kEarlyLive;
         late.liveCount = kLateLive;
-        ExpectClaimForEverySeed(early, sloped, kPung);
-        ExpectClaimForEverySeed(late, sloped, kPass);
+        ExpectClaimForEverySeed(late, sloped, kPung);
+        ExpectClaimForEverySeed(early, sloped, kPass);
         // With no slope the wall does not matter.
-        ExpectClaimForEverySeed(late, base, kPung);
+        ExpectClaimForEverySeed(early, base, kPung);
     }
 
     TEST(ComputerWeightsTest, ForAnyWeightsTheClaimAnswerIsListed) {
         MahjongRng weights(78);
         Vector<LevelProfile> profiles;
         for (int i = 0; i < 6; ++i) {
-            LevelProfile profile = Weighted(kNormalProfile);
-            profile.wShanten = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wAcceptance = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wKeep = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wSafe = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wClaimRank = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wClaimValue = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wClaimMargin = static_cast<int>(weights.Below(kWeightMax + 1));
-            profile.wClaimWall = static_cast<int>(weights.Below(kWeightMax + 1));
-            profiles.push_back(profile);
+            profiles.push_back(RandomWeights(weights));
         }
         LevelProfile zeros = Weighted(kNormalProfile);
         zeros.wShanten = zeros.wAcceptance = zeros.wKeep = zeros.wSafe = zeros.wClaimRank = zeros.wClaimValue = zeros.wClaimMargin = zeros.wClaimWall = 0;

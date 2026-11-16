@@ -235,7 +235,7 @@ namespace BECore::Mahjong {
         int wClaimValue = kNormalWeightClaimValue;
         /// Weighted claim gate: the claim's rating must exceed the pass's by more than this.
         int wClaimMargin = kNormalWeightClaimMargin;
-        /// Weighted claim gate: added to the margin per `kWallWeightUnit` tiles in the live wall (a late wall asks for less or more).
+        /// Weighted claim gate: added to the margin per `kWallWeightUnit` tiles in the live wall (the fewer tiles are left, the less margin a claim needs).
         int wClaimWall = kNormalWeightClaimWall;
     };
 
