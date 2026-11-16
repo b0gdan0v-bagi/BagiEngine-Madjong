@@ -71,7 +71,7 @@ railway variables --service bagi-mahjong \
   --set MATCH_COLLECT_TOKEN=<второй секрет> \
   --set PRIVACY_CONTACT=<ваша почта для запросов об удалении> \
   --set MATCH_STORE=/data/matches \
-  --set MATCH_LOG_VERSIONS=1-6 \
+  --set MATCH_LOG_VERSIONS=1-7 \
   --set MATCH_FORWARDED_FOR=1 \
   --set RAILWAY_RUN_UID=0
 ```
@@ -79,7 +79,7 @@ railway variables --service bagi-mahjong \
 Затем **удалите `BASIC_AUTH_USER` и `BASIC_AUTH_PASSWORD`**: в панели Railway откройте сервис `bagi-mahjong` → Variables → «⋮» → Delete. Удобнее делать всё в панели: Railway собирает изменения в один набор и применяет их кнопкой Deploy.
 
 - `PUBLIC_URL` указывается без слэша в конце и совпадает с адресом из шага 3.
-- `MATCH_LOG_VERSIONS=1-6`: нынешний формат лога матча — 6 (`kMatchLogFormatVersion` в `src/Mahjong/MatchLogJson.h`). С диапазоном `1-5` каждый новый матч отклоняется с ошибкой 400. Когда формат вырастет, расширьте диапазон.
+- `MATCH_LOG_VERSIONS=1-7`: нынешний формат лога матча — 7 (`kMatchLogFormatVersion` в `src/Mahjong/MatchLogJson.h`). С диапазоном `1-6` каждый новый матч отклоняется с ошибкой 400. Когда формат вырастет, расширьте диапазон.
 - Необязательные переменные:
   - `SESSION_DAYS` — сколько дней действует вход, по умолчанию 30;
   - `SIGNIN_GUESTS=0` — убрать кнопку «Играть без входа».

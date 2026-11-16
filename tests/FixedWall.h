@@ -2,6 +2,7 @@
 
 #include <Common/Printers.h>
 #include <Mahjong/Game/Deal.h>
+#include <Mahjong/Game/FixedWall.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongSettings.h>
 #include <Mahjong/Game/Seats.h>
@@ -11,30 +12,16 @@
 #include <gtest/gtest.h>
 
 /**
- * A wall laid out tile by tile, so that a test knows what every seat holds and what comes next. Header only; the rules tests of
- * the hand (deal, turn, claims, kongs) build their walls with it.
+ * A wall laid out tile by tile for a test, so that it knows what every seat holds and what comes next: `Game/FixedWall.h` (the
+ * layout, the padding, the clamping) with the tiles written in the notation of `ParseTiles` ("1p 2p 3p Ew Rd F1 T4"). Header
+ * only; the rules tests of the hand (deal, turn, claims, kongs) build their walls with it.
  *
- * The tiles are written in the notation of `ParseTiles` ("1p 2p 3p Ew Rd F1"). Whatever a spec does not name is padded with unused
- * tiles of the full set, never more than four of a kind: a spec that asks for a fifth copy (or a bonus tile without `flowers`) fails
- * the test (`ADD_FAILURE`). Padding comes out in the order of the set (1p 1p 1p 1p 2p ...), so a test that relies on what a draw
- * brings, or on no claim being possible, names those tiles itself.
+ * Whatever is wrong with a spec (a fifth copy, a bonus tile without `flowers`, a hand that is not 13 tiles, a text that does not
+ * read, a `liveAfterDeal` out of range) fails the test (`ADD_FAILURE`) and the wall is built as well as it can be.
  */
 namespace BECore::Mahjong::Tests {
 
-    /**
-     * @brief What a fixed wall holds, in the order it is taken.
-     *
-     * - `hands[seat]`: the 13 tiles of the seat **in the order the deal gives them** (four, four, four, one; see `DealHands`). A bonus
-     *   tile written here lands in a deal slot and is replaced from the loose tiles, as in the real deal.
-     * - `live`: the tiles drawn after the deal, in order (East's first draw is the first).
-     * - `loose`: the two loose tiles, then the tiles that refill the reserve after each loose draw, in the order they join it. The
-     *   refills are laid at the end of the live wall (the tile just before the dead wall is the first refill).
-     * - `liveAfterDeal`: the live wall holds exactly this many tiles after the deal (the refills included), so that a drawn hand comes
-     *   soon; the wall is then shorter than the ring. Each bonus tile dealt takes one refill from the live tail, so the live wall ends
-     *   the deal with `liveAfterDeal - bonusTilesDealt`. It has to lie between what `live` and the refills need and what the ring
-     *   leaves after the deal and the dead wall, otherwise the test fails once and the value is clamped. Unset: the wall is a whole
-     *   ring.
-     */
+    /// What a fixed wall holds, as texts: the members of `FixedDeal` (`hands[seat]`, `live`, `loose`, `liveAfterDeal`) in notation.
     struct FixedWallSpec {
         Array<String, kSeatCount> hands;
         String live;
@@ -56,124 +43,47 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace FixedWallDetail
 
-    /**
-     * @brief The wall of `spec`: the loose reserve, the deal in the order of `DealHands` (from `east`), `live`, padding, the refills of
-     *        the reserve, then the 14 tiles of the dead wall (the last 14 unused tiles of the set).
-     *
-     * The wall comes out through `Wall::FromOrder`, so `DealHands(wall, east, flowers)` gives each seat exactly its `hands[seat]`.
-     */
-    inline Wall MakeFixedWall(const FixedWallSpec& spec, bool flowers, Seat east = 0) {
-        Array<int, kTileIdCount> left{};
-        for (uint8_t id = 0; id < kTileIdCount; ++id) {
-            const Tile tile{id};
-            left[id] = tile.IsBonus() ? (flowers ? 1 : 0) : kCopiesPerTile;
-        }
-        const auto take = [&left](Tile tile) {
-            if (--left[tile.Id()] < 0) {
-                ADD_FAILURE() << "FixedWallSpec uses more copies of " << ToStd(ToString(tile)) << " than the set has";
-                left[tile.Id()] = 0;
-            }
-        };
-
-        Array<Vector<Tile>, kSeatCount> hands;
+    /// The deal of `spec`, dealt from `east`.
+    inline FixedDeal MakeFixedDeal(const FixedWallSpec& spec, Seat east = 0) {
+        FixedDeal deal;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            hands[seat] = FixedWallDetail::Parse(spec.hands[seat], "hands");
-            EXPECT_EQ(hands[seat].size(), static_cast<size_t>(kDealtTiles)) << "FixedWallSpec.hands[" << seat << "] needs 13 tiles";
-            for (const Tile tile : hands[seat]) {
-                take(tile);
-            }
+            deal.hands[seat] = FixedWallDetail::Parse(spec.hands[seat], "hands");
         }
-        const Vector<Tile> live = FixedWallDetail::Parse(spec.live, "live");
-        Vector<Tile> loose = FixedWallDetail::Parse(spec.loose, "loose");
-        for (const Tile tile : live) {
-            take(tile);
-        }
-        for (const Tile tile : loose) {
-            take(tile);
-        }
+        deal.live = FixedWallDetail::Parse(spec.live, "live");
+        deal.loose = FixedWallDetail::Parse(spec.loose, "loose");
+        deal.east = east;
+        deal.liveAfterDeal = spec.liveAfterDeal;
+        return deal;
+    }
 
-        // Unused tiles in the order of the set: the front pads, the last 14 are the dead wall.
-        Vector<Tile> pool;
-        for (uint8_t id = 0; id < kTileIdCount; ++id) {
-            pool.insert(pool.end(), static_cast<size_t>(left[id]), Tile{id});
-        }
-        size_t nextPad = 0;
-        const auto pad = [&pool, &nextPad]() {
-            if (nextPad >= pool.size()) {
-                ADD_FAILURE() << "FixedWallSpec: the set has no unused tiles left to pad with";
-                return Tile{static_cast<uint8_t>(0)};
-            }
-            return pool[nextPad++];
-        };
+    /// A position of a match under way (`handsPlayed` hands counted, uneven scores): four hands, the tiles that come next are
+    /// `Gd Gd 9m`, the loose reserve starts `4s 5s`.
+    inline FixedStart MakeSamplePosition(Seat east = 0, int handsPlayed = 0) {
+        FixedWallSpec spec;
+        spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";
+        spec.hands[1] = "1m 2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw";
+        spec.hands[2] = "1p 2p 3p 4p 5p 6p 7p 8p 9p Rd Wd Gd Ew";
+        spec.hands[3] = "5s 6s 7s 8s 9s 1m 2m 3m 4m 5m 6m 7m 8m";
+        spec.live = "Gd Gd 9m";
+        spec.loose = "4s 5s";
+        FixedStart state;
+        state.deal = MakeFixedDeal(spec, east);
+        state.handsPlayed = handsPlayed;
+        state.scores = {250, 120, -40, 900};
+        return state;
+    }
 
-        Vector<Tile> order;
-        // The reserve; the tiles after the first two refill it from the live tail.
-        Vector<Tile> refills;
-        for (size_t i = 0; i < loose.size(); ++i) {
-            if (i < kLooseTiles) {
-                order.push_back(loose[i]);
+    /// The wall of `spec` (`BuildFixedWall`); each problem fails the test.
+    inline Wall MakeFixedWall(const FixedWallSpec& spec, bool flowers, Seat east = 0) {
+        FixedWallBuild build = BuildFixedWall(MakeFixedDeal(spec, east), flowers);
+        for (const FixedDealProblem& problem : build.problems) {
+            if (problem.member.empty()) {
+                ADD_FAILURE() << "FixedWallSpec: " << ToStd(problem.what);
             } else {
-                refills.push_back(loose[i]);
+                ADD_FAILURE() << "FixedWallSpec." << ToStd(problem.member) << " " << ToStd(problem.what);
             }
         }
-        while (order.size() < kLooseTiles) {
-            order.push_back(pad());
-        }
-
-        // The deal, in the order DealHands takes the tiles: four at a time from East, three times, then one each.
-        const auto dealt = [&](Seat seat, int from, int count) {
-            for (int i = from; i < from + count; ++i) {
-                const size_t index = static_cast<size_t>(i);
-                order.push_back(index < hands[seat].size() ? hands[seat][index] : pad());
-            }
-        };
-        for (int round = 0; round < kDealBlockRounds; ++round) {
-            for (int step = 0; step < kSeatCount; ++step) {
-                dealt((east + step) % kSeatCount, round * kDealBlock, kDealBlock);
-            }
-        }
-        for (int step = 0; step < kSeatCount; ++step) {
-            dealt((east + step) % kSeatCount, kDealBlockRounds * kDealBlock, 1);
-        }
-
-        // The live wall after the deal: `live`, padding, and the refills at the very end.
-        const size_t ringSize = static_cast<size_t>(RingSize(StacksPerSide(flowers)));
-        const size_t dealtSize = order.size();
-        const size_t liveNeeded = live.size() + refills.size();
-        const size_t liveAvailable = ringSize > dealtSize + kDeadWallTiles ? ringSize - dealtSize - kDeadWallTiles : 0;
-        size_t liveWanted = liveAvailable;
-        if (spec.liveAfterDeal.has_value()) {
-            const int cut = *spec.liveAfterDeal;
-            if (cut < 0 || static_cast<size_t>(cut) < liveNeeded || static_cast<size_t>(cut) > liveAvailable) {
-                ADD_FAILURE() << "FixedWallSpec.liveAfterDeal " << cut << " is outside " << liveNeeded << ".." << liveAvailable
-                              << " (`live` and the refills at least, the ring after the deal and the dead wall at most)";
-                const size_t cutSize = cut < 0 ? 0 : static_cast<size_t>(cut);
-                liveWanted = eastl::max(liveNeeded, eastl::min(cutSize, liveAvailable));
-            } else {
-                liveWanted = static_cast<size_t>(cut);
-            }
-        } else {
-            EXPECT_GE(liveWanted, liveNeeded) << "FixedWallSpec: `live` and the refills do not fit the live wall";
-        }
-        for (const Tile tile : live) {
-            order.push_back(tile);
-        }
-        const size_t padTo = dealtSize + eastl::max(liveWanted, liveNeeded) - refills.size();
-        while (order.size() < padTo) {
-            order.push_back(pad());
-        }
-        for (auto it = refills.rbegin(); it != refills.rend(); ++it) {
-            order.push_back(*it);
-        }
-
-        if (pool.size() - nextPad < kDeadWallTiles) {
-            ADD_FAILURE() << "FixedWallSpec: the set has too few unused tiles for the dead wall";
-        }
-        const size_t deadBegin = pool.size() >= kDeadWallTiles ? pool.size() - kDeadWallTiles : 0;
-        for (size_t i = deadBegin; i < pool.size(); ++i) {
-            order.push_back(pool[i]);
-        }
-        return Wall::FromOrder(eastl::move(order));
+        return eastl::move(build.wall);
     }
 
     /**

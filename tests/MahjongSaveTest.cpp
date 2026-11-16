@@ -5,6 +5,7 @@
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
 namespace BECore::Mahjong::Tests {
@@ -581,6 +582,44 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(MahjongSaveTest, AMatchThatBeganFromAPositionIsSavedWithItAndResumesWhereItWas) {
+        const FixedStart state = MakeSamplePosition(1, 5);
+        for (const int steps : {0, 15, 60, kAllSteps}) {
+            const String where = Format("{} steps", steps).c_str();
+            Match match;
+            TableSession session{match};
+            MatchLog log;
+            MatchRecorder recorder;
+            recorder.SetNext(&log);
+            session.SetLogSink(&recorder);
+            ASSERT_TRUE(session.StartMatch(ShortMatch(), 17, kPCCC, UniformLevels(ComputerLevel::Normal), state).has_value()) << where;
+            MahjongRng rng(17);
+            for (int step = 0; step < steps && session.GetPhase() != SessionPhase::MatchOver; ++step) {
+                if (session.GetPhase() == SessionPhase::HandOver) {
+                    ASSERT_TRUE(session.NextHand().has_value()) << where;
+                } else if (session.ActorIsPerson()) {
+                    ASSERT_TRUE(session.PerformPerson(Choose(match.Hand().LegalActions(session.Actor()), Mode::SeekWin, rng)).has_value()) << where;
+                } else {
+                    ASSERT_TRUE(session.StepComputer().has_value()) << where;
+                }
+            }
+
+            const String text = MatchSaveText(recorder.Events());
+            ASSERT_NE(Plain(text).find("\"state\":{\"deal\""), String::npos) << where << ": the save holds the position";
+            const auto parsed = ParseMatchSaveText(text);
+            ASSERT_TRUE(parsed.has_value()) << where << ": " << (parsed ? "" : parsed.error().c_str());
+            ASSERT_TRUE((*parsed)[0].state.has_value()) << where;
+            EXPECT_TRUE(*(*parsed)[0].state == state) << where;
+
+            Table resumed;
+            ASSERT_TRUE(resumed.session.ResumeMatch(*parsed, kPCCC, (*parsed)[0].levels).has_value()) << where;
+            EXPECT_EQ(Snapshot(resumed.match.Hand()), Snapshot(match.Hand())) << where;
+            EXPECT_EQ(resumed.match.Scores(), match.Scores()) << where;
+            EXPECT_EQ(resumed.match.HandsPlayed(), match.HandsPlayed()) << where;
+            EXPECT_EQ(resumed.session.GetPhase(), session.GetPhase()) << where;
+        }
+    }
+
     TEST(MahjongSaveTest, AMatchSavedBeforeTheLevelOfEachSeatStillResumes) {
         // The text of a version 3 save: its `start` has one `level`, the rest is as written now
         const Recorded recorded(3, kPCCC, ComputerLevel{3}, 120);
@@ -588,10 +627,10 @@ namespace BECore::Mahjong::Tests {
         const size_t firstBreak = current.find('\n');
         ASSERT_NE(firstBreak, String::npos);
         const String startLine = current.substr(0, firstBreak);
-        ASSERT_NE(startLine.find("\"version\":6"), String::npos) << startLine;
+        ASSERT_NE(startLine.find("\"version\":7"), String::npos) << startLine;
         ASSERT_NE(startLine.find("\"levels\":[3,3,3,3]"), String::npos) << startLine;
         String old = startLine;
-        old.replace(old.find("\"version\":6"), 11, "\"version\":3");
+        old.replace(old.find("\"version\":7"), 11, "\"version\":3");
         old.replace(old.find("\"levels\":[3,3,3,3]"), 18, "\"level\":3");
         const String oldText = Format("{}{}", old, current.substr(firstBreak));
 

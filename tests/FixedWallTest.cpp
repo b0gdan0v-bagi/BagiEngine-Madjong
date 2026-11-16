@@ -198,4 +198,75 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NONFATAL_FAILURE((void)MakeFixedWall(garbled, false), "cannot read the tiles");
     }
 
+    namespace {
+
+        /// The strict builder's answer to the deal of `PlainSpec` after `change`.
+        template <typename Change>
+        std::expected<Wall, String> TryDeal(Change&& change, bool flowers = false) {
+            FixedDeal deal = MakeFixedDeal(PlainSpec());
+            change(deal);
+            return TryBuildFixedWall(deal, flowers);
+        }
+
+        void ExpectRefused(const std::expected<Wall, String>& built, const char* needle) {
+            ASSERT_FALSE(built.has_value());
+            EXPECT_NE(built.error().find(needle), String::npos) << ToStd(built.error());
+        }
+
+    }  // namespace
+
+    TEST(FixedWallTest, TheStrictBuilderGivesTheWallTheLenientOneGives) {
+        for (const bool flowers : {false, true}) {
+            FixedWallSpec spec = PlainSpec();
+            spec.live = "Gd Gd 9m";
+            spec.loose = "8s 9s 1s";
+            spec.liveAfterDeal = 6;
+            for (const Seat east : {0, 2}) {
+                const FixedDeal deal = MakeFixedDeal(spec, east);
+                const std::expected<Wall, String> strict = TryBuildFixedWall(deal, flowers);
+                ASSERT_TRUE(strict.has_value()) << ToStd(strict.error());
+                const FixedWallBuild lenient = BuildFixedWall(deal, flowers);
+                EXPECT_TRUE(lenient.problems.empty());
+                EXPECT_EQ(Ids(strict->LooseTiles()), Ids(lenient.wall.LooseTiles()));
+                EXPECT_EQ(Ids(strict->LiveTiles()), Ids(lenient.wall.LiveTiles()));
+                EXPECT_EQ(Ids(strict->DeadWall()), Ids(lenient.wall.DeadWall()));
+            }
+        }
+    }
+
+    TEST(FixedWallTest, TheStrictBuilderNamesTheMemberOfTheFirstProblem) {
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.live = *ParseTiles("1p 1p 1p"); }), "deal.live: uses more copies of 1p");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.hands[0][0] = *TryParse("F1"); }), "deal.hands[0]: uses more copies of F1");
+        EXPECT_TRUE(TryDeal([](FixedDeal& deal) { deal.hands[0][0] = *TryParse("F1"); }, true).has_value());
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.hands[2].resize(12); }), "deal.hands[2]: needs 13 tiles, has 12");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.hands[1].push_back(*TryParse("2p")); }), "deal.hands[1]: needs 13 tiles, has 14");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.loose.push_back(Tile{static_cast<uint8_t>(250)}); }), "deal.loose: tile 0 is not a tile");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.east = 4; }), "deal.east: 4 is not a seat");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.east = -1; }), "deal.east: -1 is not a seat");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.liveAfterDeal = -3; }), "deal.liveAfterDeal: -3 is outside");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.liveAfterDeal = static_cast<int>(kFullWall); }), "deal.liveAfterDeal: 136 is outside");
+        ExpectRefused(TryDeal([](FixedDeal& deal) { deal.live = Vector<Tile>(kFullWall, *TryParse("Ew")); }), "deal.live");
+    }
+
+    TEST(FixedWallTest, TheStrictBuilderRefusesALiveWallThatDoesNotFit) {
+        ExpectRefused(TryDeal([](FixedDeal& deal) {
+                          deal.liveAfterDeal = 1;
+                          deal.live = *ParseTiles("Gd Gd Rd");
+                      }),
+                      "deal.liveAfterDeal: 1 is outside 3..");
+    }
+
+    TEST(FixedWallTest, TheDealComparesByItsMembers) {
+        const FixedDeal deal = MakeFixedDeal(PlainSpec());
+        FixedDeal other = deal;
+        EXPECT_EQ(deal, other);
+        other.east = 1;
+        EXPECT_NE(deal, other);
+        FixedStart start{deal, 3, {1, 2, 3, 4}};
+        FixedStart same = start;
+        EXPECT_EQ(start, same);
+        same.scores[2] = 0;
+        EXPECT_NE(start, same);
+    }
+
 }  // namespace BECore::Mahjong::Tests

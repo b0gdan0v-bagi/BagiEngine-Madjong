@@ -11,7 +11,8 @@ namespace BECore::Mahjong {
     /**
      * @brief One thing that happened in a match, as plain data. `kind` says which members are meant; the others keep their defaults.
      *
-     * - `Start`: the first event of a match; `levels` has one per seat, also the seats a person plays.
+     * - `Start`: the first event of a match; `levels` has one per seat, also the seats a person plays. `state` is set when the match
+     *   began from a position (`Match::Start` with a `FixedStart`): the first hand is then its deal, not the seed's.
      * - `Hand`: the dealt tiles of every seat (`concealed`, East's 14 included, and the `bonus` tiles already laid open). Nothing is
      *   hidden: the log is the owner's.
      * - `Action`: only accepted actions are logged.
@@ -30,6 +31,7 @@ namespace BECore::Mahjong {
         SeatSetup seats = kDefaultSeatSetup;
         SeatLevels levels = UniformLevels(kDefaultLevel);
         MatchLogOrigin origin;
+        Optional<FixedStart> state;
 
         // Hand
         int number = 0;
@@ -93,7 +95,8 @@ namespace BECore::Mahjong {
               ActionRefused,       // `Apply` refused an `Action` event
               SettlementMismatch,  // the hand ended differently (kind, winner, east, round wind, scores or deltas)
               SettlementRefused,   // a `Settlement` event while the hand is not finished (or the match is over)
-              EndMismatch          // the final scores or standings, or the match is not over at `End`
+              EndMismatch,         // the final scores or standings, or the match is not over at `End`
+              BadState             // the `Start`'s `state` (a position) is refused: the deal, the hands counted or the first hand
     )
 
     struct ReplayError {
@@ -113,7 +116,8 @@ namespace BECore::Mahjong {
      *        needed: the actions are in the log, so the `levels` of a `Start` are read by nobody here.
      *
      * The `Hand`, `Settlement` and `End` events are checked against what the match makes of the actions before them, so a log that
-     * was changed, or made by other rules, stops at the first event that disagrees. A second `Start` begins a new match on `match`. An
+     * was changed, or made by other rules, stops at the first event that disagrees. A second `Start` begins a new match on `match`
+     * (from its `state` when it has one; a position the match refuses is `BadState`). An
      * empty log is `NoStart` at index 0. A log may lack its `Hand` and `End` events: what is missing is not checked.
      *
      * With an `echo` every event that was applied is passed on in order, exactly as `TableSession` emits them live. The `Hand` and

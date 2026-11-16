@@ -5,6 +5,7 @@
 #include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
 /** The JSON form of the match log (`MatchLogJson.h`); the events come from matches played by four computers on a `TableSession` with an in-memory `MatchLog`. */
@@ -364,8 +365,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", ""));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", 0));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
-        EXPECT_EQ(kMatchLogFormatVersion, 6);
+        EXPECT_EQ(kMatchLogFormatVersion, 7);
         EXPECT_EQ(kMatchLogNicknameVersion, 6);
+        EXPECT_EQ(kMatchLogStateVersion, 7);
     }
 
     TEST_F(MatchLogJsonTest, TheNicknameRoundTripsAndIsWrittenOnlyWhenThereIsOne) {
@@ -738,6 +740,201 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ReadSeats("PCC").has_value());
         EXPECT_FALSE(ReadSeats("PCCZ").has_value());
         EXPECT_EQ(SeatsToLetters(SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer}), "PCCC");
+    }
+
+    // ----- version 7: the position a match began from -----
+
+    namespace {
+
+        /// The Start event of a match begun from `state` (`TableSession` logs it), the first event of its log.
+        MatchLogEvent StartFrom(const FixedStart& state, bool flowers = false) {
+            Match match;
+            TableSession session(match);
+            MatchLog log;
+            session.SetLogSink(&log);
+            MahjongSettings settings;
+            settings.handsPerMatch = kShortMatchHands;
+            settings.flowers = flowers;
+            EXPECT_TRUE(session.StartMatch(settings, kSeed, kDefaultSeatSetup, UniformLevels(kDefaultLevel), state).has_value());
+            return log.Events().front();
+        }
+
+        /// Whether `state` with `change` made on its JSON is refused with an error that names `member`.
+        template <typename Change>
+        ::testing::AssertionResult BrokenStateIsRefused(const MatchLogEvent& start, const char* member, Change change) {
+            Json json = EventToJson(start);
+            change(json["state"]);
+            const String error = ErrorOf(json);
+            if (error.empty()) {
+                return ::testing::AssertionFailure() << member << ": accepted";
+            }
+            if (error.find(member) == String::npos) {
+                return ::testing::AssertionFailure() << "the error does not name '" << member << "': " << error.c_str();
+            }
+            return ::testing::AssertionSuccess();
+        }
+
+    }  // namespace
+
+    TEST_F(MatchLogJsonTest, AStartFromAPositionRoundTripsWithAndWithoutLiveAfterDeal) {
+        FixedStart state = MakeSamplePosition(2, 5);
+        for (const Optional<int> liveAfterDeal : {Optional<int>(), Optional<int>(40)}) {
+            state.deal.liveAfterDeal = liveAfterDeal;
+            const MatchLogEvent start = StartFrom(state);
+            ASSERT_TRUE(start.state.has_value());
+            const Json json = EventToJson(start);
+            EXPECT_EQ(Member(json, "version"), 7);
+            const Json written = Member(json, "state");
+            EXPECT_EQ(Member(written, "handsPlayed"), 5);
+            EXPECT_EQ(Member(written, "scores"), Json::array({250, 120, -40, 900}));
+            const Json deal = Member(written, "deal");
+            EXPECT_EQ(Member(deal, "east"), 2);
+            EXPECT_EQ(Member(deal, "hands")[1][4], "5m");
+            EXPECT_EQ(Member(deal, "hands")[3].size(), 13u);
+            EXPECT_EQ(Member(deal, "live"), Json::array({"Gd", "Gd", "9m"}));
+            EXPECT_EQ(Member(deal, "loose"), Json::array({"4s", "5s"}));
+            EXPECT_EQ(FindJsonMember(deal, "liveAfterDeal") != nullptr, liveAfterDeal.has_value());
+
+            const auto back = EventFromJson(json);
+            ASSERT_TRUE(back.has_value()) << back.error().c_str();
+            EXPECT_EQ(*back, start);
+            ASSERT_TRUE(back->state.has_value());
+            EXPECT_TRUE(*back->state == state);
+        }
+    }
+
+    TEST_F(MatchLogJsonTest, AStartFromAPositionWithFlowersKeepsTheBonusTiles) {
+        FixedWallSpec spec;
+        spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";
+        spec.hands[1] = "1m 2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw";
+        spec.hands[2] = "1p 2p 3p 4p 5p 6p 7p 8p 9p Rd Wd Gd Ew";
+        spec.hands[3] = "5s 6s 7s 8s 9s 1m 2m 3m 4m 5m 6m 7m 8m";
+        spec.live = "F1 F2 T1";
+        spec.loose = "T2";
+        FixedStart state;
+        state.deal = MakeFixedDeal(spec, 1);
+        const MatchLogEvent start = StartFrom(state, true);
+        const Json json = EventToJson(start);
+        EXPECT_EQ(Member(Member(Member(json, "state"), "deal"), "live"), Json::array({"F1", "F2", "T1"}));
+        const auto back = EventFromJson(json);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(*back, start);
+    }
+
+    TEST_F(MatchLogJsonTest, AStartWithoutAPositionIsAVersionSixLineApartFromTheVersion) {
+        const MatchLogEvent start = PlayedLog(kSeed).front();
+        Json json = EventToJson(start);
+        EXPECT_EQ(FindJsonMember(json, "state"), nullptr);
+        EXPECT_EQ(Member(json, "version"), 7);
+        json["version"] = 6;
+        const auto back = EventFromJson(json);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(*back, start) << "version 6 and 7 read the same line the same way";
+        constexpr size_t kVersionSixMembers = 9;
+        for (const char* key : {"event", "version", "seed", "settings", "seats", "levels", "platform", "build", "gameVersion"}) {
+            EXPECT_NE(FindJsonMember(json, key), nullptr) << key;
+        }
+        EXPECT_EQ(json.size(), kVersionSixMembers) << "no member besides those of version 6";
+    }
+
+    TEST_F(MatchLogJsonTest, AStateInAnOlderLineIsNotLookedAt) {
+        const MatchLogEvent withState = StartFrom(MakeSamplePosition(1, 3));
+        for (const int version : {6, 5, 4}) {
+            Json json = EventToJson(withState);
+            json["version"] = version;
+            if (version == 4) {
+                for (const char* member : {"platform", "build", "gameVersion"}) {
+                    json.erase(member);
+                }
+            }
+            const auto back = EventFromJson(json);
+            ASSERT_TRUE(back.has_value()) << "version " << version << ": " << back.error().c_str();
+            EXPECT_FALSE(back->state.has_value()) << "version " << version;
+            // Even a state no reader of version 7 would take is not looked at.
+            json["state"] = "garbage";
+            ASSERT_TRUE(EventFromJson(json).has_value()) << "version " << version;
+        }
+        Json current = EventToJson(withState);
+        current["state"] = "garbage";
+        EXPECT_NE(ErrorOf(current).find("state"), String::npos);
+    }
+
+    TEST_F(MatchLogJsonTest, AMalformedStateIsRefusedAndNamed) {
+        const MatchLogEvent start = StartFrom(MakeSamplePosition(1, 3));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.hands[2]", [](Json& state) { state["deal"]["hands"][2].erase(state["deal"]["hands"][2].begin()); })) << "a missing tile";
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.hands[1]", [](Json& state) { state["deal"]["hands"][1][3] = "9z"; })) << "a bad tile";
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.hands[0]", [](Json& state) { state["deal"]["hands"][0][0] = 7; })) << "a tile that is no text";
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.hands", [](Json& state) { state["deal"]["hands"].erase(state["deal"]["hands"].begin()); })) << "three hands";
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.east", [](Json& state) { state["deal"]["east"] = 5; }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.east", [](Json& state) { state["deal"]["east"] = "1"; }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.live", [](Json& state) { state["deal"]["live"] = Json::array({"1p", "zz"}); }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal.liveAfterDeal", [](Json& state) { state["deal"]["liveAfterDeal"] = "many"; }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal", [](Json& state) { state["deal"] = 3; }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.deal", [](Json& state) { state.erase("deal"); }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.scores", [](Json& state) { state["scores"] = Json::array({1, 2, 3}); })) << "scores of three numbers";
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.scores", [](Json& state) { state["scores"] = Json::array({1, 2, 3, "x"}); }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.scores", [](Json& state) { state.erase("scores"); }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.handsPlayed", [](Json& state) { state["handsPlayed"] = "3"; }));
+        EXPECT_TRUE(BrokenStateIsRefused(start, "state.handsPlayed", [](Json& state) { state.erase("handsPlayed"); }));
+        Json notObject = EventToJson(start);
+        notObject["state"] = Json::array();
+        EXPECT_NE(ErrorOf(notObject).find("state"), String::npos);
+    }
+
+    TEST_F(MatchLogJsonTest, ATileListIsAnArrayOfNotationsOrOneText) {
+        Json deal = FixedDealToJson(MakeSamplePosition(1).deal);
+        const auto reference = FixedDealFromJson(deal);
+        ASSERT_TRUE(reference.has_value()) << reference.error().c_str();
+
+        Json texts = deal;
+        for (size_t seat = 0; seat < kSeatCount; ++seat) {
+            String text;
+            for (const Tile tile : reference->hands[seat]) {
+                AppendFormat(text, "{}{}", text.empty() ? "" : " ", ToString(tile));
+            }
+            texts["hands"][seat] = ToStd(text);
+        }
+        texts["live"] = "Gd Gd 9m";
+        texts.erase("loose");
+        const auto fromTexts = FixedDealFromJson(texts);
+        ASSERT_TRUE(fromTexts.has_value()) << fromTexts.error().c_str();
+        FixedDeal want = *reference;
+        want.loose.clear();
+        EXPECT_TRUE(*fromTexts == want) << "texts of tiles read as the arrays do; a list left out is empty";
+
+        texts["hands"][0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 9z";
+        const auto bad = FixedDealFromJson(texts);
+        ASSERT_FALSE(bad.has_value());
+        EXPECT_EQ(bad.error().rfind("hands[0]: ", 0), 0u) << bad.error().c_str();
+        EXPECT_FALSE(FixedDealFromJson(Json::array()).has_value());
+    }
+
+    TEST_F(MatchLogJsonTest, AWholeLogOfAMatchFromAPositionReadsBackAndReplaysEqual) {
+        Match match;
+        TableSession session(match);
+        MatchLog log;
+        session.SetLogSink(&log);
+        MahjongSettings settings;
+        settings.handsPerMatch = kShortMatchHands;
+        ASSERT_TRUE(session.StartMatch(settings, kSeed, kAllComputers, UniformLevels(kDefaultLevel), MakeSamplePosition(3, 5)).has_value());
+        for (int hands = 0; session.GetPhase() != SessionPhase::MatchOver && hands < kHandLimitPerMatch; ++hands) {
+            session.RunComputers();
+            if (session.GetPhase() == SessionPhase::HandOver) {
+                ASSERT_TRUE(session.NextHand().has_value());
+            }
+        }
+        ASSERT_EQ(session.GetPhase(), SessionPhase::MatchOver);
+
+        const auto parsed = ParseMatchLog(TextOf(log.Events()));
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ(*parsed, log.Events());
+        Match replayed;
+        MatchLog echo;
+        const ReplayStatus status = ReplayMatchLog(*parsed, replayed, &echo);
+        ASSERT_TRUE(status.has_value()) << "stopped at event " << status.error().index << ": " << Name(status.error().problem);
+        EXPECT_EQ(echo.Events(), log.Events());
+        EXPECT_EQ(replayed.Scores(), match.Scores());
+        EXPECT_EQ(replayed.Standings(), match.Standings());
     }
 
 }  // namespace BECore::Mahjong::Tests

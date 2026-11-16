@@ -1,6 +1,7 @@
 #pragma once
 
 #include <EASTL/array.h>
+#include <Mahjong/Game/FixedWall.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/MahjongSettings.h>
@@ -51,7 +52,8 @@ namespace BECore::Mahjong {
               BadSettings,      // `IsPlayable` is false
               NotInHand,        // the match is not started or is over: there is no hand to end
               HandNotFinished,  // `EndHand` while the hand in progress has no result yet
-              HandRefused       // the next hand could not begin (cannot happen with winds made by `MakeSeatWinds`)
+              HandRefused,      // the next hand could not begin (cannot happen with winds made by `MakeSeatWinds`)
+              BadDeal           // `Start` from a `FixedStart`: the deal, `handsPlayed` or the first hand is refused
     )
 
     using MatchStatus = std::expected<void, MatchError>;
@@ -70,6 +72,16 @@ namespace BECore::Mahjong {
         /// Starts a new match (whatever was going on is dropped) and deals the first hand. `BadSettings`, and nothing changes, unless
         /// `IsPlayable(settings)`.
         MatchStatus Start(const MahjongSettings& settings, uint32_t seed);
+
+        /**
+         * @brief Starts a match from a position: the first hand is the fixed wall of `state.deal` (East `state.deal.east`, no draw for
+         *        East), `state.handsPlayed` hands already counted (the round wind follows) and `state.scores` as the scores.
+         *
+         * `seed` seeds the match's own rng, which the **next** hands use (`MakeWall`), so one position and one seed are one match.
+         * `BadSettings` unless `IsPlayable(settings)`; `BadDeal` for a deal `TryBuildFixedWall` refuses, `handsPlayed` outside
+         * `0..handsPerMatch - 1` or a hand `Begin` refuses. A refusal changes nothing.
+         */
+        MatchStatus Start(const MahjongSettings& settings, uint32_t seed, const FixedStart& state);
 
         [[nodiscard]] MatchPhase GetPhase() const noexcept {
             return _phase;

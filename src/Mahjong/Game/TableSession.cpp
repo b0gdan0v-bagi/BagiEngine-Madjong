@@ -27,16 +27,21 @@ namespace BECore::Mahjong {
     }
 
     MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const LevelProfile& profile) {
-        return StartWith(settings, seed, seats, UniformLevels(kDefaultLevel), &profile);
+        return StartWith(settings, seed, seats, UniformLevels(kDefaultLevel), &profile, nullptr);
     }
 
     MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels) {
-        return StartWith(settings, seed, seats, levels, nullptr);
+        return StartWith(settings, seed, seats, levels, nullptr, nullptr);
     }
 
-    MatchStatus TableSession::StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile) {
+    MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const FixedStart& state) {
+        return StartWith(settings, seed, seats, levels, nullptr, &state);
+    }
+
+    MatchStatus TableSession::StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile, const FixedStart* state) {
         BE_PROFILE_SCOPE("TableSession::StartMatch");
-        if (const MatchStatus started = _match.Start(settings, seed); !started) {
+        const MatchStatus started = state != nullptr ? _match.Start(settings, seed, *state) : _match.Start(settings, seed);
+        if (!started) {
             return started;
         }
         if (profile != nullptr) {
@@ -58,6 +63,9 @@ namespace BECore::Mahjong {
             start.seats = seats;
             start.levels = levels;
             start.origin = _origin;
+            if (state != nullptr) {
+                start.state = *state;
+            }
             _sink->OnEvent(start);
             _sink->OnEvent(MakeHandEvent(_match));
         }
@@ -89,6 +97,7 @@ namespace BECore::Mahjong {
         LeaveRemote();
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
+        ++_starts;
         return {};
     }
 

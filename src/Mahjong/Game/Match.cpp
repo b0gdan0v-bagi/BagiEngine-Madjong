@@ -63,6 +63,31 @@ namespace BECore::Mahjong {
         return {};
     }
 
+    MatchStatus Match::Start(const MahjongSettings& settings, uint32_t seed, const FixedStart& state) {
+        if (!IsPlayable(settings)) {
+            return std::unexpected(MatchError::BadSettings);
+        }
+        if (state.handsPlayed < 0 || IsMatchOver(state.handsPlayed, settings)) {
+            return std::unexpected(MatchError::BadDeal);
+        }
+        std::expected<Wall, String> wall = TryBuildFixedWall(state.deal, settings.flowers);
+        if (!wall.has_value()) {
+            return std::unexpected(MatchError::BadDeal);
+        }
+        Match next;
+        next._settings = settings;
+        next._rng.Seed(seed);
+        next._progress = MatchProgress{state.handsPlayed, state.deal.east};
+        next._scores = state.scores;
+        const HandStatus begun = next._hand.Begin(settings, eastl::move(*wall), MakeSeatWinds(state.deal.east), RoundWindOf(state.handsPlayed, settings));
+        if (!begun.has_value()) {
+            return std::unexpected(MatchError::BadDeal);
+        }
+        next._phase = MatchPhase::InHand;
+        *this = eastl::move(next);
+        return {};
+    }
+
     std::expected<HandSettlement, MatchError> Match::EndHand() {
         BE_PROFILE_SCOPE("Match::EndHand");
         if (_phase != MatchPhase::InHand || IsRemote()) {

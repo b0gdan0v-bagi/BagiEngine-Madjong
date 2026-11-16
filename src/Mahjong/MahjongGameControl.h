@@ -38,6 +38,10 @@ namespace BECore::Mahjong {
     [[nodiscard]] Optional<SeatSetup> ReadSeats(const String& letters);
     [[nodiscard]] String SeatsToLetters(const SeatSetup& seats);
 
+    /// The `levels` of a `reset` or a `set_state`: an array of four integers 1..10; nullopt for anything else (a number above INT64_MAX
+    /// included, as `GetJsonInt` refuses it).
+    [[nodiscard]] Optional<SeatLevels> ReadResetLevels(const Json& list);
+
     /// An action as the object `list_actions` gives (`type` and the fields of its kind: `src/Mahjong/CLAUDE.md` "Control API").
     [[nodiscard]] Json ActionToJson(const HandAction& action);
 
@@ -67,7 +71,8 @@ namespace BECore::Mahjong {
      * `list_actions` gives `ActionToJson` of the `LegalActions` of the person seat that has to act, `next_hand` in `hand_over`, nothing
      * otherwise; `perform_action` accepts each as listed. `illegal_action` is a well-formed action that is not listed now,
      * `invalid_params` a malformed one (the message names the key). `reset` takes the options of `src/Mahjong/CLAUDE.md` "Control API",
-     * all optional; anything invalid changes nothing. `set_state` is not supported. `no_active_model` before the first match and while
+     * all optional; anything invalid changes nothing. `set_state` starts a match from a position or the prefix of a match log
+     * (`MahjongSetState.h`): the same rules for the errors, and the match is saved but never uploaded. `no_active_model` before the first match and while
      * the game plays in an online room (`MahjongGame::IsOnlineTable()`: the adapter drives the local match only).
      */
     class MahjongGameControl : public IControllableGame {
@@ -78,6 +83,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] std::expected<Json, ControlError> GetActions() const override;
         std::expected<Json, ControlError> PerformAction(const Json& action) override;
         std::expected<void, ControlError> Reset(const Json& options) override;
+        std::expected<void, ControlError> SetState(const Json& state) override;
         [[nodiscard]] uint64_t GetStateVersion() const override;
 
     private:
