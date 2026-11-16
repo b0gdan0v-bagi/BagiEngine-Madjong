@@ -677,6 +677,191 @@ namespace BECore::Mahjong::Tests {
         ExpectClaimForEverySeed(early, base, kPung);
     }
 
+    // ----- the value of a claim (`wValueClaim`) -----
+
+    namespace {
+
+        /// A weighted profile whose gate and order are the claim's own-draws gain alone: a claim is acceptable exactly when `ValueClaims`
+        /// puts it strictly above the pass.
+        LevelProfile OnlyTheClaimValue(int depth = 1) {
+            LevelProfile profile = Weighted(kNormalProfile);
+            profile.wShanten = profile.wAcceptance = profile.wKeep = profile.wSafe = 0;
+            profile.wClaimRank = profile.wClaimValue = profile.wClaimMargin = profile.wClaimWall = 0;
+            profile.wValueClaim = 1;
+            profile.weightedValueDepth = depth;
+            return profile;
+        }
+
+        ClaimValue ValueOfAnswer(const HandAction& action, int64_t expected) {
+            ClaimValue value;
+            value.action = action;
+            value.value.expected = expected;
+            return value;
+        }
+
+    }  // namespace
+
+    TEST(ComputerWeightsTest, WithNoWeightOnTheClaimValueTheDepthDoesNotMatterInAWindow) {
+        for (const int depth : {0, 1, 2}) {
+            LevelProfile profile = Weighted(kNormalProfile);
+            profile.weightedValueDepth = depth;
+            EXPECT_GT(ExpectSameWindows(profile, kNormalProfile, static_cast<uint32_t>(depth)).claims, 0) << "depth " << depth;
+        }
+        LevelProfile noDepth = Weighted(kNormalProfile);
+        noDepth.wValueClaim = kWeightMax;
+        noDepth.weightedValueDepth = 0;
+        EXPECT_GT(ExpectSameWindows(noDepth, kNormalProfile).windows, 0);
+    }
+
+    TEST(ComputerWeightsTest, WithOnlyTheClaimValueWeightedAClaimIsTakenExactlyWhenItIsWorthMoreThanThePass) {
+        const LevelProfile profile = OnlyTheClaimValue();
+        int above = 0;
+        int notAbove = 0;
+        int unique = 0;
+        int checked = 0;
+        ForEachWindow([&](const TableView& view, int index, int window) {
+            if (window % kValueStride != 0) {
+                return;
+            }
+            MahjongRng rng(static_cast<uint32_t>(index * 1000 + window));
+            const ClaimDecision decision = DecideClaim(view, rng, profile);
+            if (decision.step != ClaimStep::Claim && decision.step != ClaimStep::NoGain) {
+                return;
+            }
+            ++checked;
+            const Vector<ClaimValue> values = ValueClaims(view, OwnDrawsModel{.depth = profile.weightedValueDepth});
+            int64_t passValue = 0;
+            for (const ClaimValue& value : values) {
+                passValue = value.action.kind == ActionKind::Pass ? value.value.expected : passValue;
+            }
+            int64_t bestValue = passValue;
+            int bestCount = 0;
+            for (const ClaimValue& value : values) {
+                if (value.action.kind != ActionKind::Pass && value.value.expected > bestValue) {
+                    bestValue = value.value.expected;
+                }
+            }
+            for (const ClaimValue& value : values) {
+                bestCount += value.action.kind != ActionKind::Pass && value.value.expected == bestValue ? 1 : 0;
+            }
+            const char* const where = "hand ";
+            if (bestValue > passValue) {
+                ++above;
+                EXPECT_EQ(decision.action.kind, ActionKind::Claim) << where << index << " window " << window;
+                for (const ClaimValue& value : values) {
+                    if (value.action == decision.action) {
+                        EXPECT_EQ(value.value.expected, bestValue) << where << index << " window " << window;
+                    }
+                }
+                if (bestCount == 1) {
+                    ++unique;
+                    for (const ClaimValue& value : values) {
+                        if (value.action.kind != ActionKind::Pass && value.value.expected == bestValue) {
+                            EXPECT_EQ(decision.action, value.action) << where << index << " window " << window;
+                        }
+                    }
+                }
+            } else {
+                ++notAbove;
+                EXPECT_EQ(decision.action, kPass) << where << index << " window " << window;
+            }
+        });
+        EXPECT_GT(checked, 0);
+        EXPECT_GT(above, 0) << "no window had a claim worth more than the pass";
+        EXPECT_GT(notAbove, 0) << "no window had every claim at or below the pass";
+        EXPECT_GT(unique, 0);
+    }
+
+    TEST(ComputerWeightsTest, TheGainOfAClaimThatIsNotListedAndOfAnEmptyAnswerIsZero) {
+        const HandAction chow = HandAction::MakeClaim(ClaimKind::Chow, T("1p"));
+        const HandAction kong = HandAction::MakeClaim(ClaimKind::Kong);
+        EXPECT_EQ(ClaimValueGain({}, kPung), 0);
+        EXPECT_EQ(ClaimValueGain({ValueOfAnswer(kPung, 900)}, kPung), 0) << "no pass in the answer";
+        const Vector<ClaimValue> values{ValueOfAnswer(kPung, 900), ValueOfAnswer(kPass, 400), ValueOfAnswer(chow, 100)};
+        EXPECT_EQ(ClaimValueGain(values, kPung), 500);
+        EXPECT_EQ(ClaimValueGain(values, kong), 0) << "a kong the answer does not list";
+        EXPECT_EQ(ClaimValueGain(values, kPass), 0);
+        EXPECT_EQ(ClaimValueGain(values, chow), -300) << "the gain is signed";
+        EXPECT_EQ(ClaimValueGain(values, HandAction::MakeClaim(ClaimKind::Chow, T("2p"))), 0) << "another chow is another claim";
+    }
+
+    TEST(ComputerWeightsTest, TheGainIsSignedSoAClaimWorthLessThanThePassLowersItsRatingAndCanFailTheGate) {
+        LevelProfile normal = Weighted(kNormalProfile);
+        LevelProfile valued = normal;
+        valued.wValueClaim = kNormalWeightClaimMargin;
+        int lowered = 0;
+        int raised = 0;
+        int failsTheGate = 0;
+        ForEachWindow([&](const TableView& view, int index, int window) {
+            if (window % kValueStride != 0) {
+                return;
+            }
+            const int before = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
+            const Vector<WeightedClaim> base = RateClaimsWeighted(view, before, normal);
+            const Vector<WeightedClaim> with = RateClaimsWeighted(view, before, valued);
+            ASSERT_EQ(base.size(), with.size());
+            for (size_t i = 0; i < base.size(); ++i) {
+                EXPECT_EQ(base[i].valueGain, 0) << "weight 0: no gain is looked at";
+                EXPECT_EQ(with[i].rating, base[i].rating + static_cast<int64_t>(valued.wValueClaim) * with[i].valueGain) << "hand " << index << " window " << window;
+                lowered += with[i].valueGain < 0 ? 1 : 0;
+                raised += with[i].valueGain > 0 ? 1 : 0;
+                failsTheGate += with[i].valueGain < 0 && base[i].acceptable && !with[i].acceptable ? 1 : 0;
+            }
+        });
+        EXPECT_GT(lowered, 0) << "no claim was worth less than the pass";
+        EXPECT_GT(raised, 0);
+        EXPECT_GT(failsTheGate, 0) << "no acceptable claim failed the gate on a negative gain";
+    }
+
+    TEST(ComputerWeightsTest, TheLargestWeightsAndTheClaimValueDoNotOverflowTheRating) {
+        for (const int depth : {1, 2}) {
+            LevelProfile profile = WeightedAt(kWeightMax);
+            profile.weightedValueDepth = depth;
+            int64_t largest = 0;
+            int checked = 0;
+            ForEachWindow([&](const TableView& view, int index, int window) {
+                if (window % (kValueStride * 3) != 0) {
+                    return;
+                }
+                const int before = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
+                for (const WeightedClaim& claim : RateClaimsWeighted(view, before, profile)) {
+                    ++checked;
+                    const int64_t gain = claim.valueGain < 0 ? -claim.valueGain : claim.valueGain;
+                    largest = gain > largest ? gain : largest;
+                    const int64_t features = static_cast<int64_t>(kWeightMax) * (kShantenCeiling + kAcceptanceMax + kClaimRankMax);
+                    const int64_t magnitude = claim.rating < 0 ? -claim.rating : claim.rating;
+                    EXPECT_LE(magnitude, features + static_cast<int64_t>(kWeightMax) * gain) << "hand " << index << " window " << window;
+                    EXPECT_EQ(ClaimPassesGate(profile, claim.rating, 0, false, view.liveCount),
+                              (claim.rating - profile.wClaimMargin) * kWallWeightUnit > static_cast<int64_t>(profile.wClaimWall) * view.liveCount);
+                }
+            });
+            EXPECT_GT(checked, 0) << "depth " << depth;
+            EXPECT_GT(largest, 0) << "depth " << depth;
+        }
+    }
+
+    TEST(ComputerWeightsTest, TheOwnDrawsClaimDepthStillGoesBeforeTheWeightedPath) {
+        LevelProfile profile = OnlyTheClaimValue();
+        profile.ownDrawsClaimDepth = 1;
+        profile.wClaimValue = kNormalWeightClaimValue;
+        int decided = 0;
+        ForEachWindow([&](const TableView& view, int index, int window) {
+            if (window % kValueStride != 0) {
+                return;
+            }
+            MahjongRng rng(static_cast<uint32_t>(index * 1000 + window));
+            const ClaimDecision decision = DecideClaim(view, rng, profile);
+            const int before = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
+            const Vector<ClaimValue> values = ValueClaims(view, OwnDrawsModel{.depth = profile.ownDrawsClaimDepth});
+            if (before <= kWaitingShanten || values.empty() || decision.step == ClaimStep::Mahjong) {
+                return;
+            }
+            ++decided;
+            EXPECT_EQ(decision.action, values.front().action) << "hand " << index << " window " << window;
+        });
+        EXPECT_GT(decided, 0);
+    }
+
     TEST(ComputerWeightsTest, ForAnyWeightsTheClaimAnswerIsListed) {
         MahjongRng weights(78);
         Vector<LevelProfile> profiles;

@@ -65,17 +65,26 @@ namespace BECore::Mahjong {
 
     /// A pung, kong or chow of the window with the hand after it: the shanten and acceptance of the best discard by the discard rating
     /// (the first of equal ratings by tile id, no rng; a kong has no discard yet and is the hand as it stands, as `RateClaim`), its
-    /// rating `claim` = `RateHandWeighted + wClaimRank * ClaimRank` and the gate.
+    /// rating `claim` = `RateHandWeighted + wClaimRank * ClaimRank + wValueClaim * valueGain` and the gate.
     struct WeightedClaim {
         HandAction action;
         int shanten = 0;
         int acceptance = 0;
+        /// The own-draws value of the claim minus the pass's, in milli-points and signed (`ClaimValueGain`); 0 unless the rating asked
+        /// for it.
+        int64_t valueGain = 0;
         int64_t rating = 0;
         bool acceptable = false;
     };
 
+    /// The gain of `claim` in `values` (the answer of `ValueClaims`): its `expected` minus the pass's, signed. 0 for a claim the answer
+    /// does not list, and for every claim when the answer is empty or lists no pass.
+    [[nodiscard]] int64_t ClaimValueGain(const Vector<ClaimValue>& values, const HandAction& claim) noexcept;
+
     /// Every pung, kong and chow of `view.legal` (no mahjong, no pass), in the order of `view.legal`, rated against the pass: the hand
-    /// as held, `shantenBefore` and its acceptance. `takeValueClaimsAtEqualShanten` is not read: `wClaimValue` is its weight.
+    /// as held, `shantenBefore` and its acceptance. `takeValueClaimsAtEqualShanten` is not read: `wClaimValue` is its weight. The value
+    /// gain of each claim (`ValueClaims` over `weightedValueDepth` draws, once per call) is looked at **only when `wValueClaim` and
+    /// `weightedValueDepth` are both above 0**; it is in the rating, so the gate and the order of the claims see it.
     [[nodiscard]] Vector<WeightedClaim> RateClaimsWeighted(const TableView& view, int shantenBefore, const LevelProfile& profile);
 
     /// The acceptable claim of the highest rating (not of the gate's number: the bonus is not in the order); equal ratings are the

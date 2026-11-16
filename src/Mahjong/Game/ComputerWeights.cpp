@@ -87,7 +87,20 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
+    int64_t ClaimValueGain(const Vector<ClaimValue>& values, const HandAction& claim) noexcept {
+        const HandAction pass = HandAction::MakePass();
+        const ClaimValue* passValue = nullptr;
+        const ClaimValue* claimValue = nullptr;
+        for (const ClaimValue& value : values) {
+            passValue = value.action == pass ? &value : passValue;
+            claimValue = value.action == claim ? &value : claimValue;
+        }
+        return passValue == nullptr || claimValue == nullptr ? 0 : claimValue->value.expected - passValue->value.expected;
+    }
+
     Vector<WeightedClaim> RateClaimsWeighted(const TableView& view, int shantenBefore, const LevelProfile& profile) {
+        const bool valued = profile.wValueClaim > 0 && profile.weightedValueDepth > 0;
+        const Vector<ClaimValue> values = valued ? ValueClaims(view, OwnDrawsModel{.depth = profile.weightedValueDepth}) : Vector<ClaimValue>{};
         const int meldCount = MeldCountOf(view);
         const int64_t pass = RateHandWeighted(profile, shantenBefore, AcceptanceOf(view, CountTiles(view.own.concealed), meldCount));
         Vector<WeightedClaim> claims;
@@ -100,7 +113,9 @@ namespace BECore::Mahjong {
             claim.action = action;
             claim.shanten = after.shanten;
             claim.acceptance = after.acceptance;
-            claim.rating = RateHandWeighted(profile, after.shanten, after.acceptance) + static_cast<int64_t>(profile.wClaimRank) * ClaimRank(action.claim);
+            claim.valueGain = valued ? ClaimValueGain(values, action) : 0;
+            claim.rating = RateHandWeighted(profile, after.shanten, after.acceptance) + static_cast<int64_t>(profile.wClaimRank) * ClaimRank(action.claim) +
+                           static_cast<int64_t>(profile.wValueClaim) * claim.valueGain;
             claim.acceptable = ClaimPassesGate(profile, claim.rating, pass, after.shanten == shantenBefore && IsValueClaim(view, action.claim), view.liveCount);
             claims.push_back(claim);
         }
