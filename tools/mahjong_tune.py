@@ -6,9 +6,11 @@
 
 One generation is one arena call (`--json`): the current mean is the first focus player and the baseline of the paired rows, the N sampled
 candidates follow it, and all three other seats are the mean; a candidate's score is its paired points a hand. The elite (the best quarter)
-move the mean and the spread of `log1p(weight)` (`update_state`). The mean is then looked at once, against three Normal seats, on the
-exploration range: the curve of the run, never used to choose. Training seeds are `>= 200000`; the judged ranges of `docs/bot-weights.md`
-("The split") are never played, and a command that would is refused, not clamped (`check_ranges`).
+move the mean and the spread of `log1p(weight)` (`update_state`), unless every one of them is a twin of the mean (it played the very same hands:
+paired points exactly 0 with half-width 0): that generation is a tie, the mean stays and the spread widens (`widen_state`). The mean is
+then looked at once, against three Normal seats, on the exploration range: the curve of the run, never used to choose. Training seeds are
+`>= 200000`; the judged ranges of `docs/bot-weights.md` ("The split") are never played, and a command that would is refused, not clamped
+(`check_ranges`).
 
 The log is a JSONL file, one line per record, written and flushed after each generation (a header first). It lies outside git
 (`check_log_path`), is never overwritten, and `--resume` appends to it: the state is read from its last line, and a resumed run writes the
@@ -51,7 +53,7 @@ class Weight:
     maximum: int = WEIGHT_MAX
 
 
-# The one place a coordinate is added (stage 3 adds two). The order is the order of the spec and of every list in the log.
+# The one place a coordinate is added (the last two are the value weights of stage 3). The order is the order of the spec and of every list in the log.
 WEIGHTS = (
     Weight("wShanten", 4400),
     Weight("wAcceptance", 16),
@@ -94,6 +96,7 @@ SIGMA_FLOOR = 0.05
 SMOOTHING = 0.5  # `a` of the update
 ELITE_DIVISOR = 4  # the elite are the best quarter
 STATE_DIGITS = 6  # the state is kept at the log's precision, so a resumed run starts from exactly what the log says
+TIE_WIDENING = 1.25  # the factor of the spread in a tie generation
 SEED_STRIDE = 1000003  # the stream of a generation: Random(seed * SEED_STRIDE + generation)
 X_CEILING = math.log1p(WEIGHT_MAX)
 
@@ -146,6 +149,23 @@ def update_state(state: State, candidates: Sequence[Weights], elite: Sequence[in
         mu.append(round((1 - SMOOTHING) * state.mu[index] + SMOOTHING * mean, STATE_DIGITS))
         sigma.append(round(max(SIGMA_FLOOR, (1 - SMOOTHING) * state.sigma[index] + SMOOTHING * spread), STATE_DIGITS))
     return State(tuple(mu), tuple(sigma))
+
+
+def is_twin(cell: dict) -> bool:
+    """A candidate whose paired points a hand are exactly 0 with no interval played the very same hands as the mean."""
+    return cell["mean"] == 0 and cell["half"] == 0
+
+
+def is_tie_generation(cells: Sequence[dict], elite: Sequence[int]) -> bool:
+    """No candidate beat the mean or differed from it: the elite are all twins, so they carry no information."""
+    return all(is_twin(cells[index]) for index in elite)
+
+
+def widen_state(state: State) -> State:
+    """A tie generation: `mu` stays, `sigma' = min(start sigma, 1.25 sigma)`, so a spread that collapsed on a plateau comes back to the start's."""
+    sigma = tuple(round(min(SIGMA_START if weight.start > 0 else SIGMA_START_ZERO, value * TIE_WIDENING), STATE_DIGITS)
+                  for weight, value in zip(WEIGHTS, state.sigma))
+    return State(state.mu, sigma)
 
 
 # ----- the guards -----
@@ -384,9 +404,10 @@ def play_generation(options: TrainOptions, state: State, generation: int, clock:
     players = [weights_spec(mean)] + [weights_spec(weights) for weights in candidates]
     document = run_arena(options.arena, players, weights_spec(mean), first, options.seeds, options.jobs)
     focus = document["focus"]
-    scores = [entry["paired"]["pointsPerHand"]["mean"] for entry in focus[1:]]
-    elite = elite_indices(scores)
-    new_state = update_state(state, candidates, elite)
+    cells = [entry["paired"]["pointsPerHand"] for entry in focus[1:]]
+    elite = elite_indices([cell["mean"] for cell in cells])
+    tie = is_tie_generation(cells, elite)
+    new_state = widen_state(state) if tie else update_state(state, candidates, elite)
     monitor = monitor_call(options, mean_weights(new_state))
     record = {
         "baseline": {"pointsPerHand": focus[0]["pointsPerHand"]["mean"], "winPercent": focus[0]["winPercent"]["mean"]},
@@ -394,7 +415,7 @@ def play_generation(options: TrainOptions, state: State, generation: int, clock:
             {"pairedPoints": interval_of(entry["paired"]["pointsPerHand"]), "pairedWins": interval_of(entry["paired"]["winPercent"]),
              "weights": weights_dict(weights)}
             for entry, weights in zip(focus[1:], candidates)],
-        "elite": elite,
+        "elite": [] if tie else elite,
         "first": first,
         "generation": generation,
         "hands": hands_of(document) + hands_of(monitor),
@@ -405,6 +426,7 @@ def play_generation(options: TrainOptions, state: State, generation: int, clock:
         "newMean": weights_dict(mean_weights(new_state)),
         "seeds": options.seeds,
         "sigma": {weight.name: value for weight, value in zip(WEIGHTS, new_state.sigma)},
+        "tie": tie,
         "wallSeconds": round(clock() - began, 3),
     }
     return record, new_state
@@ -455,8 +477,9 @@ def train(options: TrainOptions, clock: Callable[[], float] = time.monotonic, ou
         append_line(log, record)
         previous_seconds = record["wallSeconds"]
         monitor = record["monitor"]
+        notes = (" (significant)" if monitor["pairedPoints"]["significant"] else "") + (", tie generation" if record["tie"] else "")
         print(f"generation {generation}: the mean against Normal {signed(monitor['pairedPoints'])} points a hand, {signed(monitor['pairedWins'])} wins %"
-              f"{' (significant)' if monitor['pairedPoints']['significant'] else ''}, {record['wallSeconds']:.1f} s", file=out)
+              f"{notes}, {record['wallSeconds']:.1f} s", file=out)
     print(f"{options.generations} generations in {log}", file=out)
     return EXIT_DONE
 

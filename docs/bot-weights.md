@@ -127,12 +127,22 @@ scale-ragged objective makes fragile, and it uses two cheap evaluations a step w
 candidate.
 
 **The tool and its numbers** (`tools/mahjong_tune.py train`, standard library only; the contract is in `tools/CLAUDE.md`). The
-coordinates are the eight weights of `WEIGHTS` (the Normal-equivalent defaults above, maximum `kWeightMax`). A candidate is
+coordinates are the ten weights of `WEIGHTS` (the Normal-equivalent defaults above, maximum `kWeightMax`: the eight of stage 1 and, from
+stage 3, `wValueDiscard` and `wValueClaim`, which start at 0 like `wSafe`; the start is still Normal itself and its monitoring row still
+exactly 0). A candidate is
 `w = clamp(round(expm1(mu + sigma * gauss)), 0, 65535)` per weight; the start is `mu = log1p(default)` with `sigma` 0.5, and 2.0 for
 a weight whose default is 0 (`log1p(6)`; its samples below 0 become 0). The candidate's own `x = log1p(w)` is that of what was
 **played**, rounded and clamped. The elite are the best `ceil(N / 4)` by paired points a hand (ties by index) and the update is
 `mu' = (1 - a) mu + a mean(x_elite)`, `sigma' = max(0.05, (1 - a) sigma + a std(x_elite))` with `a` 0.5. The stream of a generation is
 `random.Random(seed * 1000003 + g)`, so a resume needs only the state of the last generation.
+
+**The tie rule** (stage 3; the pilot's finding, "The pilot"). A candidate is a **twin** of the mean when its paired points a hand are
+exactly 0 with half-width 0: it played the very same hands, so its weights are on the mean's plateau of the piecewise constant
+objective and it says nothing. When **every member of the elite is a twin** (no candidate beat the mean, and the best quarter by index
+is the first four twins), the generation is a **tie generation**: `mu` does not move, `sigma` becomes `min(start sigma, 1.25 sigma)`
+per weight (the start sigma is 0.5, 2.0 for a weight that starts at 0), the record has `"tie": true` and `"elite": []`. A spread that the
+earlier updates collapsed to the floor (0.05) is back at the start's in 11 ties (17 for a weight that starts at 0). Any other generation
+is the update above, and a twin among better ones stays in the elite as before. The start stays Normal.
 
 **One generation is two arena calls.** Training: `--focus <mean>,<c1>,..,<cN> --others <mean> --first <200000 + g * seeds> --seeds
 <seeds> --jobs 0 --json` (the mean first: the baseline of the paired rows; every other seat the mean). Monitoring: `--focus
@@ -227,6 +237,45 @@ a hand and wins %, with the half-widths of the log; `significant` is the log's f
     do with a tie (skip the update, keep the spread, widen it) and whether the start should be Normal itself or a point off the
     plateau; the values and the noise (a row of 250 seeds cannot show a difference below about 1 point a hand; the candidates' own
     half-widths were about 0.5 to 2 while they differed) are the facts it starts from. The method was not changed after the pilot.
+
+### The budget of the training (stage 3; written before the training ran)
+
+The training tunes the ten weights of `WEIGHTS` in at most 30 minutes of wall time, in **three resumable commands of at most 10
+minutes each**; it gives no verdict and plays no judged range (stage 4 does).
+
+- **Probe**, 2026-11-16, Release arena (`macos-release`), Apple M4 Pro, 14 logical cores, `--jobs 0`, **not a quiet machine: load
+  average 50 at the start of the probe, 65 to 82 during it, 76 at its end, from the other workers of the todo loop**. One command,
+  `python3 tools/mahjong_tune.py train --arena build/macos-release/bin/BagiMahjongArena --log ~/.claude/plans/mahjong-tune/probe3.jsonl
+  --seed 11 --candidates 16 --seeds 200 --monitor-seeds 250 --generations 3 --train-first 300000 --jobs 0`: 318 s in all, the start
+  monitoring about 2 s, and generations of **40.6 s, 143.4 s and 132.1 s** (15600 hands each). The first is cheap because the mean is
+  Normal's weights and three seats of four play without a value term; from the second the mean has value weights above 0 and so do
+  the other three seats and most candidates. The probe's log is a working file, not the training's: the training uses another log name
+  and the same seeds from `--train-first` (the probe's seeds are not special).
+- **The number of seconds a generation is 132** (the probe's third, the better guess for a generation whose seats all carry value
+  weights; the mean of the second and third is 138). It is about 118 hands a second, against 675 of the pilot (no value terms) and the
+  50 to 63 s a generation that "Cost" estimated from a load of 33: the load of this machine is a factor of its own, and nothing here
+  is made to look faster than it was.
+- **Chosen**: 16 candidates, 200 seeds a generation (17 players x 800 hands = 13600 hands), monitor seeds 250 (the new mean's
+  monitoring call is 2 x 1000 hands), tool seed 11, `--train-first 300000` (generation g plays seeds `300000 + 200 g` and on), the
+  monitoring range `[4000, 4250)`, `--max-seconds 450`, `--jobs 0`. A generation is **15600 hands**, the start monitoring 2000. These
+  are the proposal's numbers; **only `G` came from the probe**, the proposal had it as at most 40.
+- **`G = floor(3 x 450 / 132) = floor(10.2) = 10` generations**, fixed now: 10 x 15600 + 2000 = **158000 hands** at most. The tool stops
+  before a generation when the seconds since the command started plus the last generation's seconds reach 450, so a command ends
+  under 450 s plus the amount by which its last generation took longer than the one before it (under 600 s unless a generation takes
+  150 s more than the last one). With generations of 132 s the stops fall after about 4, 3 and 3 generations (the first has the cheap
+  generation 0), which is the 10 of the budget; **a slower machine stops the third command before 10, and that is recorded, not
+  corrected** (the budget is not edited afterwards).
+- **The three commands**, the same line, the second and the third with `--resume` added, stdout of each to its own file next to the log
+  (`~/.claude/plans/mahjong-tune/train3-1.out`, `-2`, `-3`):
+  `python3 tools/mahjong_tune.py train --arena build/macos-release/bin/BagiMahjongArena --log ~/.claude/plans/mahjong-tune/train3.jsonl
+  --seed 11 --candidates 16 --seeds 200 --monitor-seeds 250 --generations 10 --train-first 300000 --max-seconds 450 --jobs 0`.
+- **The tie rule** ("The method") is in: a generation in which no candidate beats the mean or differs from it moves nothing and
+  widens the spread, as the pilot's plateau (18 generations of the same row) asked. The start is Normal, so the start monitoring row is
+  exactly 0 and the first mean may stay on Normal's plateau for some generations; the value weights start at 0 and are sampled above
+  it from the first generation (`sigma` 2.0 on `log1p`, samples up to a few hundred), so a candidate with a value term leaves the plateau.
+- **What the budget buys**: 10 generations of 16 candidates, a monitoring row of 1000 hands (half-width about 1 to 2 points a hand
+  on a mean that plays like Normal and 8 on one that does not: the probe's rows, which are read only for the cost). Nothing here is
+  expected to be a result; the record of the run is "The training (stage 3)" after it.
 
 ## The verdict rule (fixed before any run)
 

@@ -6,7 +6,9 @@
 
 The fake arena values a player `f(w) = -scale * sum((log1p(w_i) - log1p(target_i))^2)`, `normal` having the start weights, and answers the
 paired points a hand of a focus player as `f(player) - f(first)` plus a noise from a hash of the seed and the player index. Every call it gets
-is appended to a file, so a test reads back what the tuner asked for. Registered as the ctest entry MahjongTune.
+is appended to a file, so a test reads back what the tuner asked for. Two toy plateaus make twins (paired points 0 with half-width 0, as the real
+arena says of a player that played the same hands): `dead` weights that `f` does not read, and a ball `plateau` (in `log1p` units, around `normal`)
+inside which `f` is flat. Registered as the ctest entry MahjongTune.
 """
 
 import contextlib
@@ -70,18 +72,29 @@ def weights_of(spec):
     assert knobs.pop("weighted") == "1"
     return [int(knobs[name]) for name in names]
 
+dead = set(config.get("dead", []))
+
+def live(weights):
+    return [w for index, w in enumerate(weights) if index not in dead]
+
+def flat(weights):
+    radius = config.get("plateau")
+    return radius is not None and all(abs(math.log1p(w) - math.log1p(n)) <= radius for w, n in zip(live(weights), live(normal)))
+
 def value(weights):
-    return -config["scale"] * sum((math.log1p(w) - math.log1p(t)) ** 2 for w, t in zip(weights, target))
+    if flat(weights):
+        weights = normal
+    return -config["scale"] * sum((math.log1p(w) - math.log1p(t)) ** 2 for w, t in zip(live(weights), live(target)))
 
 def noise(first, index):
     digest = hashlib.sha256(f"{{first}}:{{index}}".encode()).digest()
     return (digest[0] / 255 * 2 - 1) * config["noise"]
 
-def cell(mean):
-    return {{"mean": round(mean, 6), "half": config["half"], "hasInterval": True}}
+def cell(mean, half=None):
+    return {{"mean": round(mean, 6), "half": config["half"] if half is None else half, "hasInterval": True}}
 
-def paired(mean):
-    return dict(cell(mean), significant=abs(mean) > config["half"])
+def paired(mean, half=None):
+    return dict(cell(mean, half), significant=abs(mean) > config["half"])
 
 first = int(options["--first"])
 focus = players(options["--focus"])
@@ -89,11 +102,13 @@ base = weights_of(focus[0])
 entries = []
 for index, spec in enumerate(focus):
     weights = weights_of(spec)
-    points = 0.0 if weights == base else value(weights) - value(base) + noise(first, index)
+    twin = live(weights) == live(base) or (flat(weights) and flat(base))
+    points = 0.0 if twin else value(weights) - value(base) + noise(first, index)
+    half = 0 if twin else None
     wins = points * 2
     entry = dict(name=spec, hands=4 * int(options["--seeds"]), winPercent=cell(25 + wins), pointsPerHand=cell(value(base) + points),
                  drawnPercent=0, declaredPercent=0, avgWinScore=0)
-    entry["paired"] = None if index == 0 else dict(against=focus[0], pointsPerHand=paired(points), winPercent=paired(wins),
+    entry["paired"] = None if index == 0 else dict(against=focus[0], pointsPerHand=paired(points, half), winPercent=paired(wins, half),
                                                    gaveWinPercent=paired(0), standingScore=paired(0))
     entries.append(entry)
 print(json.dumps({{"format": "bagi-arena-report", "version": 1, "first": first, "seeds": int(options["--seeds"]),
@@ -158,6 +173,12 @@ class SourcesTest(unittest.TestCase):
 
 
 class SpecTest(unittest.TestCase):
+    def test_the_two_value_weights_are_the_last_coordinates_and_start_at_zero(self) -> None:
+        self.assertEqual([weight.name for weight in tune.WEIGHTS[-2:]], ["wValueDiscard", "wValueClaim"])
+        self.assertEqual([weight.start for weight in tune.WEIGHTS[-2:]], [0, 0])
+        for name in ("wValueDiscard", "wValueClaim"):
+            self.assertEqual(tune.weights_spec(tune.start_weights()).count(f",{name}="), 1)
+
     def test_the_spec_has_every_weight_once_in_order_and_one_player(self) -> None:
         spec = tune.weights_spec(tune.start_weights())
         self.assertTrue(spec.startswith("normal:weighted=1,"))
@@ -201,6 +222,11 @@ class SamplingTest(unittest.TestCase):
         self.assertTrue(any(value > 0 for value in values))
         self.assertTrue(any(value == 0 for value in values))
 
+    def test_a_value_weight_that_starts_at_zero_samples_above_zero(self) -> None:
+        for name in ("wValueDiscard", "wValueClaim"):
+            index = [weight.name for weight in tune.WEIGHTS].index(name)
+            self.assertTrue(any(candidate[index] > 0 for candidate in tune.sample_candidates(tune.initial_state(), 200, 2, 0)), name)
+
     def test_the_elite_are_the_best_quarter_ties_by_index(self) -> None:
         self.assertEqual(tune.elite_indices([1.0, 5.0, 3.0, 5.0, 0.0, 2.0, 4.0, 1.0]), [1, 3])
         self.assertEqual(tune.elite_indices([2.0] * 8), [0, 1])
@@ -241,6 +267,63 @@ class UpdateTest(unittest.TestCase):
         count = len(tune.WEIGHTS)
         updated = tune.update_state(tune.initial_state(), [tuple([13] * count), tuple([17] * count)], [0, 1])
         for value in updated.mu + updated.sigma:
+            self.assertEqual(value, round(value, tune.STATE_DIGITS))
+
+
+class TieTest(unittest.TestCase):
+    TWIN = {"mean": 0.0, "half": 0.0}
+
+    def test_a_twin_is_exactly_zero_with_no_interval(self) -> None:
+        self.assertTrue(tune.is_twin(self.TWIN))
+        self.assertFalse(tune.is_twin({"mean": 0.0, "half": 0.01}))  # it played other hands and came out level
+        self.assertFalse(tune.is_twin({"mean": 0.01, "half": 0.0}))
+        self.assertFalse(tune.is_twin({"mean": -3.0, "half": 1.0}))
+
+    def test_a_generation_is_a_tie_only_when_every_member_of_the_elite_is_a_twin(self) -> None:
+        worse, better = {"mean": -2.0, "half": 0.5}, {"mean": 1.5, "half": 0.5}
+        cells = [self.TWIN, worse, self.TWIN, self.TWIN, worse, self.TWIN, self.TWIN, self.TWIN]
+        elite = tune.elite_indices([cell["mean"] for cell in cells])
+        self.assertEqual(elite, [0, 2])
+        self.assertTrue(tune.is_tie_generation(cells, elite))
+        cells[4] = better  # one that beat the mean is in the elite: the old update
+        elite = tune.elite_indices([cell["mean"] for cell in cells])
+        self.assertEqual(elite, [4, 0])
+        self.assertFalse(tune.is_tie_generation(cells, elite))
+
+    def test_a_twin_among_better_ones_stays_in_the_elite_and_moves_the_state_as_before(self) -> None:
+        count = len(tune.WEIGHTS)
+        better = {"mean": 2.0, "half": 0.5}
+        cells = [self.TWIN, better, {"mean": -1.0, "half": 0.5}, self.TWIN, {"mean": -4.0, "half": 0.5}, {"mean": -3.0, "half": 0.5},
+                 {"mean": -2.0, "half": 0.5}, {"mean": -5.0, "half": 0.5}]
+        elite = tune.elite_indices([cell["mean"] for cell in cells])
+        self.assertEqual(elite, [1, 0])  # the twin is in it, behind the better one
+        self.assertFalse(tune.is_tie_generation(cells, elite))
+        candidates = [tuple([9] * count)] * 8
+        state = tune.initial_state()
+        self.assertNotEqual(tune.update_state(state, candidates, elite), state)
+
+    def test_a_tie_generation_keeps_the_mean_and_widens_the_spread_up_to_the_start_spread(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([2.0] * count), tuple([0.2] * count))
+        widened = tune.widen_state(state)
+        self.assertEqual(widened.mu, state.mu)
+        self.assertEqual(widened.sigma, tuple([0.25] * count))
+        caps = tuple(tune.SIGMA_START if weight.start > 0 else tune.SIGMA_START_ZERO for weight in tune.WEIGHTS)
+        near = tune.State(state.mu, tuple(cap * 0.9 for cap in caps))
+        self.assertEqual(tune.widen_state(near).sigma, caps)  # never above the start's
+        self.assertEqual(tune.widen_state(tune.State(state.mu, caps)).sigma, caps)
+
+    def test_a_spread_that_collapsed_to_the_floor_is_back_at_the_start_spread_after_enough_ties(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([2.0] * count), tuple([tune.SIGMA_FLOOR] * count))
+        caps = tuple(tune.SIGMA_START if weight.start > 0 else tune.SIGMA_START_ZERO for weight in tune.WEIGHTS)
+        steps = math.ceil(math.log(max(caps) / tune.SIGMA_FLOOR, tune.TIE_WIDENING))
+        for _ in range(steps - 1):
+            state = tune.widen_state(state)
+        self.assertNotEqual(state.sigma, caps)
+        state = tune.widen_state(state)
+        self.assertEqual(state.sigma, caps)
+        for value in state.sigma:
             self.assertEqual(value, round(value, tune.STATE_DIGITS))
 
 
@@ -367,7 +450,8 @@ class TrainTest(unittest.TestCase):
         self.train(log, generations=1)
         header, record = read_records(log)
         self.assertEqual(header["weightNames"], [weight.name for weight in tune.WEIGHTS])
-        for key in ("baseline", "candidates", "elite", "first", "generation", "hands", "mean", "monitor", "mu", "newMean", "seeds", "sigma", "wallSeconds"):
+        for key in ("baseline", "candidates", "elite", "first", "generation", "hands", "mean", "monitor", "mu", "newMean", "seeds", "sigma", "tie",
+                    "wallSeconds"):
             self.assertIn(key, record)
         self.assertEqual(record["mean"], tune.weights_dict(self.start))
         self.assertEqual(len(record["candidates"]), self.CANDIDATES)
@@ -397,6 +481,65 @@ class TrainTest(unittest.TestCase):
         self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
         code, out, _ = self.train(parts, "--resume", generations=5)  # nothing left to do
         self.assertEqual(code, 0)
+        self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
+
+    def plateau_config(self) -> None:
+        """Two dead weights and a ball around Normal inside which the objective is flat: many candidates are twins, a few escape."""
+        names = [weight.name for weight in tune.WEIGHTS]
+        self.set_config(**DEFAULT_CONFIG, dead=[names.index("wClaimWall"), names.index("wClaimRank")], plateau=5.0)
+
+    def test_a_candidate_that_differs_only_in_a_dead_weight_is_a_twin_of_the_mean(self) -> None:
+        self.plateau_config()
+        log = self.temp / "dead.jsonl"
+        self.train(log, generations=1)
+        _, record = read_records(log)
+        names = [weight.name for weight in tune.WEIGHTS]
+        dead = [names.index("wClaimWall"), names.index("wClaimRank")]
+        mean = tune.weights_from_dict(record["mean"])
+        for candidate in record["candidates"]:
+            weights = tune.weights_from_dict(candidate["weights"])
+            only_dead = all(w == m for index, (w, m) in enumerate(zip(weights, mean)) if index not in dead)
+            if only_dead:
+                self.assertEqual((candidate["pairedPoints"]["mean"], candidate["pairedPoints"]["half"]), (0, 0), candidate)
+            self.assertEqual(tune.is_twin(candidate["pairedPoints"]), candidate["pairedPoints"]["half"] == 0 and candidate["pairedPoints"]["mean"] == 0)
+
+    def test_the_tuner_leaves_the_plateau_and_a_tie_generation_leaves_the_mean_alone(self) -> None:
+        self.plateau_config()
+        log = self.temp / "plateau.jsonl"
+        code, out, err = self.train(log, generations=12, candidates=16)
+        self.assertEqual((code, err), (0, ""), out)
+        records = read_records(log)[1:]
+        ties = [record for record in records if record["tie"]]
+        self.assertTrue(ties, "the toy has to produce a tie generation for this case to mean anything")
+        self.assertIn("tie generation", out)
+        previous = None
+        for record in records:
+            self.assertIsInstance(record["tie"], bool)
+            if record["tie"]:
+                self.assertEqual(record["elite"], [])
+                cells = [candidate["pairedPoints"] for candidate in record["candidates"]]
+                self.assertTrue(tune.is_tie_generation(cells, tune.elite_indices([cell["mean"] for cell in cells])))
+                if previous is not None:
+                    self.assertEqual(record["mu"], previous["mu"])
+            else:
+                self.assertEqual(len(record["elite"]), 4)
+                cells = [candidate["pairedPoints"] for candidate in record["candidates"]]
+                self.assertFalse(tune.is_tie_generation(cells, record["elite"]))
+            previous = record
+        final = tune.weights_from_dict(records[-1]["newMean"])
+        self.assertGreater(true_value(final, self.target), true_value(self.start, self.target) + 1.0)
+        self.assertNotEqual(records[-1]["mu"], {weight.name: round(math.log1p(weight.start), tune.STATE_DIGITS) for weight in tune.WEIGHTS})
+
+    def test_a_resumed_run_equals_an_uninterrupted_one_with_tie_generations_in_it(self) -> None:
+        self.plateau_config()
+        whole, parts = self.temp / "whole.jsonl", self.temp / "parts.jsonl"
+        self.assertEqual(self.train(whole, generations=8, candidates=16)[0], 0)
+        ties = [record["generation"] for record in read_records(whole)[1:] if record["tie"]]
+        self.assertTrue(ties and ties[0] < 6, ties)
+        self.assertEqual(self.train(parts, generations=ties[0] + 1, candidates=16)[0], 0)  # stops right after a tie generation
+        self.assertTrue(read_records(parts)[-1]["tie"])
+        code, out, err = self.train(parts, "--resume", generations=8, candidates=16)
+        self.assertEqual((code, err), (0, ""), out)
         self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
 
     def test_every_call_of_the_arena_is_a_legal_one(self) -> None:
