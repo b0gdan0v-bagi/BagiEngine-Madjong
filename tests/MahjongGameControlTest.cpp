@@ -1528,6 +1528,7 @@ namespace BECore::Mahjong::Tests {
             context.kinds = &game->GetLocalSession().Seats();
             context.levels = &game->GetLocalSession().Levels();
             Json expected = TableStateToJson(context, MakeTableView(original.Hand(), seat));
+            expected["theme"] = Member(state, "theme");  // the adapter adds the theme, the table's state has none
             EXPECT_EQ(Stable(state), Stable(expected)) << "at " << cut;
 
             const HandState now = game->GetLocalMatch().Hand().Capture();
