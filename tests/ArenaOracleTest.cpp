@@ -56,7 +56,8 @@ namespace BECore::Mahjong::Arena {
                 const uint32_t seed = kFirstSeed + static_cast<uint32_t>(index);
                 int step = 0;
                 const HandObserver observer = [&](const HandModel& hand, Seat actor) {
-                    if (step++ % stride == 0) {
+                    // The call with the hand finished (`kNoSeat`) is no decision: nobody acts there.
+                    if (actor != kNoSeat && step++ % stride == 0) {
                         positions.push_back({hand, actor, seed * kRngStride + static_cast<uint32_t>(step)});
                     }
                 };

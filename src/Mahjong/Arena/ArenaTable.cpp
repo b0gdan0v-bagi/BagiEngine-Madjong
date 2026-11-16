@@ -1,6 +1,9 @@
 #include "ArenaTable.h"
 
 #include <Mahjong/Arena/ArenaStats.h>
+#include <Mahjong/Game/ComputerTurn.h>
+#include <Mahjong/Game/ComputerView.h>
+#include <Mahjong/Game/HandShape.h>
 #include <thread>
 
 namespace BECore::Mahjong::Arena {
@@ -44,6 +47,49 @@ namespace BECore::Mahjong::Arena {
                     count.won += otherWon && winRound <= rounds ? 1 : 0;
                 }
             }
+        }
+
+        /// 1.0 in `HitCount::expectedMicro`.
+        constexpr int64_t kMicroPerHit = 1'000'000;
+
+        /// What one seat could win on: its winning kinds and the unseen copies of them against all the unseen copies, from its view.
+        struct Exposure {
+            Seat seat = kNoSeat;
+            Vector<Tile> winning;
+            int64_t unseenWinning = 0;
+            int64_t unseenTotal = 0;
+        };
+
+        /// `view` with the tile `drawn` (invalid for none) counted as unseen again: the seat's view before it drew.
+        Optional<Exposure> ExposureOf(const TableView& view, Vector<Tile> winning, Tile drawn) {
+            Exposure exposure;
+            exposure.seat = view.seat;
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                const Tile kind{id};
+                const int unseen = UnseenCopies(view, kind) + (kind == drawn ? 1 : 0);
+                exposure.unseenTotal += unseen;
+                if (eastl::find(winning.begin(), winning.end(), kind) != winning.end()) {
+                    exposure.unseenWinning += unseen;
+                }
+            }
+            if (exposure.unseenTotal <= 0) {
+                return std::nullopt;
+            }
+            exposure.winning = eastl::move(winning);
+            return exposure;
+        }
+
+        void Count(HitCount& count, const Exposure& exposure, Tile tile) {
+            ++count.exposures;
+            count.expectedMicro += (exposure.unseenWinning * kMicroPerHit + exposure.unseenTotal / 2) / exposure.unseenTotal;
+            const bool hit = eastl::find(exposure.winning.begin(), exposure.winning.end(), tile) != exposure.winning.end();
+            count.hits += hit ? 1 : 0;
+        }
+
+        void MergeHits(HitCount& total, const HitCount& part) {
+            total.exposures += part.exposures;
+            total.expectedMicro += part.expectedMicro;
+            total.hits += part.hits;
         }
 
         void MergeSums(SampleSums& total, const SampleSums& part) {
@@ -123,6 +169,18 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
+        void AddHitRow(String& text, StringView label, const HitCount& count) {
+            const size_t start = text.size();
+            const double expected = static_cast<double>(count.expectedMicro) / static_cast<double>(kMicroPerHit);
+            const double rate = count.expectedMicro > 0 ? kPermille * static_cast<double>(count.hits) / expected : 0.0;
+            text.append(Format("{:<{}}", label, kLabelWidth));
+            AddRight(text, Format("{}", count.exposures), kNumberWidth);
+            AddRight(text, Fixed(expected), kNumberWidth + 2);
+            AddRight(text, Format("{}", count.hits), kNumberWidth);
+            AddRight(text, Fixed(rate, kPermillePrecision), kNumberWidth + 2);
+            EndLine(text, start);
+        }
+
         void AddScoreRow(String& text, StringView label, const SampleSums& sums) {
             const size_t start = text.size();
             text.append(Format("{:<{}}", label, kLabelWidth));
@@ -150,8 +208,52 @@ namespace BECore::Mahjong::Arena {
         };
     }
 
-    void AddHand(TableStats& stats, const HandRecord& record, const OwnTurns& turns) {
+    HandObserver MakeHitObserver(HandHits& hits) {
+        hits = HandHits{};
+        struct State {
+            Vector<Exposure> pending;
+            size_t scanned = 0;
+        };
+        return [&hits, state = State{}](const HandModel& hand, Seat actor) mutable {
+            // The discard of the last action, if there was one, is the new `Discard` move.
+            const Vector<HandMove>& moves = hand.Moves();
+            for (; state.scanned < moves.size(); ++state.scanned) {
+                const HandMove& move = moves[state.scanned];
+                if (move.kind != MoveKind::Discard) {
+                    continue;
+                }
+                for (const Exposure& exposure : state.pending) {
+                    if (exposure.seat != move.seat) {
+                        Count(hits.discards, exposure, move.tile);
+                    }
+                }
+            }
+            state.pending.clear();
+            if (!IsSeat(actor) || hand.GetPhase() != Phase::Discard) {
+                return;
+            }
+            const Tile drawn = hand.DrawnTile(actor);
+            if (drawn.IsPlayable() && hand.GetHand(actor).callingDeclared) {
+                PlayerHand before = hand.GetHand(actor);
+                before.RemoveConcealed(drawn);
+                if (const Optional<Exposure> own = ExposureOf(MakeTableView(hand, actor), WinningTiles(before), drawn)) {
+                    Count(hits.draws, *own, drawn);
+                }
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (seat != actor && hand.GetHand(seat).callingDeclared) {
+                    if (Optional<Exposure> exposure = ExposureOf(MakeTableView(hand, seat), WinningTiles(hand.GetHand(seat)), Tile{})) {
+                        state.pending.push_back(eastl::move(*exposure));
+                    }
+                }
+            }
+        };
+    }
+
+    void AddHand(TableStats& stats, const HandRecord& record, const OwnTurns& turns, const HandHits& hits) {
         ++stats.hands;
+        MergeHits(stats.discardHits, hits.discards);
+        MergeHits(stats.drawHits, hits.draws);
         const bool won = IsSeat(record.winner);
         if (!won) {
             ++stats.drawn;
@@ -195,11 +297,17 @@ namespace BECore::Mahjong::Arena {
                     return;
                 }
                 OwnTurns turns;
-                const HandObserver observer = MakeOwnTurnObserver(turns);
+                HandHits hits;
+                const HandObserver turnObserver = MakeOwnTurnObserver(turns);
+                const HandObserver hitObserver = MakeHitObserver(hits);
+                const HandObserver observer = [&](const HandModel& hand, Seat actor) {
+                    turnObserver(hand, actor);
+                    hitObserver(hand, actor);
+                };
                 const uint32_t seed = config.first + static_cast<uint32_t>(index);
                 const std::expected<HandRecord, String> record = PlayArenaHand(seed, players, false, nullptr, &observer);
                 if (record.has_value()) {
-                    AddHand(slots[static_cast<size_t>(index)], *record, turns);
+                    AddHand(slots[static_cast<size_t>(index)], *record, turns, hits);
                     continue;
                 }
                 errors[static_cast<size_t>(index)] = record.error();
@@ -239,6 +347,8 @@ namespace BECore::Mahjong::Arena {
                     total.rounds[declared][rounds].won += slot.rounds[declared][rounds].won;
                 }
             }
+            MergeHits(total.discardHits, slot.discardHits);
+            MergeHits(total.drawHits, slot.drawHits);
             for (size_t east = 0; east < kEastCases; ++east) {
                 MergeSums(total.winnerScore[east], slot.winnerScore[east]);
                 MergeSums(total.standingScore[east], slot.standingScore[east]);
@@ -269,6 +379,17 @@ namespace BECore::Mahjong::Arena {
         AddScoreRow(text, "standing, East", stats.standingScore[kEastIndex]);
         AddScoreRow(text, "standing, not East", stats.standingScore[kOtherIndex]);
         text.append("standing = a seat that did not win, in a won hand\n");
+        text.append("\na tile that is a winning kind of a declared, waiting seat, against its unseen winning copies / unseen total (that seat's view)\n");
+        size_t hitStart = text.size();
+        text.append(Format("{:<{}}", "", kLabelWidth));
+        AddRight(text, "exposures", kNumberWidth);
+        AddRight(text, "expected hits", kNumberWidth + 2);
+        AddRight(text, "hits", kNumberWidth);
+        AddRight(text, "hit per mille", kNumberWidth + 2);
+        EndLine(text, hitStart);
+        AddHitRow(text, "discard of another", stats.discardHits);
+        AddHitRow(text, "own draw (check)", stats.drawHits);
+        text.append("hit per mille = hits / expected hits; about 1000 means the tiles come as the unseen copies say\n");
         return text;
     }
 

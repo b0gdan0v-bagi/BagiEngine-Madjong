@@ -53,7 +53,7 @@ printed), 2 is a bad argument (printed with the usage).
 one thread (all focus players, all four rotations) into a result slot of its own, and the slots are merged in seed order, so the report is the
 same bytes at any N (only the `--time` table differs between runs, as always). When there are fewer seeds than N, each seed thread also owns
 `N / seeds` threads (the integer division) that play the worlds of a search decision (`WorldThreads`), so the total never exceeds N and a
-one-seed job uses all the cores; the worlds are summed in world order, so the answer is the same bytes too. `--time` is the wall time of a
+one-seed job uses all the cores; the worlds are summed in world order, so the answer is the same bytes too. `--time` prints the mean and the slowest decision of each player (`slowest us`) and is the wall time of a
 decision: with the worlds level it is lower than the work in it, and the table sums the threads' microseconds, so it is not the wall time of the run. A hand the rules refuse stops the run, and the error printed is that of the lowest seed that
 failed, whatever N is. The default stays 1. A search player (`searchWorlds`) plays hundreds of Normal decisions for each of its own, so use
 `--jobs` for those runs; for the players without a search (`normal` and `easy`), on 14 cores in Debug, `--seeds 150` of two focus
@@ -62,7 +62,7 @@ over-counts when the threads contend (shared cores, efficiency cores), so the De
 (`docs/bot-search.md`) is not read from a `--jobs 14` run.
 
 A player is `random`, a level `1` .. `10` (`easy` and `normal` are the names of 1 and 5), or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
-`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` `waitingKongByPoints` (0 or 1, on in Normal: a waiting hand weighs a kong that keeps its wait by points, `ComputerClaim.h`) and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the two own-draws knobs, `ownDrawsDepth` and `ownDrawsPickWait`, are rated in `docs/own-draws-ev.md`) and the three knobs of
+`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` `waitingKongByPoints` (0 or 1, on in Normal: a waiting hand weighs a kong that keeps its wait by points, `ComputerClaim.h`) and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the own-draws knobs, `ownDrawsDepth`, `ownDrawsPickWait`, `ownDrawsDiscardWins`, `ownDrawsClaimDepth` and `ownDrawsDeclareDepth`, are rated in `docs/own-draws-ev.md`) and the three knobs of
 the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (0..12, default 4) and `searchMargin` (0..100 tenths of a standard
 error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
 plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes about 49 s on 20 seeds in Debug (one thread). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
@@ -305,7 +305,9 @@ whatever the knob says.
 `--others` and `--time`) and prints what the own-draws value of `docs/own-draws-ev.md` needs as constants: for each number of declared
 opponents `d` (0..3) the own turns observed, the per mille chance that another seat wins in the next round and the survival after 1..4 rounds
 next to `(1 - h)^i`; the mean score of a winner and the mean standing score of a seat that did not win, East and not East, with intervals; the
-share of the won hands won on a discard, on a self-draw and on a robbed kong. A round is the stretch between a seat's own turn and its next one.
+share of the won hands won on a discard, on a self-draw and on a robbed kong; and, for a declared, waiting seat, how often a tile is a
+winning kind against what its unseen copies predict (exposures, expected hits, hits, hit per mille), for the discards of the other seats and, as
+a check, for the seat's own draws. A round is the stretch between a seat's own turn and its next one.
 The same bytes at any `--jobs`; the measured numbers are in `docs/own-draws-ev.md`.
 
 ## What is not built

@@ -295,6 +295,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(profile.searchWorlds, 0) << ToStd(LevelText(level));
             EXPECT_EQ(profile.ownDrawsDepth, 0) << ToStd(LevelText(level)) << ": the own-draws value is off in every level";
             EXPECT_FALSE(profile.ownDrawsPickWait) << ToStd(LevelText(level));
+            EXPECT_FALSE(profile.ownDrawsDiscardWins) << ToStd(LevelText(level));
+            EXPECT_EQ(profile.ownDrawsClaimDepth, 0) << ToStd(LevelText(level));
+            EXPECT_EQ(profile.ownDrawsDeclareDepth, 0) << ToStd(LevelText(level));
             EXPECT_FALSE(profile.readDanger) << ToStd(LevelText(level)) << ": the danger tie-break is off in every level (until the arena says otherwise)";
             if (LevelNumber(level) >= LevelNumber(ComputerLevel::Normal)) {
                 EXPECT_EQ(&profile, &kNormalProfile) << ToStd(LevelText(level)) << ": no player above Normal exists inside the time rule (docs/bot-search.md)";

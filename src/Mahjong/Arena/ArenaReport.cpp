@@ -244,6 +244,7 @@ namespace BECore::Mahjong::Arena {
             AddLeft(text, name, nameWidth);
             AddRight(text, Format("{}", tally.decisions), kDecisionsWidth);
             AddRight(text, Plain(AverageOf(tally.nanoseconds, tally.decisions) / kNanosecondsPerMicrosecond), kMicrosecondsWidth);
+            AddRight(text, Plain(tally.slowestNanoseconds / kNanosecondsPerMicrosecond), kMicrosecondsWidth);
             EndLine(text, start);
         }
 
@@ -253,6 +254,7 @@ namespace BECore::Mahjong::Arena {
             AddLeft(text, "player", nameWidth);
             AddRight(text, "decisions", kDecisionsWidth);
             AddRight(text, "us per decision", kMicrosecondsWidth);
+            AddRight(text, "slowest us", kMicrosecondsWidth);
             EndLine(text, start);
             for (const FocusResult& focus : result.focus) {
                 AddTimingRow(text, focus.player.name, focus.focus, nameWidth);

@@ -77,6 +77,8 @@ namespace BECore::Mahjong::Arena {
         /// `nanoseconds` is filled only with `ArenaConfig::timing`.
         int64_t decisions = 0;
         int64_t nanoseconds = 0;
+        /// The slowest single decision: merged as a maximum, so any `jobs` gives the maximum of the same measurements.
+        int64_t slowestNanoseconds = 0;
     };
 
     /// The result of one focus player.

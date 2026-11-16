@@ -65,6 +65,7 @@ namespace BECore::Mahjong::Arena {
             focus.focus.winsByKind[Index(ScoreKind::WinTileFromWall)] = 1;
             focus.focus.decisions = 400;
             focus.focus.nanoseconds = 800000;
+            focus.focus.slowestNanoseconds = 7000;
             // The three other seats: 11 of the 15 won hands, 3 seat-hands of the drawn one.
             focus.others.hands = 48;
             focus.others.wins = 11;
@@ -426,6 +427,9 @@ namespace BECore::Mahjong::Arena {
         // 800000 ns over 400 decisions is 2000 ns, 2 us.
         EXPECT_TRUE(Contains(timed, "400")) << timed;
         EXPECT_TRUE(Contains(timed, "2.00"));
+        // The slowest decision of 7000 ns is 7 us, in its own column.
+        EXPECT_TRUE(Contains(timed, "slowest us")) << timed;
+        EXPECT_TRUE(Contains(timed, "7.00"));
     }
 
     TEST(ArenaStatsTest, TheSameResultGivesTheSameTextTwice) {

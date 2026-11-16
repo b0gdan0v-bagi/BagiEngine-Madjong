@@ -41,6 +41,15 @@ namespace BECore::Mahjong {
         return NotWinningValue(standingScore, seatIsEast, TypicalScoresOf(seatIsEast));
     }
 
+    int64_t DiscardRoundChance(int64_t share) noexcept {
+        const int64_t hit = eastl::clamp<int64_t>(RoundedDiv(share * kDiscardHitPermille, kPermilleBase), 0, kOwnDrawsProbBase);
+        int64_t missAll = kOwnDrawsProbBase;
+        for (int discard = 0; discard < kOpponentDiscardsPerRound; ++discard) {
+            missAll = RoundedDiv(missAll * (kOwnDrawsProbBase - hit), kOwnDrawsProbBase);
+        }
+        return kOwnDrawsProbBase - missAll;
+    }
+
     int64_t Alive(int draws, int declaredOpponents) noexcept {
         const int opponents = eastl::clamp(declaredOpponents, 0, kMaxDeclaredOpponents);
         const int64_t survival = kOwnDrawsProbBase - kOpponentWinPerRoundPermille[opponents] * kProbPerPermille;

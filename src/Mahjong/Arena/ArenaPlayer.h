@@ -19,7 +19,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// One row of `kProfileKnobs` per field of `LevelProfile`.
-    inline constexpr size_t kProfileFieldCount = 11;
+    inline constexpr size_t kProfileFieldCount = 14;
 
     inline constexpr Array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
@@ -31,6 +31,9 @@ namespace BECore::Mahjong::Arena {
         {"searchMargin", &LevelProfile::searchMargin, nullptr, kSearchMaxMargin},
         {"ownDrawsDepth", &LevelProfile::ownDrawsDepth, nullptr, kOwnDrawsMaxDepth},
         {"ownDrawsPickWait", nullptr, &LevelProfile::ownDrawsPickWait, 1},
+        {"ownDrawsDiscardWins", nullptr, &LevelProfile::ownDrawsDiscardWins, 1},
+        {"ownDrawsClaimDepth", &LevelProfile::ownDrawsClaimDepth, nullptr, kOwnDrawsMaxDepth},
+        {"ownDrawsDeclareDepth", &LevelProfile::ownDrawsDeclareDepth, nullptr, kOwnDrawsMaxDepth},
         {"readDanger", nullptr, &LevelProfile::readDanger, 1},
         {"waitingKongByPoints", nullptr, &LevelProfile::waitingKongByPoints, 1},
     }};

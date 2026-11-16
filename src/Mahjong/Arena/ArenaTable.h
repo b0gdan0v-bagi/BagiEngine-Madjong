@@ -26,6 +26,15 @@ namespace BECore::Mahjong::Arena {
         int64_t won = 0;
     };
 
+    /// How often a tile is a winning kind of a declared, waiting seat, against what the unseen copies predict. An exposure is one tile
+    /// that a seat could win on (an opponent's discard, or the seat's own draw); the expected hits are the sum over the exposures of
+    /// that seat's unseen winning copies / its unseen total, in millionths of a hit, each rounded half up.
+    struct HitCount {
+        int64_t exposures = 0;
+        int64_t expectedMicro = 0;
+        int64_t hits = 0;
+    };
+
     /// What `--table-stats` measures over four Normal seats; the source of `kOpponentWinPerRoundPermille` (`docs/own-draws-ev.md`).
     /// Integers only, so the merge of the seeds does not depend on the order or on the threads.
     struct TableStats {
@@ -41,6 +50,15 @@ namespace BECore::Mahjong::Arena {
         Array<SampleSums, kEastCases> winnerScore{};
         /// Of each seat that did not win in a won hand, by whether that seat was East (index 0) or not (1).
         Array<SampleSums, kEastCases> standingScore{};
+        /// The discards of the other seats, and the seat's own draws (the check: about 1000 per mille by the nature of the wall).
+        HitCount discardHits;
+        HitCount drawHits;
+    };
+
+    /// The hits of one hand, filled by `MakeHitObserver`.
+    struct HandHits {
+        HitCount discards;
+        HitCount draws;
     };
 
     /// The number of declared opponents of each own turn of a seat, in turn order. An own turn is an action in the `Discard` phase (a
@@ -51,6 +69,16 @@ namespace BECore::Mahjong::Arena {
     [[nodiscard]] HandObserver MakeOwnTurnObserver(OwnTurns& turns);
 
     /**
+     * @brief The read-only observer that fills `hits` (cleared first); it is outside the timed decision.
+     *
+     * The state before an action is all it gets, so an exposure is taken from the state before the discard (the seat's view, in which
+     * the discarder's concealed tiles are still unseen) and resolved by the discard move that appears in the next call. The last
+     * action of a hand has no next call but the one `PlayArenaHand` makes with the hand finished (`actor` is `kNoSeat`), so a discard
+     * that ends the hand with no window is counted like any other.
+     */
+    [[nodiscard]] HandObserver MakeHitObserver(HandHits& hits);
+
+    /**
      * @brief Adds one finished hand to `stats`.
      *
      * A round is the stretch between an own turn of a seat and its next one, in which the three other seats act. For the turn `k` of `n`
@@ -59,7 +87,7 @@ namespace BECore::Mahjong::Arena {
      * ends by a draw or by the seat's own win leaves the rounds that never came out of the count: the chance is that of a round that
      * is played.
      */
-    void AddHand(TableStats& stats, const HandRecord& record, const OwnTurns& turns);
+    void AddHand(TableStats& stats, const HandRecord& record, const OwnTurns& turns, const HandHits& hits = {});
 
     /// The seeds `first .. first + count - 1`, one hand each with `player` on all four seats.
     struct TableStatsConfig {

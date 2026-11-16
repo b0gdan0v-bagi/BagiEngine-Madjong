@@ -10,9 +10,9 @@ namespace BECore::Mahjong {
      * earns when another seat wins, and the chance that nobody else has won after some draws. Pure: no `TableView`, no rng.
      *
      * **Fixed point, so one input gives one choice on every platform.** A probability is an integer over `kOwnDrawsProbBase`, a value is
-     * an `int64_t` in milli-points (`kMilliPerPoint` to a point). Every division goes through `RoundedDiv` (round half up). No `double`
-     * is used in a choice. A score is an `int` up to `LimitCap(INT_MAX)`, a milli-point value of it with the largest factor is far inside
-     * an `int64_t`, so a huge limit cannot overflow.
+     * an `int64_t` in milli-points (`kMilliPerPoint` to a point). Every division goes through `RoundedDiv` (round half up) or, for a numerator that can be negative, `RoundedDivSigned` (the same on
+     * the magnitude). No `double` is used in a choice. A score is an `int` up to `LimitCap(INT_MAX)`, a milli-point value of it with the largest factor is far inside an `int64_t`, so a huge limit
+     * cannot overflow.
      */
 
     /// A probability of 1.
@@ -32,6 +32,17 @@ namespace BECore::Mahjong {
      */
     inline constexpr int kOpponentWinPerRoundPermille[kSeatCount] = {7, 188, 336, 475};
 
+    /**
+     * How often an opponent's discard is a winning kind of a declared, waiting seat, in thousandths of what the unseen copies predict
+     * (a share `unseen winning copies / unseen total` of a random unseen tile is 1000). Below 1000 because the opponents hold back
+     * the tiles that are dangerous to a declared seat. The `hit per mille` of `discard of another` in
+     * `BagiMahjongArena --table-stats --first 4000 --seeds 1000 --jobs 14` (Release; `docs/own-draws-ev.md`, slice 2).
+     */
+    inline constexpr int kDiscardHitPermille = 806;
+
+    /// The discards of the other seats between two draws of the seat (the three others act once).
+    inline constexpr int kOpponentDiscardsPerRound = kSeatCount - 1;
+
     /// A typical winner's score and a typical score of a seat that stands next to it (the losers' pairwise settlement is by the difference).
     struct TypicalScores {
         int winner = 0;
@@ -43,7 +54,7 @@ namespace BECore::Mahjong {
     inline constexpr TypicalScores kTypicalScoresEast{45, 9};
     inline constexpr TypicalScores kTypicalScoresOther{45, 9};
 
-    /// `numerator / denominator` rounded half up; both are not negative and `denominator` is positive. The one rounding of this file.
+    /// `numerator / denominator` rounded half up; both are not negative and `denominator` is positive.
     [[nodiscard]] int64_t RoundedDiv(int64_t numerator, int64_t denominator) noexcept;
 
     /// `numerator / denominator` rounded half away from zero (`RoundedDiv` of the magnitude); `denominator` is positive.
@@ -73,6 +84,16 @@ namespace BECore::Mahjong {
 
     /// `NotWinningValue` at the typical scores of the table (`TypicalScoresOf`).
     [[nodiscard]] int64_t NotWinningValue(int standingScore, bool seatIsEast) noexcept;
+
+    /**
+     * @brief The chance, over `kOwnDrawsProbBase`, that at least one of the `kOpponentDiscardsPerRound` discards of a round is a kind
+     *        the seat wins on: `1 - (1 - q)^k`, `q` the share of one discard (`kDiscardHitPermille` of `share`).
+     *
+     * `share` is the unseen winning copies over the unseen tiles, over `kOwnDrawsProbBase`; one discard hits with `q` (capped at 1) and
+     * the discards of a round are taken as independent. Every product is rounded half up, so the chance is monotone in `share`. 0 for a
+     * `share` of 0.
+     */
+    [[nodiscard]] int64_t DiscardRoundChance(int64_t share) noexcept;
 
     /**
      * @brief The chance, over `kOwnDrawsProbBase`, that nobody else has won after the seat's `draws` next draws: `(1 - h)^draws`, `h` the

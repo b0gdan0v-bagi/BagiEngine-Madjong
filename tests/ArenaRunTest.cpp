@@ -463,6 +463,11 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(timed.timing);
         EXPECT_GT(timed.focus[0].focus.nanoseconds, 0);
         EXPECT_GT(timed.focus[0].others.nanoseconds, 0);
+        // The slowest decision is part of the sum and the mean cannot exceed it; without timing it stays 0.
+        EXPECT_EQ(quiet.focus[0].focus.slowestNanoseconds, 0);
+        EXPECT_GT(timed.focus[0].focus.slowestNanoseconds, 0);
+        EXPECT_LE(timed.focus[0].focus.slowestNanoseconds, timed.focus[0].focus.nanoseconds);
+        EXPECT_GE(timed.focus[0].focus.slowestNanoseconds * timed.focus[0].focus.decisions, timed.focus[0].focus.nanoseconds);
         // The decisions are counted either way and do not depend on the clock.
         EXPECT_GT(quiet.focus[0].focus.decisions, 0);
         EXPECT_EQ(timed.focus[0].focus.decisions, quiet.focus[0].focus.decisions);
@@ -617,6 +622,9 @@ namespace BECore::Mahjong::Arena {
         const ArenaResult threaded = PlayConfig(config);
         EXPECT_GT(threaded.focus[0].focus.nanoseconds, 0);
         EXPECT_GT(threaded.focus[0].others.nanoseconds, 0);
+        // The slowest decision merges as a maximum, not a sum: it cannot exceed the sum of all of them.
+        EXPECT_GT(threaded.focus[0].focus.slowestNanoseconds, 0);
+        EXPECT_LE(threaded.focus[0].focus.slowestNanoseconds, threaded.focus[0].focus.nanoseconds);
         // The clock is the only difference: the decisions and the rows are those of one thread.
         EXPECT_EQ(threaded.focus[0].focus.decisions, single.focus[0].focus.decisions);
         EXPECT_TRUE(SameRows(threaded.focus[0].rows, single.focus[0].rows));

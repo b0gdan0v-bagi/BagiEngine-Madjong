@@ -92,12 +92,26 @@ namespace BECore::Mahjong {
 
         /// Step 2 with `ownDrawsPickWait`: the discard that declares the calling hand and has the best expected value (no rng: ties are
         /// `ValueWaits`' order).
-        Optional<HandAction> ChooseValuedDeclaration(const TableView& view) {
-            const Vector<DiscardValue> waits = ValueWaits(view);
+        Optional<HandAction> ChooseValuedDeclaration(const TableView& view, const LevelProfile& profile) {
+            const Vector<DiscardValue> waits = ValueWaits(view, OwnDrawsModel{.discardWins = profile.ownDrawsDiscardWins});
             if (waits.empty()) {
                 return std::nullopt;
             }
             return HandAction::MakeDiscard(waits.front().tile, true);
+        }
+
+        /// Step 2 with `ownDrawsDeclareDepth`, after the declaration is chosen: the best discard that does not declare, when it is worth
+        /// strictly more than the best declaration (`ValueLater` against `ValueWaits`); nullopt declares. No rng.
+        Optional<HandAction> ChooseLaterDiscard(const TableView& view, const LevelProfile& profile) {
+            if (view.own.callingDeclared) {
+                return std::nullopt;
+            }
+            const Vector<DiscardValue> now = ValueWaits(view, OwnDrawsModel{.discardWins = profile.ownDrawsDiscardWins});
+            const Vector<DiscardValue> later = ValueLater(view, OwnDrawsModel{.depth = profile.ownDrawsDeclareDepth, .discardWins = profile.ownDrawsDiscardWins});
+            if (now.empty() || later.empty() || now.front().expected >= later.front().expected) {
+                return std::nullopt;
+            }
+            return HandAction::MakeDiscard(later.front().tile);
         }
 
         /// Step 3: the first listed kong that does not hurt the hand.
@@ -216,7 +230,7 @@ namespace BECore::Mahjong {
                 return HandAction::MakeDiscard(DiscardWithoutAcceptance(counts, view, rng));
             }
             if (profile.ownDrawsDepth > 0) {
-                const Vector<DiscardValue> values = ValueDiscards(view, profile.ownDrawsDepth);
+                const Vector<DiscardValue> values = ValueDiscards(view, OwnDrawsModel{.depth = profile.ownDrawsDepth, .discardWins = profile.ownDrawsDiscardWins});
                 if (!values.empty()) {
                     return HandAction::MakeDiscard(values.front().tile);
                 }
@@ -381,9 +395,14 @@ namespace BECore::Mahjong {
                 return {*searched, StepOfSearched(view, *searched)};
             }
         }
-        const Optional<HandAction> declaration = profile.ownDrawsPickWait ? ChooseValuedDeclaration(view) : ChooseWaitingDiscard(view, rng, true, profile.readDanger);
+        const Optional<HandAction> declaration = profile.ownDrawsPickWait ? ChooseValuedDeclaration(view, profile) : ChooseWaitingDiscard(view, rng, true, profile.readDanger);
         if (declaration.has_value()) {
             if (!Roll(rng, profile.skipDeclarationPercent)) {
+                if (profile.ownDrawsDeclareDepth > 0) {
+                    if (const Optional<HandAction> later = ChooseLaterDiscard(view, profile)) {
+                        return {*later, TurnStep::Discard};
+                    }
+                }
                 return {*declaration, TurnStep::Declare};
             }
         }

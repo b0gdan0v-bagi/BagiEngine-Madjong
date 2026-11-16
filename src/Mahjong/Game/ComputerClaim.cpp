@@ -18,34 +18,6 @@ namespace BECore::Mahjong {
             return profile.takeValueClaimsAtEqualShanten && KeepsValueAtEqualShanten(view, action.claim);
         }
 
-        /// The loose tile a kong draws: one draw more than the wall leaves the seat.
-        constexpr int kKongLooseDraws = 1;
-
-        /// The view of the seat after it claimed `view.pendingTile` as a kong: three concealed copies out, an open kong in the melds.
-        /// The copies the seat sees do not change (the fourth was in the pile, now it lies in the meld).
-        TableView ViewAfterKong(const TableView& view) {
-            TableView after = view;
-            int left = kKongTilesFromHand;
-            Vector<Tile> concealed;
-            for (const Tile tile : view.own.concealed) {
-                if (left > 0 && tile == view.pendingTile) {
-                    --left;
-                    continue;
-                }
-                concealed.push_back(tile);
-            }
-            after.own.concealed = eastl::move(concealed);
-            Meld kong;
-            kong.kind = MeldKind::Kong;
-            kong.concealed = false;
-            kong.first = view.pendingTile;
-            kong.from = view.currentSeat;
-            kong.fromDiscard = true;
-            kong.claimed = view.pendingTile;
-            after.own.melds.push_back(kong);
-            return after;
-        }
-
         /// The acceptable claims no other acceptable claim beats (several when they are equal in every respect).
         Vector<HandAction> BestClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
             Vector<RatedClaim> best;
@@ -99,6 +71,37 @@ namespace BECore::Mahjong {
         return counts;
     }
 
+    TableView ViewAfterClaim(const TableView& view, const HandAction& claim) {
+        TableView after = view;
+        const TileCounts counts = ConcealedAfterClaim(view, claim);
+        after.own.concealed.clear();
+        for (uint8_t id = 0; id < kKindCount; ++id) {
+            for (int copy = 0; copy < counts[id]; ++copy) {
+                after.own.concealed.push_back(Tile{id});
+            }
+        }
+        Meld meld;
+        meld.kind = claim.claim == ClaimKind::Kong ? MeldKind::Kong : (claim.claim == ClaimKind::Chow ? MeldKind::Chow : MeldKind::Pung);
+        meld.concealed = false;
+        meld.first = claim.claim == ClaimKind::Chow ? claim.chowFirst : view.pendingTile;
+        meld.from = view.currentSeat;
+        meld.fromDiscard = true;
+        meld.claimed = view.pendingTile;
+        after.own.melds.push_back(meld);
+        if (claim.claim != ClaimKind::Kong) {
+            after.phase = Phase::Discard;
+            after.currentSeat = view.seat;
+            after.pendingTile = Tile{};
+            after.legal.clear();
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                if (counts[id] > 0) {
+                    after.legal.push_back(HandAction::MakeDiscard(Tile{id}));
+                }
+            }
+        }
+        return after;
+    }
+
     DiscardRating RateClaim(const TableView& view, const HandAction& claim) {
         const TileCounts counts = ConcealedAfterClaim(view, claim);
         const int melds = MeldCountOf(view) + 1;
@@ -141,7 +144,7 @@ namespace BECore::Mahjong {
             WaitingKong rated;
             rated.kong = action;
             rated.passValue = ValueOfHeldHand(view);
-            rated.kongValue = ValueOfHeldHand(ViewAfterKong(view), kKongLooseDraws);
+            rated.kongValue = ValueOfHeldHand(ViewAfterClaim(view, action), kKongLooseDraws);
             return rated;
         }
         return std::nullopt;
@@ -159,6 +162,13 @@ namespace BECore::Mahjong {
                 }
             }
             return {HandAction::MakePass(), ClaimStep::WaitingHand};
+        }
+        if (profile.ownDrawsClaimDepth > 0) {
+            const Vector<ClaimValue> values = ValueClaims(view, OwnDrawsModel{.depth = profile.ownDrawsClaimDepth, .discardWins = profile.ownDrawsDiscardWins});
+            if (!values.empty()) {
+                const HandAction& chosen = values.front().action;
+                return {chosen, chosen.kind == ActionKind::Claim ? ClaimStep::Claim : ClaimStep::NoGain};
+            }
         }
         if (profile.searchWorlds > 0) {
             if (handoff != nullptr) {
