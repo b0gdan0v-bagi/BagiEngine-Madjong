@@ -131,7 +131,8 @@ namespace BECore::Mahjong {
     }
 
     /// The most a score can be for the setting `limit`: the limit rounded down to a multiple of `kScoreRounding`, 0 for a negative one.
-    /// Every score is at most this and a multiple of `kScoreRounding`, whatever the limit is (also `INT_MAX`).
+    /// Every score is at most this and a multiple of `kScoreRounding`, whatever the limit is (also `INT_MAX`); what the sums of scores
+    /// do is bounded by `kMaxLimit` (`IsPlayable`), not here.
     [[nodiscard]] constexpr int LimitCap(int limit) noexcept {
         return limit > 0 ? RoundDownToTen(limit) : 0;
     }

@@ -2,8 +2,26 @@
 
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
+#include <limits>
 
 namespace BECore::Mahjong {
+
+    namespace {
+
+        /// The most a seat's points change in one hand at the largest limit (`Settle`): the winner collects its score from each of the
+        /// other seats, and a loser pays it and settles with the two other losers, each at most one score gap; so a seat moves by
+        /// `kSeatCount - 1` payments, each at most `LimitCap(kMaxLimit)` and, when East takes part, `kEastPaymentFactor` times that.
+        /// The worst seat is East winning (three doubled payments in) or East losing (one doubled payment to the winner and two doubled gaps).
+        constexpr int64_t kMaxChangeInHand = static_cast<int64_t>(kSeatCount - 1) * kEastPaymentFactor * LimitCap(kMaxLimit);
+        /// A match is exactly `handsPerMatch` hands of points (a drawn hand moves none) only while an East repeat counts as a hand.
+        static_assert(kEastRepeatCountsAsHand, "without it the number of hands of a match is unbounded and so are the points");
+        static_assert(kMaxScore + kMaxHandsPerMatch * kMaxChangeInHand <= std::numeric_limits<int>::max(), "the points of a seat stay in the range of an int in every playable match");
+
+        [[nodiscard]] constexpr bool IsScoreInBounds(int score) noexcept {
+            return score >= -kMaxScore && score <= kMaxScore;
+        }
+
+    }  // namespace
 
     MatchProgress NextProgress(MatchProgress progress, ResultKind kind, Seat winner, const MahjongSettings& settings) noexcept {
         if (kind == ResultKind::Drawn && settings.replayDrawnHand) {
@@ -32,7 +50,8 @@ namespace BECore::Mahjong {
     }
 
     bool IsPlayable(const MahjongSettings& settings) noexcept {
-        return settings.handsPerMatch > 0 && settings.handsPerMatch % kRoundsPerMatch == 0;
+        return settings.handsPerMatch > 0 && settings.handsPerMatch <= kMaxHandsPerMatch && settings.handsPerMatch % kRoundsPerMatch == 0 && settings.limit >= 0 && settings.limit <= kMaxLimit &&
+               IsScoreInBounds(settings.startingScore);
     }
 
     MatchStatus Match::DealHand(const MatchProgress& progress, HandModel& hand) {
@@ -67,7 +86,7 @@ namespace BECore::Mahjong {
         if (!IsPlayable(settings)) {
             return std::unexpected(MatchError::BadSettings);
         }
-        if (state.handsPlayed < 0 || IsMatchOver(state.handsPlayed, settings)) {
+        if (state.handsPlayed < 0 || IsMatchOver(state.handsPlayed, settings) || !eastl::all_of(state.scores.begin(), state.scores.end(), IsScoreInBounds)) {
             return std::unexpected(MatchError::BadDeal);
         }
         std::expected<Wall, String> wall = TryBuildFixedWall(state.deal, settings.flowers);
