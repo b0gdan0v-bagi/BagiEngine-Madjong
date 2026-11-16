@@ -2,6 +2,7 @@
 
 #include <BECore/Config/ConfigManager.h>
 #include <BECore/GameManager/CoreManager.h>
+#include <BECore/Input/PointerId.h>
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UIBoxMesh.h>
@@ -9,12 +10,12 @@
 #include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UITextComponent.h>
-#include <CoreSDL/SDLEvents.h>
 #include <Events/ApplicationEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
 #include <Mahjong/Components/MahjongHintsComponent.h>
+#include <Mahjong/Components/WindowPointerShape.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/CenterPanel.h>
@@ -141,43 +142,9 @@ namespace BECore::Mahjong {
             return WindowNumbers{environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight()), environment.GetSettings().minTouchSize};
         }
 
-        /// Whether SDL made an event from a touch or a pen (a real mouse never has these ids).
-        bool IsTouchDevice(SDL_MouseID which) {
-            return which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID;
-        }
-
-        bool IsTouchClick(const SDL_MouseButtonEvent& button) {
-            return IsTouchDevice(button.which);
-        }
-
-        /// Whether `element` or a shown element below it reports the pointer over it (the canvas sets `UIElement::hovered` from the motion it
-        /// consumed; a hidden element may still carry the flag of its last motion).
-        bool HasHoveredElement(const UIElement& element) {
-            if (!element.active.visible) {
-                return false;
-            }
-            if (element.hovered) {
-                return true;
-            }
-            for (const auto& child : element.children) {
-                if (HasHoveredElement(*child)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// Whether a canvas of the scene has the pointer: one that takes input and is modal (it consumes every motion) or has a shown
-        /// element under the pointer. A canvas that consumes a motion keeps it from the table, so the table cannot see the pointer move onto
-        /// it from a tile; this is how it finds out.
-        bool CanvasHasPointer(Scene& scene) {
-            for (const auto& child : scene.GetRootNode().GetChildren()) {
-                const IntrusivePtr<UICanvasComponent> canvas = child->GetComponent<UICanvasComponent>();
-                if (canvas && canvas->TakesInput() && (canvas->_modal || HasHoveredElement(canvas->GetRoot()))) {
-                    return true;
-                }
-            }
-            return false;
+        /// Whether the pointer is a touch screen or a pen: neither rests on a tile, and a click of either turns the tap regime on.
+        bool IsTouchOrPen(const PointerEvent& event) {
+            return event.touch || IsPenPointer(event.which);
         }
 
         Faces FacesOf(const TableSession& session) {
@@ -473,7 +440,7 @@ namespace BECore::Mahjong {
         return _felt.Get();
     }
 
-    void MahjongTableComponent::OnAttached() {
+    void MahjongTableComponent::OnTargetAttached() {
         s_active = this;
         _atlas = CoreManager::GetResourceManager().Load<ITexture>(kAtlasPath);
         if (!_atlas) {
@@ -485,8 +452,6 @@ namespace BECore::Mahjong {
         }
         LoadTableLayoutSpec();
         Subscribe<ApplicationEvents::ApplicationCleanUpEvent, &MahjongTableComponent::OnApplicationCleanUp>(this);
-        SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongTableComponent::OnMouseDown>(this);
-        SubscribeInScene<SDLEvents::MouseMotionEvent, &MahjongTableComponent::OnMouseMotion>(this);
         SubscribeInScene<InputEvents::ActionEvent, &MahjongTableComponent::OnAction>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongTableComponent::OnUpdate>(this);
     }
@@ -773,35 +738,48 @@ namespace BECore::Mahjong {
         }
     }
 
-    void MahjongTableComponent::OnMouseDown(const SDLEvents::MouseButtonDownEvent& event) {
-        BE_PROFILE_SCOPE("MahjongTable::OnMouseDown");
-        if (IsTouchClick(event.button)) {
+    bool MahjongTableComponent::OnPointerPress(const PointerEvent& event) {
+        BE_PROFILE_SCOPE("MahjongTable::OnPointerPress");
+        if (IsTouchOrPen(event)) {
             _touchSeen = true;
         }
-        if (event.button.button != SDL_BUTTON_LEFT) {
-            return;
+        if (event.button != SDL_BUTTON_LEFT) {
+            return false;
         }
         MahjongGame* game = PersonToAct();
         if (game == nullptr) {
-            return;
+            return false;
         }
         RefreshSelection(game);
-        const Optional<int> hit = HitHandTile(_shown.layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
+        const Optional<int> hit = HitHandTile(_shown.layout, event.sceneX, event.sceneY);
         const Seat actor = game->GetSession().Actor();
         const PlayerHand& held = game->GetMatch().Hand().GetHand(actor);
         // The layout is the last frame's: it must be of this hand
         if (hit && (_shown.layout.viewer != actor || *hit < 0 || *hit >= static_cast<int>(held.concealed.size()))) {
-            return;
+            return true;
         }
+        // A handler of the action this makes may switch the scene and destroy the component: nothing of it is touched after the call
         TapHandTile(*game, hit);
+        return true;
     }
 
-    void MahjongTableComponent::OnMouseMotion(const SDLEvents::MouseMotionEvent& event) {
-        const SDL_MouseMotionEvent& motion = event.motion;
+    void MahjongTableComponent::OnPointerEnter(const PointerEvent& event) {
         // A touch or a pen has no pointer to rest on a tile
-        _pointerSeen = !IsTouchDevice(motion.which);
-        _pointerX = motion.x;
-        _pointerY = motion.y;
+        _pointerSeen = !IsTouchOrPen(event);
+        _pointerX = event.outputX;
+        _pointerY = event.outputY;
+    }
+
+    bool MahjongTableComponent::OnPointerMove(const PointerEvent& event) {
+        ++_pointerMotions;
+        _pointerSeen = !IsTouchOrPen(event);
+        _pointerX = event.outputX;
+        _pointerY = event.outputY;
+        return true;
+    }
+
+    void MahjongTableComponent::OnPointerExit(const PointerEvent& /*event*/) {
+        _pointerSeen = false;
     }
 
     void MahjongTableComponent::OnAction(const InputEvents::ActionEvent& event) {
@@ -1092,9 +1070,9 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongTable::PublishHover");
         Scene& scene = GetScene();
         const bool live = game != nullptr && game->GetMatch().GetPhase() != MatchPhase::NotStarted;
-        // A pointer that the table cannot follow any more is forgotten, not kept: something else took it (the pause, the cover, a canvas
-        // that consumes its motion), so it can have moved on without the table hearing of it
-        if (_pointerSeen && (!live || game->IsTablePaused() || game->GetSession().HandoffPending() || CanvasHasPointer(scene))) {
+        // A pointer that the table cannot follow any more is forgotten, not kept: the pause and the cover take it without a motion to say so
+        // (a canvas that takes the motion ends it through `OnPointerExit`)
+        if (_pointerSeen && (!live || game->IsTablePaused() || game->GetSession().HandoffPending())) {
             _pointerSeen = false;
         }
         const TileSlot* slot = nullptr;
@@ -1270,8 +1248,9 @@ namespace BECore::Mahjong {
         }
     }
 
-    void MahjongTableComponent::OnDraw() {
+    void MahjongTableComponent::OnTargetDraw() {
         BE_PROFILE_SCOPE("MahjongTable::OnDraw");
+        SetShape(WholeWindowShape(GetScene(), *CoreManager::GetRenderer()));
         PollTableLayoutSpec();
         RefreshPalette();
         _drawnSmallHandTile = SmallHandTileNow();

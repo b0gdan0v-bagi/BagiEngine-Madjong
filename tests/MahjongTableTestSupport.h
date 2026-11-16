@@ -12,6 +12,7 @@
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Games/GameManager.h>
+#include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
@@ -501,11 +502,18 @@ namespace BECore::Mahjong::Tests {
             _game->GetSession().MarkChanged();  // as a move would: what the components keep by the version is made again
         }
 
-        /// A left click (press and release) at a point of the view through the engine's input path: a canvas that takes it consumes
-        /// it, otherwise it reaches the table. True when a canvas took the press.
+        /// Whether `handler` is the table or the hints: the two pointer targets of the scene's own, which a press passes through to the table.
+        bool IsOwnPointerTarget(const IUIInputHandler* handler) const {
+            return handler != nullptr && (handler == static_cast<const IUIInputHandler*>(_table) || handler == static_cast<const IUIInputHandler*>(MahjongHintsComponent::GetActive()));
+        }
+
+        /// A left click (press and release) at a point of the view through the engine's input path: a canvas above the table that takes it
+        /// consumes it, otherwise it reaches the table. True when a handler other than the table and the hints took the press.
         bool Click(float x, float y, SDL_MouseID which = 0) {
-            const bool taken = CoreManager::GetUIInput().DispatchMouseButtonDown(MouseButton(x, y, true, which));
-            CoreManager::GetUIInput().DispatchMouseButtonUp(MouseButton(x, y, false, which));
+            UIInput& input = CoreManager::GetUIInput();
+            const bool dispatched = input.DispatchMouseButtonDown(MouseButton(x, y, true, which));
+            const bool taken = dispatched && !IsOwnPointerTarget(input.LastPressTaker());
+            input.DispatchMouseButtonUp(MouseButton(x, y, false, which));
             return taken;
         }
 
@@ -515,14 +523,17 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The mouse pointer moves to a point of the view through the engine's input path (`which`: the device, `SDL_TOUCH_MOUSEID` for a touch): a canvas
-        /// that takes the motion consumes it and the table never hears of it. True when a canvas took it.
+        /// above the table that takes the motion keeps it from the table, which is then told the pointer left. True when a handler other than the table took it
+        /// (the dispatcher names no taker of a motion, so the table's count of the motions it was given says whether it was the one).
         bool HoverAt(float x, float y, SDL_MouseID which = 0) {
             SDL_MouseMotionEvent motion{};
             motion.type = SDL_EVENT_MOUSE_MOTION;
             motion.which = which;
             motion.x = x;
             motion.y = y;
-            return CoreManager::GetUIInput().DispatchMouseMotion(motion);
+            const uint64_t before = _table->PointerMotions();
+            const bool dispatched = CoreManager::GetUIInput().DispatchMouseMotion(motion);
+            return dispatched && _table->PointerMotions() == before;
         }
 
         /// The slot of the `index`-th concealed tile of the bottom seat in the last layout.

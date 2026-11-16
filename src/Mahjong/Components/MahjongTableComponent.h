@@ -3,7 +3,7 @@
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Renderer/ITexture.h>
 #include <BECore/Resource/ResourceHandle.h>
-#include <BECore/Scene/IComponent.h>
+#include <BECore/Scene/Components/PointerTargetComponent.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <Mahjong/ComputerThinking.h>
 #include <Mahjong/Table/ActionButtons.h>
@@ -19,11 +19,6 @@
 namespace BECore {
 
     class IRenderer;
-
-    namespace SDLEvents {
-        struct MouseButtonDownEvent;
-        struct MouseMotionEvent;
-    }  // namespace SDLEvents
 
     namespace InputEvents {
         struct ActionEvent;
@@ -86,6 +81,11 @@ namespace BECore::Mahjong {
      * **Playing.** A person acts while `TableSession::ActorIsPerson()` and no cover is up; a refused action changes nothing. The tap regime
      * (`UsesTapToSelect`) turns the first click on a tile into a selection that holds only in the discard turn it was made in.
      *
+     * **The pointer.** The table is one `PointerTargetComponent` for all its tiles (they are slots of the layout, not nodes), with the whole
+     * output window as its shape, so a click in the bars beside the view still clears a selection. It stands at the draw order of its node,
+     * the first of the scene: a canvas above it (a button, a modal) takes a press and a motion before it, and the hints, which only watch,
+     * see a press first. Which tile is under the pointer is the layout's test (`HitHandTile`, `SlotAt`), not the engine's.
+     *
      * **Buttons.** The canvas `Actions` and `ActionsCompact` hold the same buttons by name and exactly one is shown (`NeedsCompactActions`);
      * `LegalActions` decides every frame which buttons show and the answers come as `InputEvents::ActionEvent`s.
      *
@@ -94,14 +94,11 @@ namespace BECore::Mahjong {
      * one pause, so between computers the time from a discard to the next is the same whether or not a window opened; a person who acts
      * next gets the turn at once when no window opened and after the pause when one did.
      */
-    class MahjongTableComponent : public IComponent {
+    class MahjongTableComponent : public PointerTargetComponent {
         BE_CLASS(MahjongTableComponent)
     public:
         MahjongTableComponent() = default;
         ~MahjongTableComponent() override;
-
-        void OnAttached() override;
-        void OnDraw() override;
 
         /// A computer seat's decision is being computed in the background (only a search seat; a decision with no search is never "thinking").
         [[nodiscard]] bool ComputerThinks() const {
@@ -167,15 +164,26 @@ namespace BECore::Mahjong {
         /// The HUD shows `HandOver` only when this is false.
         [[nodiscard]] bool HandOverHeld() const;
 
+        /// How many motions of a pointer over the window reached the table instead of a canvas above it: the engine tells no taker of a motion,
+        /// so a test that asks "did a canvas take it" compares this before and after.
+        [[nodiscard]] uint64_t PointerMotions() const noexcept {
+            return _pointerMotions;
+        }
+
         /// The attached table, if any; the game assumes a single one.
         static MahjongTableComponent* GetActive() noexcept {
             return s_active;
         }
 
+    protected:
+        void OnTargetAttached() override;
+        void OnTargetDraw() override;
+        bool OnPointerPress(const PointerEvent& event) override;
+        void OnPointerEnter(const PointerEvent& event) override;
+        bool OnPointerMove(const PointerEvent& event) override;
+        void OnPointerExit(const PointerEvent& event) override;
+
     private:
-        void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
-        /// Keeps the position of the pointer (output pixels; a touch or a pen forgets it); only a motion no canvas took gets here.
-        void OnMouseMotion(const SDLEvents::MouseMotionEvent& event);
         void OnAction(const InputEvents::ActionEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         void OnApplicationCleanUp();
@@ -343,6 +351,7 @@ namespace BECore::Mahjong {
         float _pointerX = 0.0f;  // the pointer in output pixels, valid while `_pointerSeen`; converted to the view when used, so a resized
         float _pointerY = 0.0f;  // window keeps it where it is on the screen
         bool _pointerSeen = false;
+        uint64_t _pointerMotions = 0;
         bool _hoverShown = false;  // the plate `TileHoverPlate` is shown
         Tile _hoverTile;           // the tile `tileHoverText` names now (invalid for none) and the string table version it was worded at
         uint64_t _hoverStringsVersion = 0;

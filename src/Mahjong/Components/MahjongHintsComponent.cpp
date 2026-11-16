@@ -6,11 +6,11 @@
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UITextComponent.h>
-#include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHintsComponent.gen.hpp>
 #include <Mahjong/Components/ColorTokens.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
+#include <Mahjong/Components/WindowPointerShape.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TapSelect.h>
@@ -146,10 +146,9 @@ namespace BECore::Mahjong {
         }
     }
 
-    void MahjongHintsComponent::OnAttached() {
+    void MahjongHintsComponent::OnTargetAttached() {
         s_active = this;
         SubscribeInScene<InputEvents::ActionEvent, &MahjongHintsComponent::OnAction>(this);
-        SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongHintsComponent::OnMouseDown>(this);
     }
 
     MahjongHintsComponent::Key MahjongHintsComponent::KeyOf(const MahjongGame* game) {
@@ -175,8 +174,9 @@ namespace BECore::Mahjong {
         return view;
     }
 
-    void MahjongHintsComponent::OnDraw() {
+    void MahjongHintsComponent::OnTargetDraw() {
         BE_PROFILE_SCOPE("MahjongHints::OnDraw");
+        SetShape(WholeWindowShape(GetScene(), *CoreManager::GetRenderer()));
         MahjongGame* game = MahjongGame::GetActive();
         if (game != nullptr && game->IsOptionsOpen()) {
             PublishChoice(*game);
@@ -425,15 +425,15 @@ namespace BECore::Mahjong {
         canvas->SetElementVisible(NameOf(kCoachCard), open);
     }
 
-    void MahjongHintsComponent::OnMouseDown(const SDLEvents::MouseButtonDownEvent& event) {
+    bool MahjongHintsComponent::OnPointerPress(const PointerEvent& event) {
         MahjongGame* game = MahjongGame::GetActive();
-        // A note this very press made (the discard it is) was never shown and stays
-        if (event.button.button != SDL_BUTTON_LEFT || game == nullptr) {
-            return;
+        if (event.button != SDL_BUTTON_LEFT || game == nullptr) {
+            return false;
         }
+        // This component is asked before the table: a note shown now is cleared before the discard of this very press makes the next one
         if (_coachShown && game->GetCoach().Version() == _coachPublished) {
             game->GetCoach().ClearNote();
-            return;
+            return false;
         }
         // A press on the card of the advice takes it down, as the button `Hint` does; the card is no control (a `SceneView` canvas is under the
         // touch size), so the press is read here
@@ -443,14 +443,17 @@ namespace BECore::Mahjong {
             const UIElement* card = canvas != nullptr ? canvas->GetRoot().FindByName(NameOf(kCoachCard)) : nullptr;
             // A hidden card has an empty rect, which no point is inside
             if (card != nullptr) {
-                const float x = scene.ScreenToSceneX(event.button.x);
-                const float y = scene.ScreenToSceneY(event.button.y);
                 const Rect& r = card->rect;
-                if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
+                if (event.sceneX >= r.x && event.sceneX < r.x + r.w && event.sceneY >= r.y && event.sceneY < r.y + r.h) {
                     _adviceOn = false;
                 }
             }
         }
+        return false;
+    }
+
+    bool MahjongHintsComponent::OnPointerMove(const PointerEvent& /*event*/) {
+        return false;
     }
 
     void MahjongHintsComponent::DrawMarks(const MahjongGame& game) const {
