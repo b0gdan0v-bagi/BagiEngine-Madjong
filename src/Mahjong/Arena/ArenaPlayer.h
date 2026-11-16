@@ -19,7 +19,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// One row of `kProfileKnobs` per field of `LevelProfile`.
-    inline constexpr size_t kProfileFieldCount = 14;
+    inline constexpr size_t kProfileFieldCount = 23;
 
     inline constexpr Array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
@@ -36,6 +36,15 @@ namespace BECore::Mahjong::Arena {
         {"ownDrawsDeclareDepth", &LevelProfile::ownDrawsDeclareDepth, nullptr, kOwnDrawsMaxDepth},
         {"readDanger", nullptr, &LevelProfile::readDanger, 1},
         {"waitingKongByPoints", nullptr, &LevelProfile::waitingKongByPoints, 1},
+        {"weighted", nullptr, &LevelProfile::weighted, 1},
+        {"wShanten", &LevelProfile::wShanten, nullptr, kWeightMax},
+        {"wAcceptance", &LevelProfile::wAcceptance, nullptr, kWeightMax},
+        {"wKeep", &LevelProfile::wKeep, nullptr, kWeightMax},
+        {"wSafe", &LevelProfile::wSafe, nullptr, kWeightMax},
+        {"wClaimRank", &LevelProfile::wClaimRank, nullptr, kWeightMax},
+        {"wClaimValue", &LevelProfile::wClaimValue, nullptr, kWeightMax},
+        {"wClaimMargin", &LevelProfile::wClaimMargin, nullptr, kWeightMax},
+        {"wClaimWall", &LevelProfile::wClaimWall, nullptr, kWeightMax},
     }};
 
     /// What an arena-only player knows beyond a computer player's view (`ArenaOracle.h`). `None` is every ordinary player.

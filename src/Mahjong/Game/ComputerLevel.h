@@ -2,6 +2,7 @@
 
 #include <EASTL/array.h>
 #include <Mahjong/Game/Seats.h>
+#include <Mahjong/Game/Tile.h>
 
 namespace BECore::Mahjong {
 
@@ -111,6 +112,49 @@ namespace BECore::Mahjong {
     inline constexpr int kSearchCandidates = 4;
     inline constexpr int kSearchMargin = 30;
 
+    /// The weighted player (`LevelProfile::weighted`, `ComputerWeights.h`): the largest value of a weight, which the arena accepts from
+    /// the command line (the smallest is 0).
+    inline constexpr int kWeightMax = 65535;
+
+    /// The shanten of a hand of 13 tiles is at most this (no set, no pair, no part: four sets and a pair away), so `kShantenCeiling -
+    /// shanten` is the feature "nearness to a win", never below 0 for a hand of 13 tiles.
+    inline constexpr int kShantenCeiling = 8;
+
+    /// The worst grade of `Danger` (`High`, `DiscardDanger.h` asserts it) and the span of `KeepValue` (`kKeepValueTile - kKeepWorthless`,
+    /// `ComputerTurn.h` asserts it): the features `kDangerWorst - danger` and `kKeepValueTile - keep` run from 0 to these.
+    inline constexpr int kDangerWorst = 3;
+    inline constexpr int kKeepSpread = 3;
+
+    /// The most unseen copies the acceptance of a hand can count: every kind, every copy.
+    inline constexpr int kAcceptanceMax = kKindCount * kCopiesPerTile;
+
+    /// The tiles left in the wall at which the wall slope of a claim (`wClaimWall`) is one whole weight: `wClaimWall * liveCount / kWallWeightUnit`.
+    inline constexpr int kWallWeightUnit = 100;
+
+    /// The weights with which the weighted player is Normal exactly (`docs/bot-weights.md`, "Policy"). Normal ranks by shanten, then
+    /// acceptance, then (with `readDanger`) danger, then keep value, so each weight exceeds the largest spread of everything below it:
+    /// `kNormalWeightSafeStep` is the weight `wSafe` that stands for `readDanger`, and is itself above the span of keep.
+    inline constexpr int kNormalWeightKeep = 1;
+    inline constexpr int kNormalWeightSafe = 0;
+    inline constexpr int kNormalWeightSafeStep = 4;
+    inline constexpr int kNormalWeightAcceptance = 16;
+    inline constexpr int kNormalWeightShanten = 4400;
+
+    /// The claim weights with which a claim is acceptable exactly when Normal's rule says so: a gain of acceptance alone is never
+    /// enough (the margin is the whole span of acceptance), a lowered shanten always is, a value claim at an equal shanten is.
+    inline constexpr int kNormalWeightClaimRank = 1;
+    inline constexpr int kNormalWeightClaimWall = 0;
+    inline constexpr int kNormalWeightClaimMargin = kNormalWeightAcceptance * kAcceptanceMax;
+    inline constexpr int kNormalWeightClaimValue = kNormalWeightShanten;
+
+    static_assert(kNormalWeightKeep * kKeepSpread < kNormalWeightSafeStep, "danger outranks keep value");
+    static_assert(kKeepSpread * kNormalWeightKeep + kDangerWorst * kNormalWeightSafeStep < kNormalWeightAcceptance, "acceptance outranks danger and keep value");
+    static_assert(kAcceptanceMax * kNormalWeightAcceptance < kNormalWeightShanten, "shanten outranks acceptance");
+    static_assert(kNormalWeightShanten - kNormalWeightAcceptance * kAcceptanceMax > kNormalWeightClaimMargin, "a lowered shanten passes the claim gate whatever the acceptance does");
+    static_assert(kNormalWeightClaimValue - kNormalWeightAcceptance * kAcceptanceMax > kNormalWeightClaimMargin, "a value claim at an equal shanten passes the gate");
+    static_assert(kNormalWeightClaimMargin >= kNormalWeightAcceptance * kAcceptanceMax, "a gain of acceptance alone never passes the gate");
+    static_assert(kNormalWeightShanten <= kWeightMax && kNormalWeightClaimMargin <= kWeightMax, "the defaults are in the range of the knobs");
+
     /**
      * @brief The numbers a level plays by: what the choosers of `ComputerTurn.h` and `ComputerClaim.h` do differently from Normal.
      * `kNormalProfile` is the defaults, and **a knob that is off draws nothing from the rng**, so Normal's stream does not depend on
@@ -169,6 +213,26 @@ namespace BECore::Mahjong {
         /// passes by the expected points of each (`RateWaitingKong`, `ComputerClaim.h`); false = it passes every claim but mahjong.
         /// Draws nothing from the rng. On in every level (the owner, 2026-11-12).
         bool waitingKongByPoints = true;
+        /// The weighted player (`ComputerWeights.h`): step 5 of the own turn and steps 3 and 4 of a claim window choose by the weights
+        /// below instead of `BestDiscard` and `BestClaims`. Off in every level; **with the default weights the play is Normal's, rng
+        /// stream included**, and off the code path is the unweighted one. Steps 1 to 4 of the turn and 1 and 2 of a window ignore it.
+        bool weighted = false;
+        /// Weighted discard rating: per step of the shanten of the 13 tiles left below `kShantenCeiling`.
+        int wShanten = kNormalWeightShanten;
+        /// Weighted discard rating: per unseen copy that improves the 13 tiles left (`AcceptanceOf`).
+        int wAcceptance = kNormalWeightAcceptance;
+        /// Weighted discard rating: per step of `KeepValue` below `kKeepValueTile` (a lower keep value is discarded sooner).
+        int wKeep = kNormalWeightKeep;
+        /// Weighted discard rating: per grade of `Danger` below `kDangerWorst`; read only with a declared opponent. 0 = danger not read.
+        int wSafe = kNormalWeightSafe;
+        /// Weighted claim rating: per `ClaimRank` of the claim (kong above pung above chow), the order of claims that rate the same.
+        int wClaimRank = kNormalWeightClaimRank;
+        /// Weighted claim gate: the bonus of a pung or kong of a value tile at an equal shanten.
+        int wClaimValue = kNormalWeightClaimValue;
+        /// Weighted claim gate: the claim's rating must exceed the pass's by more than this.
+        int wClaimMargin = kNormalWeightClaimMargin;
+        /// Weighted claim gate: added to the margin per `kWallWeightUnit` tiles in the live wall (a late wall asks for less or more).
+        int wClaimWall = kNormalWeightClaimWall;
     };
 
     /// The Normal player: the defaults of `LevelProfile`.

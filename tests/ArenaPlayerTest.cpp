@@ -102,8 +102,34 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(ErrorOf("normal:searchCandidates=13"), "13"));
     }
 
+    TEST(ArenaPlayerTest, TheWeightKnobsAreSetFromTheSpec) {
+        const ArenaPlayer weighted = Player("normal:weighted=1,wShanten=3000");
+        EXPECT_TRUE(weighted.profile.weighted);
+        EXPECT_EQ(weighted.profile.wShanten, 3000);
+        EXPECT_EQ(weighted.profile.wAcceptance, kNormalWeightAcceptance);
+        EXPECT_EQ(weighted.profile.wClaimMargin, kNormalWeightClaimMargin);
+        EXPECT_EQ(Player(Format("normal:wClaimWall={}", kWeightMax)).profile.wClaimWall, kWeightMax);
+        EXPECT_TRUE(Contains(ErrorOf(Format("normal:wKeep={}", kWeightMax + 1)), "outside 0.."));
+        EXPECT_TRUE(Contains(ErrorOf("normal:wSafe=-1"), "-1"));
+        EXPECT_TRUE(Contains(ErrorOf("normal:weighted=2"), "weighted"));
+    }
+
+    TEST(ArenaPlayerTest, EveryLevelHasTheNormalWeightsAndIsNotWeighted) {
+        for (const LevelProfile* profile : kLevelProfiles) {
+            EXPECT_FALSE(profile->weighted);
+            EXPECT_EQ(profile->wShanten, kNormalWeightShanten);
+            EXPECT_EQ(profile->wAcceptance, kNormalWeightAcceptance);
+            EXPECT_EQ(profile->wKeep, kNormalWeightKeep);
+            EXPECT_EQ(profile->wSafe, kNormalWeightSafe);
+            EXPECT_EQ(profile->wClaimRank, kNormalWeightClaimRank);
+            EXPECT_EQ(profile->wClaimValue, kNormalWeightClaimValue);
+            EXPECT_EQ(profile->wClaimMargin, kNormalWeightClaimMargin);
+            EXPECT_EQ(profile->wClaimWall, kNormalWeightClaimWall);
+        }
+    }
+
     TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
-        static_assert(kProfileFieldCount == 14, "an oracle is no LevelProfile field");
+        static_assert(kProfileFieldCount == 23, "an oracle is no LevelProfile field");
         for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
@@ -206,7 +232,16 @@ namespace BECore::Mahjong::Arena {
                                                       set.ownDrawsClaimDepth != kNormalProfile.ownDrawsClaimDepth,
                                                       set.ownDrawsDeclareDepth != kNormalProfile.ownDrawsDeclareDepth,
                                                       set.readDanger != kNormalProfile.readDanger,
-                                                      set.waitingKongByPoints != kNormalProfile.waitingKongByPoints};
+                                                      set.waitingKongByPoints != kNormalProfile.waitingKongByPoints,
+                                                      set.weighted != kNormalProfile.weighted,
+                                                      set.wShanten != kNormalProfile.wShanten,
+                                                      set.wAcceptance != kNormalProfile.wAcceptance,
+                                                      set.wKeep != kNormalProfile.wKeep,
+                                                      set.wSafe != kNormalProfile.wSafe,
+                                                      set.wClaimRank != kNormalProfile.wClaimRank,
+                                                      set.wClaimValue != kNormalProfile.wClaimValue,
+                                                      set.wClaimMargin != kNormalProfile.wClaimMargin,
+                                                      set.wClaimWall != kNormalProfile.wClaimWall};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;
             for (size_t index = 0; index < kProfileFieldCount; ++index) {
                 moved[index] = moved[index] || changed[index];

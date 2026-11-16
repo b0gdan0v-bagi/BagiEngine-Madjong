@@ -13,6 +13,7 @@ namespace BECore::Mahjong {
     inline constexpr int kKeepTerminal = 1;
     inline constexpr int kKeepSimple = 2;
     inline constexpr int kKeepValueTile = 3;  // a dragon, the own wind, the round wind: a pung of it scores a double
+    static_assert(kKeepValueTile - kKeepWorthless == kKeepSpread, "the span of KeepValue that the weighted rating assumes");
 
     /// The copies of `tile` the seat cannot see (`kCopiesPerTile - view.visible`, never below 0); 0 for a tile that is not playable.
     [[nodiscard]] int UnseenCopies(const TableView& view, Tile tile) noexcept;
