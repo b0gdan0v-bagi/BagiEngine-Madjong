@@ -950,4 +950,23 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(MahjongSaveTest, ASessionNestedTooDeepIsRefusedAndANormalOneStillReads) {
+        RoomSession session;
+        session.url = "ws://localhost:8080";
+        session.room = "K7M4Q";
+        session.token = "00112233445566778899aabbccddeeff";
+        const MahjongOnlineSave good = MakeOnlineSave("Ann", session);
+        const auto read = ReadOnline(good);
+        ASSERT_TRUE(read.has_value()) << read.error().c_str();
+        EXPECT_TRUE(read->session.IsValid());
+
+        const size_t deep = 10000;
+        MahjongOnlineSave bomb = good;
+        bomb.session.assign(deep, '[');
+        bomb.session.append(deep, ']');
+        const auto refused = ReadOnline(bomb);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_NE(refused.error().find("nested"), String::npos) << refused.error().c_str();
+    }
+
 }  // namespace BECore::Mahjong::Tests

@@ -525,6 +525,41 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST_F(MatchLogJsonTest, ALineNestedTooDeepIsRefusedWithItsLineNumberAndANormalOneStillReads) {
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const String first = FromStdString(EventToJson(events[0]).dump());
+        const size_t deep = 10000;
+        String bomb;
+        bomb.append(deep, '[');
+        bomb.append(deep, ']');
+        String text = first;
+        text += "\n";
+        text += bomb;
+        text += "\n";
+        const auto refused = ParseMatchLog(text);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_TRUE(refused.error().find("line 2:") == 0) << refused.error().c_str();
+        EXPECT_NE(refused.error().find("nested deeper"), String::npos) << refused.error().c_str();
+
+        // The limit itself: a line at kMaxJsonNesting levels is the parser's to judge, one more is refused before it.
+        String at;
+        at.append(kMaxJsonNesting, '[');
+        at.append(kMaxJsonNesting, ']');
+        const auto atLimit = ParseMatchLog(at);
+        ASSERT_FALSE(atLimit.has_value());
+        EXPECT_EQ(atLimit.error().find("nested deeper"), String::npos) << atLimit.error().c_str();
+        String over;
+        over.append(kMaxJsonNesting + 1, '[');
+        over.append(kMaxJsonNesting + 1, ']');
+        const auto beyond = ParseMatchLog(over);
+        ASSERT_FALSE(beyond.has_value());
+        EXPECT_NE(beyond.error().find("nested deeper"), String::npos) << beyond.error().c_str();
+
+        const auto parsed = ParseMatchLog(TextOf(events).c_str());
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ(*parsed, events);
+    }
+
     TEST_F(MatchLogJsonTest, TheHandLineListsFourteenTilesForEastAndThirteenForTheOthers) {
         const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         const MatchLogEvent& hand = First(events, MatchLogKind::Hand);
