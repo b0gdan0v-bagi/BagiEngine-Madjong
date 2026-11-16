@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  What the HUD shows when, as data. Each element below is a value that reads a field of the level `view`, which is the table's HudFacts
+  (src/Mahjong/Table/HudFacts.h: made from public data only, so nothing here can see a hidden tile). The game reads this file at the start
+  (MahjongHudComponent); a file with any error is refused whole, the log names the field and the path, and both elements stay hidden.
+
+  moveLineShown   the element `MoveLine` (the last move or the line of a room): shown while the facts say there is a text for it
+  matchOverShown  the canvas `MatchOver` (the final standings): shown when the match is over
+
+  Why a config file and not the node file config/nodes/MahjongHud.xml: the scene loader opens no link scope, so a <context> or a `from`
+  there is a load error (engine/src/Modules/BECore/Values/CLAUDE.md).
+-->
+<MahjongHudValues>
+  <context view="HudFacts"/>
+  <moveLineShown from="view.hasLastMove"/>
+  <matchOverShown from="view.matchOver"/>
+</MahjongHudValues>
