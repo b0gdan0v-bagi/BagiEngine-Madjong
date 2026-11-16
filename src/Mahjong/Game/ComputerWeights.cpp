@@ -4,25 +4,47 @@
 
 namespace BECore::Mahjong {
 
-    int64_t RateDiscardWeighted(const LevelProfile& profile, int shanten, int acceptance, int keep, int danger) noexcept {
+    int64_t RateDiscardWeighted(const LevelProfile& profile, int shanten, int acceptance, int keep, int danger, int64_t value) noexcept {
         return static_cast<int64_t>(profile.wShanten) * (kShantenCeiling - shanten) + static_cast<int64_t>(profile.wAcceptance) * acceptance +
-               static_cast<int64_t>(profile.wKeep) * (kKeepValueTile - keep) + static_cast<int64_t>(profile.wSafe) * (kDangerWorst - danger);
+               static_cast<int64_t>(profile.wKeep) * (kKeepValueTile - keep) + static_cast<int64_t>(profile.wSafe) * (kDangerWorst - danger) + static_cast<int64_t>(profile.wValueDiscard) * value;
     }
 
-    Vector<WeightedDiscard> RateDiscardsWeighted(const TableView& view, const TileCounts& counts, int meldCount, const LevelProfile& profile) {
+    Array<int64_t, kKindCount> DiscardValueAbove(const TableView& view, const LevelProfile& profile) {
+        Array<int64_t, kKindCount> above{};
+        if (profile.wValueDiscard <= 0 || profile.weightedValueDepth <= 0) {
+            return above;
+        }
+        const Vector<DiscardValue> values = ValueDiscards(view, OwnDrawsModel{.depth = profile.weightedValueDepth});
+        if (values.empty()) {
+            return above;
+        }
+        int64_t lowest = values.front().expected;
+        for (const DiscardValue& value : values) {
+            lowest = value.expected < lowest ? value.expected : lowest;
+        }
+        for (const DiscardValue& value : values) {
+            above[value.tile.Id()] = value.expected - lowest;
+        }
+        return above;
+    }
+
+    Vector<WeightedDiscard> RateDiscardsWeighted(const TableView& view, const TileCounts& counts, int meldCount, const LevelProfile& profile, bool withValue) {
+        const Array<int64_t, kKindCount> above = withValue ? DiscardValueAbove(view, profile) : Array<int64_t, kKindCount>{};
         // `RateDiscards` reads the danger only with a declared opponent, so the weight alone decides whether it is looked at.
         Vector<DiscardOption> options = RateDiscards(counts, meldCount, view, profile.wSafe > 0);
         eastl::sort(options.begin(), options.end(), [](const DiscardOption& a, const DiscardOption& b) { return a.tile.Id() < b.tile.Id(); });
         Vector<WeightedDiscard> rated;
         rated.reserve(options.size());
         for (const DiscardOption& option : options) {
-            rated.push_back({option.tile, option.shanten, option.acceptance, option.keep, option.danger, RateDiscardWeighted(profile, option.shanten, option.acceptance, option.keep, option.danger)});
+            const int64_t value = above[option.tile.Id()];
+            rated.push_back({option.tile, option.shanten, option.acceptance, option.keep, option.danger, value,
+                             RateDiscardWeighted(profile, option.shanten, option.acceptance, option.keep, option.danger, value)});
         }
         return rated;
     }
 
     Tile ChooseWeightedDiscard(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
-        const Vector<WeightedDiscard> rated = RateDiscardsWeighted(view, CountTiles(view.own.concealed), MeldCountOf(view), profile);
+        const Vector<WeightedDiscard> rated = RateDiscardsWeighted(view, CountTiles(view.own.concealed), MeldCountOf(view), profile, true);
         if (rated.empty()) {
             return Tile{};
         }

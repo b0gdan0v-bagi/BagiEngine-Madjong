@@ -276,6 +276,193 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    // ----- the value of a discard (`wValueDiscard`) -----
+
+    namespace {
+
+        /// Debug time: the value is searched on every `kValueStride`-th own turn only.
+        constexpr int kValueStride = 5;
+
+        /// A weighted profile that rates by the value of the discard alone.
+        LevelProfile OnlyTheDiscardValue(int depth = 1) {
+            LevelProfile profile = Weighted(kNormalProfile);
+            profile.wShanten = profile.wAcceptance = profile.wKeep = profile.wSafe = 0;
+            profile.wValueDiscard = 1;
+            profile.weightedValueDepth = depth;
+            return profile;
+        }
+
+    }  // namespace
+
+    TEST(ComputerWeightsTest, WithNoWeightOnTheValueTheDepthDoesNotMatter) {
+        for (const int depth : {0, 1, 2}) {
+            LevelProfile profile = Weighted(kNormalProfile);
+            profile.weightedValueDepth = depth;
+            const TurnTally tally = ExpectSameTurns(profile, kNormalProfile, static_cast<uint32_t>(depth));
+            EXPECT_GT(tally.ties, 0) << "depth " << depth;
+        }
+    }
+
+    TEST(ComputerWeightsTest, WithNoDepthTheValueWeightChangesNothing) {
+        LevelProfile profile = Weighted(kNormalProfile);
+        profile.wValueDiscard = kWeightMax;
+        profile.weightedValueDepth = 0;
+        EXPECT_GT(ExpectSameTurns(profile, kNormalProfile).discards, 0);
+    }
+
+    TEST(ComputerWeightsTest, WithOnlyTheValueWeightedTheDiscardIsOneOfTheBestValue) {
+        const LevelProfile profile = OnlyTheDiscardValue();
+        int separated = 0;
+        int chosenRated = 0;
+        ForEachTurn([&](const TableView& view, int index, int step) {
+            if (step % kValueStride != 0) {
+                return;
+            }
+            const Vector<DiscardValue> values = ValueDiscards(view, profile.weightedValueDepth);
+            if (values.empty()) {
+                return;
+            }
+            int64_t best = values.front().expected;
+            int64_t lowest = values.front().expected;
+            for (const DiscardValue& value : values) {
+                best = value.expected > best ? value.expected : best;
+                lowest = value.expected < lowest ? value.expected : lowest;
+            }
+            // With every rated kind equal the unrated ones tie with them (all 0), so the tile may be any.
+            if (best == lowest) {
+                return;
+            }
+            ++separated;
+            const Tile chosen = WeightedChoice(view, profile, static_cast<uint32_t>(step));
+            for (const DiscardValue& value : values) {
+                if (value.tile == chosen) {
+                    ++chosenRated;
+                    EXPECT_EQ(value.expected, best) << "hand " << index << " step " << step;
+                }
+            }
+        });
+        EXPECT_GT(separated, 0);
+        EXPECT_EQ(chosenRated, separated) << "a kind that ValueDiscards does not rate was chosen over a rated one that is better";
+    }
+
+    TEST(ComputerWeightsTest, TheValueAboveTheLowestIsNeverNegativeAndTheUnratedKindsAreZero) {
+        const LevelProfile profile = OnlyTheDiscardValue();
+        int rated = 0;
+        ForEachTurn([&](const TableView& view, int index, int step) {
+            if (step % kValueStride != 0) {
+                return;
+            }
+            const Array<int64_t, kKindCount> above = DiscardValueAbove(view, profile);
+            const Vector<DiscardValue> values = ValueDiscards(view, profile.weightedValueDepth);
+            Array<bool, kKindCount> listed{};
+            int64_t lowest = values.empty() ? 0 : values.front().expected;
+            for (const DiscardValue& value : values) {
+                lowest = value.expected < lowest ? value.expected : lowest;
+            }
+            int64_t smallest = values.empty() ? 0 : above[values.front().tile.Id()];
+            for (const DiscardValue& value : values) {
+                listed[value.tile.Id()] = true;
+                EXPECT_EQ(above[value.tile.Id()], value.expected - lowest) << "hand " << index << " step " << step;
+                smallest = above[value.tile.Id()] < smallest ? above[value.tile.Id()] : smallest;
+                ++rated;
+            }
+            EXPECT_EQ(smallest, 0) << "the worst rated kind is the zero";
+            for (size_t id = 0; id < kKindCount; ++id) {
+                EXPECT_GE(above[id], 0) << "hand " << index << " step " << step;
+                if (!listed[id]) {
+                    EXPECT_EQ(above[id], 0) << "kind " << id << " hand " << index << " step " << step;
+                }
+            }
+            // The rating of step 5 carries it: `wValueDiscard * V` and the nine weights' part, which is 0 here.
+            for (const WeightedDiscard& discard : RateDiscardsWeighted(view, CountTiles(view.own.concealed), MeldCountOf(view), profile, true)) {
+                EXPECT_EQ(discard.value, above[discard.tile.Id()]);
+                EXPECT_EQ(discard.rating, above[discard.tile.Id()]);
+            }
+        });
+        EXPECT_GT(rated, 0);
+    }
+
+    TEST(ComputerWeightsTest, TheValueTermIsLeftOutOfARatingThatDoesNotAskForIt) {
+        LevelProfile profile = Weighted(kNormalProfile);
+        profile.wValueDiscard = 3;
+        const TableView view = DiscardView("1p 2p 3p 4p 5p 6p 7p 8p 9p 1m 2m Gd Rd 5s");
+        const Vector<WeightedDiscard> without = RateDiscardsWeighted(view, CountTiles(view.own.concealed), 0, profile);
+        for (const WeightedDiscard& discard : without) {
+            EXPECT_EQ(discard.value, 0);
+            EXPECT_EQ(discard.rating, RateDiscardWeighted(kNormalProfile, discard.shanten, discard.acceptance, discard.keep, discard.danger));
+        }
+    }
+
+    TEST(ComputerWeightsTest, AViewThatIsNotADiscardTurnRatesAsIfTheValueWeightWereZero) {
+        TableView view = DiscardView("1p 2p 3p 4p 5p 6p 7p 8p 9p 1m 2m Gd Rd 5s");
+        view.phase = Phase::Claim;
+        const LevelProfile valued = OnlyTheDiscardValue();
+        ASSERT_TRUE(ValueDiscards(view, valued.weightedValueDepth).empty());
+        for (const int64_t above : DiscardValueAbove(view, valued)) {
+            EXPECT_EQ(above, 0);
+        }
+        LevelProfile plain = Weighted(kNormalProfile);
+        plain.wValueDiscard = 5;
+        const TileCounts counts = CountTiles(view.own.concealed);
+        const Vector<WeightedDiscard> with = RateDiscardsWeighted(view, counts, 0, plain, true);
+        const Vector<WeightedDiscard> zero = RateDiscardsWeighted(view, counts, 0, Weighted(kNormalProfile), true);
+        ASSERT_EQ(with.size(), zero.size());
+        for (size_t i = 0; i < with.size(); ++i) {
+            EXPECT_EQ(with[i].rating, zero[i].rating);
+        }
+        for (uint32_t seed = 1; seed <= 4; ++seed) {
+            EXPECT_EQ(WeightedChoice(view, plain, seed), WeightedChoice(view, Weighted(kNormalProfile), seed));
+        }
+    }
+
+    TEST(ComputerWeightsTest, TheLargestWeightsAndTheValueDoNotOverflowTheRating) {
+        for (const int depth : {1, 2}) {
+            LevelProfile profile = WeightedAt(kWeightMax);
+            profile.weightedValueDepth = depth;
+            int64_t largestValue = 0;
+            int checked = 0;
+            ForEachTurn([&](const TableView& view, int index, int step) {
+                if (step % (kValueStride * 3) != 0) {
+                    return;
+                }
+                const Array<int64_t, kKindCount> above = DiscardValueAbove(view, profile);
+                for (const int64_t value : above) {
+                    largestValue = value > largestValue ? value : largestValue;
+                }
+                for (const WeightedDiscard& discard : RateDiscardsWeighted(view, CountTiles(view.own.concealed), MeldCountOf(view), profile, true)) {
+                    ++checked;
+                    const int64_t featureBound = static_cast<int64_t>(kWeightMax) * (kShantenCeiling + kAcceptanceMax + kKeepValueTile + kDangerWorst);
+                    EXPECT_EQ(discard.rating, RateDiscardWeighted(profile, discard.shanten, discard.acceptance, discard.keep, discard.danger, discard.value)) << "hand " << index << " step " << step;
+                    EXPECT_GE(discard.rating, static_cast<int64_t>(kWeightMax) * discard.value) << "hand " << index << " step " << step;
+                    EXPECT_LE(discard.rating, featureBound + static_cast<int64_t>(kWeightMax) * discard.value) << "hand " << index << " step " << step;
+                }
+            });
+            EXPECT_GT(checked, 0) << "depth " << depth;
+            EXPECT_GT(largestValue, 0) << "depth " << depth;
+        }
+    }
+
+    TEST(ComputerWeightsTest, TheOwnDrawsDepthStillGoesBeforeTheWeightedPath) {
+        LevelProfile profile = OnlyTheDiscardValue();
+        profile.ownDrawsDepth = 1;
+        profile.wShanten = kNormalWeightShanten;
+        int decided = 0;
+        ForEachTurn([&](const TableView& view, int index, int step) {
+            if (step % kValueStride != 0) {
+                return;
+            }
+            MahjongRng rng(static_cast<uint32_t>(index * 1000 + step));
+            const TurnDecision decision = DecideTurn(view, rng, profile);
+            const Vector<DiscardValue> values = ValueDiscards(view, profile.ownDrawsDepth);
+            if (decision.step != TurnStep::Discard || values.empty()) {
+                return;
+            }
+            ++decided;
+            EXPECT_EQ(decision.action, HandAction::MakeDiscard(values.front().tile)) << "hand " << index << " step " << step;
+        });
+        EXPECT_GT(decided, 0);
+    }
+
     // ----- a moved weight moves the choice -----
 
     TEST(ComputerWeightsTest, WithNoWeightOnAcceptanceTheLowerKeepValueIsDiscardedWhereNormalDiscardsTheLargerAcceptance) {
@@ -379,6 +566,10 @@ namespace BECore::Mahjong::Tests {
         profiles.push_back(largest);
         ForEachTurn([&](const TableView& view, int index, int step) {
             for (const LevelProfile& profile : profiles) {
+                // The own-draws value is dear in Debug: a profile that asks for it plays every third of the `kValueStride`-th turns.
+                if (profile.wValueDiscard > 0 && step % (kValueStride * 3) != 0) {
+                    continue;
+                }
                 MahjongRng rng(static_cast<uint32_t>(index * 1000 + step));
                 const HandAction answer = ChooseTurnAction(view, rng, profile);
                 EXPECT_TRUE(Has(view.legal, answer)) << "hand " << index << " step " << step;

@@ -3,6 +3,7 @@
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerTurn.h>
+#include <Mahjong/Game/OwnDraws.h>
 
 namespace BECore::Mahjong {
 
@@ -10,7 +11,9 @@ namespace BECore::Mahjong {
      * @file
      * The weighted player (`LevelProfile::weighted`, `docs/bot-weights.md`): step 5 of the own turn and steps 3 and 4 of a claim window
      * choose by a sum of weights times features instead of Normal's lexicographic order. **With the default weights (`kNormalWeight...`)
-     * the choices and the draws from the rng are Normal's exactly**; with `weighted` off none of this is called.
+     * the choices and the draws from the rng are Normal's exactly**; with `weighted` off none of this is called. The two value terms
+     * (`wValueDiscard` here, `wValueClaim` for a claim) are computed only while their weight is above 0, so at 0 nothing of the own-draws
+     * code runs.
      *
      * Steps 1 to 4 of the turn and steps 1 and 2 of a claim window do not read the weights. The hints and the coach (`ExplainAdvice`)
      * explain Normal's order: a weighted profile is not supported there and is never passed to it.
@@ -24,17 +27,28 @@ namespace BECore::Mahjong {
         int keep = 0;
         /// The `Danger` grade; 0 for every kind unless `profile.wSafe > 0` and an opponent has declared.
         int danger = 0;
+        /// The own-draws value above the lowest rated one, in milli-points (`DiscardValueAbove`); 0 unless the rating asked for it.
+        int64_t value = 0;
         int64_t rating = 0;
     };
 
     /// The rating of a discard from its features: `wShanten * (kShantenCeiling - shanten) + wAcceptance * acceptance + wKeep *
-    /// (kKeepValueTile - keep) + wSafe * (kDangerWorst - danger)`. The weights are non-negative, so a larger weight always means more of the
-    /// good thing.
-    [[nodiscard]] int64_t RateDiscardWeighted(const LevelProfile& profile, int shanten, int acceptance, int keep, int danger) noexcept;
+    /// (kKeepValueTile - keep) + wSafe * (kDangerWorst - danger) + wValueDiscard * value`. The weights are non-negative, so a larger
+    /// weight always means more of the good thing; `value` is in milli-points and 64 bits, so the sum cannot overflow.
+    [[nodiscard]] int64_t RateDiscardWeighted(const LevelProfile& profile, int shanten, int acceptance, int keep, int danger, int64_t value = 0) noexcept;
+
+    /// The own-draws value of each kind as a discard, in milli-points, **above the lowest rated one**: `ValueDiscards(view,
+    /// OwnDrawsModel{.depth = profile.weightedValueDepth})` gives `expected` for at most `kOwnDrawsMaxCandidates` kinds, and the result
+    /// is `expected` minus the smallest of them. A kind it does not rate, and every kind when it rates none (not a discard turn),
+    /// is 0, so the value is never negative. **Computed only when `wValueDiscard` and `weightedValueDepth` are both above 0**: otherwise
+    /// every entry is 0 and `ValueDiscards` is not called.
+    [[nodiscard]] Array<int64_t, kKindCount> DiscardValueAbove(const TableView& view, const LevelProfile& profile);
 
     /// Every kind held, with its features and rating, in the order of the tile ids. Unlike Normal's `BestDiscard` it rates every kind,
-    /// not only the lowest-shanten ones: a weight may trade shanten for something else.
-    [[nodiscard]] Vector<WeightedDiscard> RateDiscardsWeighted(const TableView& view, const TileCounts& counts, int meldCount, const LevelProfile& profile);
+    /// not only the lowest-shanten ones: a weight may trade shanten for something else. `withValue` adds the term of `wValueDiscard`
+    /// (`DiscardValueAbove`): only the own discard of `ChooseWeightedDiscard` asks for it, the discard after a claim is rated by the
+    /// other weights alone (the claim's value comes from `ValueClaims`).
+    [[nodiscard]] Vector<WeightedDiscard> RateDiscardsWeighted(const TableView& view, const TileCounts& counts, int meldCount, const LevelProfile& profile, bool withValue = false);
 
     /// The discard of the highest rating; kinds with an equal rating are the ties, in the order of the tile ids, and `PickOne` takes one
     /// (a number is drawn from `rng` exactly when there is more than one, as in `BestDiscard`). An empty hand gives an invalid tile.
