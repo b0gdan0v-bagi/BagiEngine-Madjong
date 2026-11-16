@@ -48,4 +48,14 @@ namespace BECore::Mahjong::Arena {
     /// The interval excludes 0; without an interval never.
     [[nodiscard]] bool IsSignificant(const MeanInterval& interval) noexcept;
 
+    /// `kPercent * part / whole`, 0 for no `whole`: the ratios of totals of every report.
+    [[nodiscard]] inline double PercentOf(int64_t part, int64_t whole) noexcept {
+        return whole > 0 ? kPercent * static_cast<double>(part) / static_cast<double>(whole) : 0.0;
+    }
+
+    /// `sum / count`, 0 for no `count`.
+    [[nodiscard]] inline double AverageOf(int64_t sum, int64_t count) noexcept {
+        return count > 0 ? static_cast<double>(sum) / static_cast<double>(count) : 0.0;
+    }
+
 }  // namespace BECore::Mahjong::Arena

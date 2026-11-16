@@ -130,10 +130,6 @@ namespace BECore::Mahjong::Arena {
             return Format("{:.{}f}", value, precision);
         }
 
-        double PercentOf(int64_t part, int64_t whole) {
-            return whole > 0 ? kPercent * static_cast<double>(part) / static_cast<double>(whole) : 0.0;
-        }
-
         void AddRoundsTable(String& text, const TableStats& stats) {
             text.append("\nanother seat wins in the following round, by the opponents that have declared (d)\n");
             text.append("  each row: own turns observed, per mille that another seat wins in the next round, survival % after 1..4 rounds; the row below is (1-h)^i\n");
