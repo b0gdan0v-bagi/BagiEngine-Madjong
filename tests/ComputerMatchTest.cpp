@@ -31,6 +31,10 @@ namespace BECore::Mahjong::Tests {
         /// The weighted seat's match: the seed of the weight sets and how many random ones are played besides the default, all zeros and all largest.
         constexpr uint32_t kWeightsSeed = 31;
         constexpr int kRandomWeightSets = 3;
+        /// The value weights of the weighted seat's second match and its depths. Depth 2 is played once only: it is the dear one in Debug.
+        constexpr int kValueWeights[] = {1, 4, kWeightMax};
+        constexpr int kValueTestDepth = 1;
+        constexpr int kValueDeeperTestDepth = 2;
 
         struct PlayedMatch {
             Vector<HandSettlement> history;
@@ -275,6 +279,37 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NO_FATAL_FAILURE(PlayOwnDrawsMatch(profiles[index], name.c_str(), &again));
             EXPECT_EQ(first, again) << name;
         }
+    }
+
+    namespace {
+
+        /// A weighted profile of the default nine weights with the two value weights set and the horizon of both.
+        LevelProfile ValuedWeighted(int valueDiscard, int valueClaim, int depth) {
+            LevelProfile profile = Weighted(kNormalProfile);
+            profile.wValueDiscard = valueDiscard;
+            profile.wValueClaim = valueClaim;
+            profile.weightedValueDepth = depth;
+            return profile;
+        }
+
+        void PlayValuedTwice(const LevelProfile& profile, const String& name) {
+            SeatScores first{};
+            SeatScores again{};
+            ASSERT_NO_FATAL_FAILURE(PlayOwnDrawsMatch(profile, name.c_str(), &first));
+            ASSERT_NO_FATAL_FAILURE(PlayOwnDrawsMatch(profile, name.c_str(), &again));
+            EXPECT_EQ(first, again) << name;
+        }
+
+    }  // namespace
+
+    // The value terms call `ValueDiscards` / `ValueClaims` on every decision of the seat: the matches here are a few seconds more of Debug time
+    // than the weighted test above (depth 1: the weights of each term alone and together; depth 2: one case).
+    TEST(ComputerMatchTest, OneWeightedSeatWithTheValueWeightsPlaysLegallyAndTheSameMatchTwice) {
+        for (const int weight : kValueWeights) {
+            PlayValuedTwice(ValuedWeighted(weight, 0, kValueTestDepth), Format("discard value {} at depth {}", weight, kValueTestDepth));
+            PlayValuedTwice(ValuedWeighted(0, weight, kValueTestDepth), Format("claim value {} at depth {}", weight, kValueTestDepth));
+        }
+        PlayValuedTwice(ValuedWeighted(kValueWeights[1], kValueWeights[1], kValueDeeperTestDepth), Format("both values at depth {}", kValueDeeperTestDepth));
     }
 
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {

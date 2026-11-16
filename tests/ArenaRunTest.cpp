@@ -454,6 +454,27 @@ namespace BECore::Mahjong::Arena {
         }
     }
 
+    TEST(ArenaRunTest, TheWeightedSeatWithTheValueWeightsAtZeroIsNormalWhateverTheDepth) {
+        // At 0 the value features are not computed, so the depth (read only above 0) cannot matter.
+        const ArenaResult run = PlayConfig(ConfigOf({"normal", "normal:weighted=1,wValueDiscard=0,wValueClaim=0,weightedValueDepth=2"}, "normal", kFewSeeds));
+        ASSERT_EQ(run.focus.size(), 2u);
+        const FocusResult& normal = run.focus[0];
+        const FocusResult& weighted = run.focus[1];
+        EXPECT_GT(normal.focus.decisions, 0);
+        EXPECT_TRUE(SameRows(normal.rows, weighted.rows));
+        EXPECT_TRUE(SameTally(normal.focus, weighted.focus));
+        EXPECT_TRUE(SameTally(normal.others, weighted.others));
+        EXPECT_EQ(normal.winsBySeat, weighted.winsBySeat);
+    }
+
+    TEST(ArenaRunTest, TheWeightedSeatWithAValueWeightRunsAndPlaysOtherHandsThanNormal) {
+        // A few seeds, no refusal, and rows that are not Normal's, so the term is wired to the play.
+        const ArenaResult run = PlayConfig(ConfigOf({"normal", "normal:weighted=1,wValueDiscard=2"}, "normal", kFewSeeds));
+        ASSERT_EQ(run.focus.size(), 2u);
+        EXPECT_EQ(run.focus[1].rows.size(), static_cast<size_t>(kFewSeeds));
+        EXPECT_FALSE(SameRows(run.focus[0].rows, run.focus[1].rows));
+    }
+
     TEST(ArenaRunTest, TheKindsAreCountedOncePerWonHand) {
         const FocusResult& result = StrengthRun().focus.at(0);
         for (const ArenaTally* tally : {&result.focus, &result.others}) {
