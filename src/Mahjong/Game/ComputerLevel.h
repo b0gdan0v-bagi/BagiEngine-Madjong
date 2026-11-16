@@ -150,6 +150,12 @@ namespace BECore::Mahjong {
     inline constexpr int kNormalWeightClaimMargin = kNormalWeightAcceptance * kAcceptanceMax + kNormalWeightClaimRank * kClaimRankMax;
     inline constexpr int kNormalWeightClaimValue = kNormalWeightShanten;
 
+    /// The weights of the two value features (`wValueDiscard`, `wValueClaim`): 0, the feature is off and costs nothing, which is what
+    /// keeps the Normal-equivalent weights Normal's. `kWeightedValueDepth` is the horizon (draws) of both when a weight is above 0.
+    inline constexpr int kNormalWeightValueDiscard = 0;
+    inline constexpr int kNormalWeightValueClaim = 0;
+    inline constexpr int kWeightedValueDepth = 1;
+
     static_assert(kNormalWeightClaimRank * kClaimRankMax < kNormalWeightAcceptance, "acceptance outranks the claim rank");
     static_assert(kNormalWeightKeep * kKeepSpread < kNormalWeightSafeStep, "danger outranks keep value");
     static_assert(kKeepSpread * kNormalWeightKeep + kDangerWorst * kNormalWeightSafeStep < kNormalWeightAcceptance, "acceptance outranks danger and keep value");
@@ -237,6 +243,15 @@ namespace BECore::Mahjong {
         int wClaimMargin = kNormalWeightClaimMargin;
         /// Weighted claim gate: added to the margin per `kWallWeightUnit` tiles in the live wall (the fewer tiles are left, the less margin a claim needs).
         int wClaimWall = kNormalWeightClaimWall;
+        /// Weighted discard rating: per milli-point by which the discard's own-draws value (`ValueDiscards`) is above the lowest rated one.
+        /// Read (and the value computed) only when above 0 and `weightedValueDepth` is above 0.
+        int wValueDiscard = kNormalWeightValueDiscard;
+        /// Weighted claim rating: per milli-point by which the claim's own-draws value (`ValueClaims`) is above the pass's (signed).
+        /// Read (and the value computed) only when above 0 and `weightedValueDepth` is above 0.
+        int wValueClaim = kNormalWeightValueClaim;
+        /// The draws both value terms look ahead (`OwnDrawsModel::depth`, at most `kOwnDrawsMaxDepth`); 0 = no value term. Read only when a
+        /// value weight is above 0.
+        int weightedValueDepth = kWeightedValueDepth;
     };
 
     /// The Normal player: the defaults of `LevelProfile`.

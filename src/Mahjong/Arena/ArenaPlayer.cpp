@@ -10,7 +10,7 @@ namespace BECore::Mahjong::Arena {
         constexpr bool ProfileHasKnownFields() {
             [[maybe_unused]] const auto& [skipAcceptance, skipDeclaration, skipClaim, takeValue, searchWorlds, searchCandidates, searchMargin, ownDrawsDepth, ownDrawsPickWait, ownDrawsDiscardWins,
                                           ownDrawsClaimDepth, ownDrawsDeclareDepth, readDanger, waitingKongByPoints, weighted, wShanten, wAcceptance, wKeep, wSafe, wClaimRank, wClaimValue,
-                                          wClaimMargin, wClaimWall] = kNormalProfile;
+                                          wClaimMargin, wClaimWall, wValueDiscard, wValueClaim, weightedValueDepth] = kNormalProfile;
             return true;
         }
         static_assert(ProfileHasKnownFields());

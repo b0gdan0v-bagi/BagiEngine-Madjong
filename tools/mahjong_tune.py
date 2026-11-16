@@ -61,6 +61,8 @@ WEIGHTS = (
     Weight("wClaimValue", 4400),
     Weight("wClaimMargin", 2178),
     Weight("wClaimWall", 0),
+    Weight("wValueDiscard", 0),
+    Weight("wValueClaim", 0),
 )
 
 Weights = tuple  # whole numbers, in the order of WEIGHTS

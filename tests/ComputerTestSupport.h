@@ -69,15 +69,16 @@ namespace BECore::Mahjong::Tests {
         return profile;
     }
 
-    /// A weighted profile with all eight weights at `weight`.
+    /// A weighted profile with all ten weights at `weight` (`weightedValueDepth` stays at its default).
     inline LevelProfile WeightedAt(int weight) {
         LevelProfile profile = Weighted(kNormalProfile);
         profile.wShanten = profile.wAcceptance = profile.wKeep = profile.wSafe = weight;
         profile.wClaimRank = profile.wClaimValue = profile.wClaimMargin = profile.wClaimWall = weight;
+        profile.wValueDiscard = profile.wValueClaim = weight;
         return profile;
     }
 
-    /// A weighted profile with all eight weights drawn from the whole range `0..kWeightMax`.
+    /// A weighted profile with all ten weights drawn from the whole range `0..kWeightMax`.
     inline LevelProfile RandomWeights(MahjongRng& rng) {
         auto weight = [&rng] { return static_cast<int>(rng.Below(kWeightMax + 1)); };
         LevelProfile profile = Weighted(kNormalProfile);
@@ -89,6 +90,8 @@ namespace BECore::Mahjong::Tests {
         profile.wClaimValue = weight();
         profile.wClaimMargin = weight();
         profile.wClaimWall = weight();
+        profile.wValueDiscard = weight();
+        profile.wValueClaim = weight();
         return profile;
     }
 

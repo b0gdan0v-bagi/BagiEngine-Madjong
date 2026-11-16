@@ -109,6 +109,19 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(weighted.profile.wAcceptance, kNormalWeightAcceptance);
         EXPECT_EQ(weighted.profile.wClaimMargin, kNormalWeightClaimMargin);
         EXPECT_EQ(Player(Format("normal:wClaimWall={}", kWeightMax)).profile.wClaimWall, kWeightMax);
+        EXPECT_EQ(weighted.profile.wValueDiscard, kNormalWeightValueDiscard);
+        EXPECT_EQ(weighted.profile.wValueClaim, kNormalWeightValueClaim);
+        EXPECT_EQ(weighted.profile.weightedValueDepth, kWeightedValueDepth);
+        const ArenaPlayer valued = Player("normal:weighted=1,wValueDiscard=7,wValueClaim=9,weightedValueDepth=2");
+        EXPECT_EQ(valued.profile.wValueDiscard, 7);
+        EXPECT_EQ(valued.profile.wValueClaim, 9);
+        EXPECT_EQ(valued.profile.weightedValueDepth, 2);
+        EXPECT_EQ(Player(Format("normal:wValueDiscard={}", kWeightMax)).profile.wValueDiscard, kWeightMax);
+        EXPECT_EQ(Player(Format("normal:wValueClaim={}", kWeightMax)).profile.wValueClaim, kWeightMax);
+        EXPECT_EQ(Player(Format("normal:weightedValueDepth={}", kOwnDrawsMaxDepth)).profile.weightedValueDepth, kOwnDrawsMaxDepth);
+        EXPECT_TRUE(Contains(ErrorOf(Format("normal:wValueDiscard={}", kWeightMax + 1)), "outside 0.."));
+        EXPECT_TRUE(Contains(ErrorOf(Format("normal:wValueClaim={}", kWeightMax + 1)), "outside 0.."));
+        EXPECT_TRUE(Contains(ErrorOf(Format("normal:weightedValueDepth={}", kOwnDrawsMaxDepth + 1)), "outside 0.."));
         EXPECT_TRUE(Contains(ErrorOf(Format("normal:wKeep={}", kWeightMax + 1)), "outside 0.."));
         EXPECT_TRUE(Contains(ErrorOf("normal:wSafe=-1"), "-1"));
         EXPECT_TRUE(Contains(ErrorOf("normal:weighted=2"), "weighted"));
@@ -125,11 +138,14 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(profile->wClaimValue, kNormalWeightClaimValue);
             EXPECT_EQ(profile->wClaimMargin, kNormalWeightClaimMargin);
             EXPECT_EQ(profile->wClaimWall, kNormalWeightClaimWall);
+            EXPECT_EQ(profile->wValueDiscard, kNormalWeightValueDiscard);
+            EXPECT_EQ(profile->wValueClaim, kNormalWeightValueClaim);
+            EXPECT_EQ(profile->weightedValueDepth, kWeightedValueDepth);
         }
     }
 
     TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
-        static_assert(kProfileFieldCount == 23, "an oracle is no LevelProfile field");
+        static_assert(kProfileFieldCount == 26, "an oracle is no LevelProfile field");
         for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
@@ -241,7 +257,10 @@ namespace BECore::Mahjong::Arena {
                                                       set.wClaimRank != kNormalProfile.wClaimRank,
                                                       set.wClaimValue != kNormalProfile.wClaimValue,
                                                       set.wClaimMargin != kNormalProfile.wClaimMargin,
-                                                      set.wClaimWall != kNormalProfile.wClaimWall};
+                                                      set.wClaimWall != kNormalProfile.wClaimWall,
+                                                      set.wValueDiscard != kNormalProfile.wValueDiscard,
+                                                      set.wValueClaim != kNormalProfile.wValueClaim,
+                                                      set.weightedValueDepth != kNormalProfile.weightedValueDepth};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;
             for (size_t index = 0; index < kProfileFieldCount; ++index) {
                 moved[index] = moved[index] || changed[index];

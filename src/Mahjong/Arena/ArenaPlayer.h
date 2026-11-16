@@ -19,7 +19,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// One row of `kProfileKnobs` per field of `LevelProfile`.
-    inline constexpr size_t kProfileFieldCount = 23;
+    inline constexpr size_t kProfileFieldCount = 26;
 
     inline constexpr Array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
@@ -45,6 +45,9 @@ namespace BECore::Mahjong::Arena {
         {"wClaimValue", &LevelProfile::wClaimValue, nullptr, kWeightMax},
         {"wClaimMargin", &LevelProfile::wClaimMargin, nullptr, kWeightMax},
         {"wClaimWall", &LevelProfile::wClaimWall, nullptr, kWeightMax},
+        {"wValueDiscard", &LevelProfile::wValueDiscard, nullptr, kWeightMax},
+        {"wValueClaim", &LevelProfile::wValueClaim, nullptr, kWeightMax},
+        {"weightedValueDepth", &LevelProfile::weightedValueDepth, nullptr, kOwnDrawsMaxDepth},
     }};
 
     /// What an arena-only player knows beyond a computer player's view (`ArenaOracle.h`). `None` is every ordinary player.
