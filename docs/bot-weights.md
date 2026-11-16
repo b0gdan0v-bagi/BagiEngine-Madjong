@@ -29,11 +29,21 @@ the coach (`ExplainAdvice`) explain Normal's order: a weighted profile is not su
 | keep | the discarded kind | `kKeepValueTile - KeepValue`, 0 to `kKeepSpread` (3) |
 | safety | the discarded kind | `kDangerWorst - Danger` (`DiscardDanger.h`), 0 to 3; **0 danger for every kind unless `wSafe > 0` and an opponent has declared** |
 | claim rank | a claim | `ClaimRank` (chow 0, pung 1, kong 2: `ComputerClaim.h`) |
+| discard value | the discarded kind | `V`: the own-draws value of the discard above the lowest rated one, in milli-points (below); 0 unless `wValueDiscard > 0` |
+| claim value gain | a claim | `G`: the own-draws value of the claim minus that of the pass, in milli-points, signed (below); 0 unless `wValueClaim > 0` |
 
 **Discard** (step 5, after the `skipAcceptancePercent` roll and the `ownDrawsDepth` branch, which keep their order and draws):
-`R = wShanten * nearness + wAcceptance * acceptance + wKeep * keep + wSafe * safety` for every kind held (Normal rates only the
+`R = wShanten * nearness + wAcceptance * acceptance + wKeep * keep + wSafe * safety + wValueDiscard * V` for every kind held (Normal rates only the
 lowest-shanten kinds), in 64 bits. The highest `R` is discarded; kinds with an equal `R` are the ties, in the order of the tile ids,
 and `PickOne` takes one, drawing from the rng exactly when there is more than one. `readDanger` is not read: `wSafe` replaces it.
+
+**The discard value** `V` (stage 3). `ValueDiscards(view, OwnDrawsModel{.depth = weightedValueDepth})` (`docs/own-draws-ev.md`) rates at
+most `kOwnDrawsMaxCandidates` kinds, in milli-points (`kMilliPerPoint` 1000 a point), in fixed point and 64 bits. `V(kind)` is its
+`expected` minus the lowest `expected` of the rated kinds: 0 for the worst rated kind and for every kind it does not rate, never
+negative, so a larger weight always means more of the better discard. Not a discard turn (nothing rated): `V` is 0 for all. It is
+**computed only when `wValueDiscard > 0` and `weightedValueDepth > 0`**: at 0 the call is not made, so the choice, the draws from the
+rng and the cost are the nine-weight family's. It is added only in the choice of the discard of step 5 (`ChooseWeightedDiscard`);
+the best discard after a claim stays by the nine-weight rating (the claim's own value is `G`), and `ownDrawsDepth > 0` still goes first.
 
 **Claim** (a window with a pung, kong or chow listed, after the mahjong and the waiting hand are answered; it takes the place of
 `BestClaims` and of the final `Roll(skipClaimPercent)` only when `weighted`; `ownDrawsClaimDepth` and the search stay ahead). For
@@ -52,6 +62,18 @@ Normal's. **`takeValueClaimsAtEqualShanten` is not read on this path**: `wClaimV
 claims at an equal shanten whatever the flag says. Levels 1 and 2 have the flag off, so `weighted=1` on them is not their unweighted
 play at the default weights; on Normal and levels 3 and up (the flag on) it is.
 
+**The claim value gain** `G` (stage 3). `ValueClaims(view, OwnDrawsModel{.depth = weightedValueDepth})` rates the pass and each claim it
+lists; `G = value(claim).expected - value(pass).expected`, signed, matched to the legal claim by `HandAction::operator==`. A claim
+it does not list, or an empty answer, has `G = 0`. The claim's rating becomes `C + wValueClaim * G`, so the gate above sees the gain
+in `C - P`, and the best acceptable claim is by the new `C`. Like `V` it is **computed only when `wValueClaim > 0` and
+`weightedValueDepth > 0`**, once for the window; `ownDrawsClaimDepth > 0` and the search stay ahead of this path.
+
+**The depth** `weightedValueDepth` (0 .. `kOwnDrawsMaxDepth`, default `kWeightedValueDepth`) is the horizon, in own draws, of both
+values; 0 means no value term. It is a knob of the arena, never a coordinate of the tuner: every candidate, the mean and the other
+seats play the same depth. **It is 1**: by the rule written before the measurement (the largest depth in {1, 2} for which a generation
+of the proposed shape, all four seats weighted with both value weights near 4, is estimated at 60 s or less; else 1) depth 2 is out
+at over 700 s a generation and depth 1 is the answer in any case ("Cost").
+
 **The default weights are Normal's, and why that is exact.** Each weight is above the largest spread of every term below it, so
 the sum orders like Normal's lexicographic order; `ComputerLevel.h` states each step as a `static_assert` from the named constants,
 so a change of one constant is caught at build time:
@@ -66,13 +88,17 @@ so a change of one constant is caught at build time:
 | `wClaimWall` | 0 | |
 | `wClaimMargin` | 2178 = 16 x 136 + 1 x 2 | a gain of acceptance and rank alone never passes |
 | `wClaimValue` | 4400 = `wShanten` | a value claim at an equal shanten passes |
+| `wValueDiscard` | 0 | (a feature that is off at the Normal-equivalent start: at 0 it is not even computed) |
+| `wValueClaim` | 0 | (the same) |
 
 A lowered shanten gains at least `wShanten` minus the whole acceptance (4400 - 2176 = 2224) and passes the gate (above 2178)
 whatever the acceptance does; a raised shanten loses at least as much and never passes. The margin is 2178, not 2176: the claim's
 rank is in `C`, so the gate has to clear the rank too. Where this could not be exact the constants would change, not the rule.
 
-**Knobs.** `weighted` and the eight weights are rows of `kProfileKnobs`, so the arena sets them
-(`normal:weighted=1,wShanten=3000`); each is in `kNormalProfile`, so every level has them at the Normal-equivalent defaults.
+**Knobs.** `weighted`, the ten weights (the eight above and `wValueDiscard`, `wValueClaim`) and `weightedValueDepth` are rows of
+`kProfileKnobs`, so the arena sets them (`normal:weighted=1,wShanten=3000`, `normal:weighted=1,wValueDiscard=4`); each is in
+`kNormalProfile`, so every level has them at the Normal-equivalent defaults. A point is 1000 milli-points, so a value weight of 4 is
+about one shanten step (`wShanten` 4400) for a difference of one point: the scale the tuner starts from.
 
 ## The split (fixed before any run)
 
@@ -239,7 +265,46 @@ the paired difference row `+0.00 +- 0.00` on every column, 1000 seeds. Stage 2 a
 candidate (a run that has one weighted focus player among all-Normal seats), 14 cores, to be measured again for the candidates of a
 real generation.
 
+### The value features (stage 3)
+
+Measured on 2026-11-16, the same Release arena and machine, **load average 33 to 100 from the other workers of the loop** (it fell
+and rose between runs; a repeat of each number is given, and the cost of a depth is read by orders of magnitude, not by the
+decimals). `--others normal --first 4000 --seeds 500 --jobs 0 --time`, one focus player a run (2000 hands, 500 seeds, 4 rotations);
+the value weights are 4, `weightedValueDepth` is the `d` of the row:
+
+| focus | wall time (two runs) | hands a second | us a decision, the focus seat |
+|---|---|---|---|
+| `normal` | 0.66 s, 0.58 s | 3046, 3438 | 97, 86 |
+| `normal:weighted=1` | 0.74 s, 0.75 s | 2708, 2664 | 172, 173 |
+| `wValueDiscard=4`, d 1 | 2.27 s, 1.99 s | 882, 1003 | 1076, 955 |
+| `wValueDiscard=4`, d 2 | 15.71 s, 13.44 s | 127, 149 | 9302, 7930 |
+| `wValueClaim=4`, d 1 | 0.98 s, 0.98 s | 2041, 2038 | 301, 306 |
+| `wValueClaim=4`, d 2 | 2.64 s, 2.42 s | 759, 828 | 1323, 1211 |
+| both at 4, d 1 | 2.33 s, 2.11 s | 860, 948 | 1134, 1033 |
+| both at 4, d 2 | 18.59 s, 13.99 s | 108, 143 | 11125, 8323 |
+
+(The table sums the threads' microseconds and `--time` reads a clock around every decision.) The discard value dominates: it rates
+up to `kOwnDrawsMaxCandidates` kinds a turn, the claim value once a window. With the discard value a decision is about six
+times the nine-weight player's at depth 1 and fifty to sixty times at depth 2. The paired rows against Normal on the same seeds are read only to see that the value
+weights change the play (they do: the rows differ from Normal's, and the points a hand are within their intervals' noise); they are
+**not a result**: for both at 4, depth 1, +3.02 +- 4.98 points a hand and -0.85 +- 1.42 wins %; at depth 2 +2.86 +- 4.92 and -0.80 +- 1.41.
+
+**What a generation costs.** One generation of the proposed shape (16 candidates and the mean as 17 focus players, 200 seeds, the
+mean as the three other seats, then the mean's monitoring call on 250 seeds against Normal) was sized from three focus players with
+the value weights (4 and 4, 3 and 5, 5 and 3) against three seats of the first, 200 seeds from 300000, times 17/3, plus the
+monitoring call of one focus player on 250 seeds:
+
+| depth | 3 focus players, 200 seeds | monitoring, 250 seeds | a generation (estimate) | load |
+|---|---|---|---|---|
+| 1 | 10.97 s, 8.57 s | 1.18 s, 1.16 s | 63 s, 50 s | 33, 32 |
+| 2 | 130.2 s, 138.3 s | 16.9 s, 11.2 s | 755 s, 795 s | 70, 76 |
+
+**`kWeightedValueDepth` is 1.** The rule, written before these numbers: the largest depth in {1, 2} for which a generation of this
+shape is estimated at 60 s or less, else 1. Depth 2 is more than ten times over; depth 1 is at the edge (50 to 63 s on a loaded
+machine) and is the default whatever the rule says. The constant stays 1 (the knob was added with that value), so the tests that read it are unchanged.
+The generation of the tuner is measured again in the probe of the budget (stage 3, before the run).
+
 ## Not done by this stage
 
-The own-draws value as a feature and the training (stage 3), the judged run, any named constant and any change of a level (stage 4).
-`judge`, the verdict of the weights against the decision and confirmation ranges, does not exist yet.
+The training with the two value weights, the judged run, any named constant and any change of a level (stages 3 and 4). `judge`,
+the verdict of the weights against the decision and confirmation ranges, does not exist yet.
