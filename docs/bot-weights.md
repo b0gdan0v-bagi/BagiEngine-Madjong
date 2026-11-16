@@ -4,8 +4,9 @@ The entry `mahjong-selfplay-weight-tuning` asks whether a computer player whose 
 with the weights tuned by self-play in the bot arena (`docs/bot-arena.md`), beats Normal, whose order (shanten, then acceptance, then
 keep value) was set by hand. It is built in four stages, one slice each; this page is the record, written in the order of the work:
 the policy and the method **before any run**, the numbers after. Stage 1 (this section's code) delivers the family and its cost and
-no run of a tuner. Stage 2 adds the report (`--json`), the tuner and a pilot run of it ("The pilot"); the training and the judged run are
-stages 3 and 4.
+no run of a tuner. Stage 2 adds the report (`--json`), the tuner and a pilot run of it ("The pilot"); stage 3 the two value features and
+the training; stage 4 the judged run, and **its verdict is "not stronger than Normal"** ("The judged run (stage 4)", which starts with
+the whole entry in one table).
 
 The code is `src/Mahjong/Game/ComputerWeights.{h,cpp}`, called from `ChooseDiscard` (`ComputerTurn.cpp`) and `DecideClaim`
 (`ComputerClaim.cpp`) only when `LevelProfile::weighted` is on; the weights and their defaults are in `ComputerLevel.h`. **No level
@@ -400,7 +401,63 @@ shape is estimated at 60 s or less, else 1. Depth 2 is more than ten times over;
 machine) and is the default whatever the rule says. The constant stays 1 (the knob was added with that value), so the tests that read it are unchanged.
 The generation of the tuner is measured again in the probe of the budget (stage 3, before the run).
 
+## The judged run (stage 4)
+
+**The record of the entry in one table**, numbers copied from the sections above and below.
+
+| stage | what | features and weights | budget | outcome |
+|---|---|---|---|---|
+| 1 | the family | nearness, acceptance, keep, safety, claim rank, claim value, claim margin, claim wall: the eight weights, defaults Normal's | none (no tuner) | a seat at the defaults plays exactly as Normal; a weighted decision costs about 1.8 to 2.1 times Normal's |
+| 2 | the pilot | the same eight weights | 18 generations of 16 candidates, 344000 hands, 474 s | the mean sat on Normal's plateau (exactly 0 from generation 6 on); the tie rule followed from it |
+| 3 | the training | ten weights: the eight and `wValueDiscard`, `wValueClaim` (own-draws value at `weightedValueDepth` 1) | 10 generations of 16 candidates, 158000 hands, 824 s, 0 tie generations | the curve stayed flat, +11.67 +- 8.04 points a hand and +0.60 +- 2.08 wins % at generation 9 (exploration range, not a result) |
+| 4 | the judged run | the last mean: `wShanten` 7698, `wAcceptance` 8, `wKeep` 1, `wSafe` 1, `wClaimRank` 0, `wClaimValue` 6229, `wClaimMargin` 1358, `wClaimWall` 0, `wValueDiscard` 4, `wValueClaim` 2, depth 1 | six calls, 40000 hands, 96.1 s of arena wall time | A fails, B passes, C fails: **not stronger than Normal** |
+
+The weights are not adopted: **no `kTunedProfile`, no arena player `tuned`, no level takes them**, and nothing in the code changed in
+this stage. In all, 542000 hands were played by the tuner's three runs (344000 + 158000 + 40000; the cost probes are not counted).
+
+**The run.** `python3 tools/mahjong_tune.py judge --from-log ~/.claude/plans/mahjong-tune/train3.jsonl --arena build/macos-release/bin/BagiMahjongArena
+--ledger ~/.claude/plans/mahjong-tune/judged.json --jobs 0`, one command of 1 min 36 s, 2026-11-16, Release arena, Apple M4 Pro, 14
+logical cores, `--jobs 0`, **not a quiet machine** (load average 1 minute about 46 to 49 around the run, other workers of the todo
+loop; noted, not corrected). The spec it printed first, checked against "The final weights" before any call was played, is
+`normal:weighted=1,wShanten=7698,wAcceptance=8,wKeep=1,wSafe=1,wClaimRank=0,wClaimValue=6229,wClaimMargin=1358,wClaimWall=0,wValueDiscard=4,wValueClaim=2`
+(`weightedValueDepth` is its default, 1). The output is `~/.claude/plans/mahjong-tune/judge.out` and the ledger
+`~/.claude/plans/mahjong-tune/judged.json`, both outside the repository. No call was repeated after a cut, `judge` needed no fix, and no
+weight, range or number of the rule was changed after a call was seen.
+
+The six calls (1000 seeds each; mean +- half-width; `sig` is the report's flag of the interval excluding 0):
+
+| call | range `--first` | hands | wall | points a hand | wins % |
+|---|---|---|---|---|---|
+| A, against three Normal seats (paired tuned minus Normal) | 100000 | 8000 | 13.0 s | +7.13 +- 3.69, sig | +0.20 +- 1.03, not sig |
+| A | 130000 | 8000 | 13.5 s | +7.23 +- 3.73, sig | +0.00 +- 1.00, not sig |
+| B, seats turned (Normal's own rows against three tuned seats) | 100000 | 4000 | 24.7 s | -7.55 +- 3.56 | 24.90 +- 1.03 |
+| B | 130000 | 4000 | 23.6 s | -7.03 +- 3.95 | 25.35 +- 1.03 |
+| C, against three random seats (paired tuned minus Normal) | 100000 | 8000 | 10.4 s | +13.75 +- 5.69, sig | -1.18 +- 1.23, not sig |
+| C | 130000 | 8000 | 10.9 s | +10.00 +- 4.71, sig | -1.00 +- 1.20, not sig |
+
+The three judgements, on the pooled interval of the two ranges (the mean of the two, half-width `sqrt(h1^2 + h2^2) / 2`):
+
+| judgement | pooled points a hand | pooled wins % | result |
+|---|---|---|---|
+| A, against Normal | +7.18 +- 2.62 | +0.10 +- 0.72 | **fails**: the wins are not significant on 100000 (+0.20 +- 1.03) nor on 130000 (+0.00 +- 1.00), and the wins on 130000 are not above 0 |
+| B, seats turned | -7.29 +- 2.66 | 25.12 +- 0.73 | passes: Normal's points are not above 0 and its wins not significantly above 25 |
+| C, against random | +11.87 +- 3.70 | -1.09 +- 0.86 | **fails**: the pooled wins are significantly below 0 (the interval ends at -0.23) |
+
+**Verdict: not stronger than Normal (A and C failed).**
+
+**Reading.** The tuned weights take **more points a hand and no more wins**. Against three Normal seats the paired points are +7.2
+on each range, significant on both and pooled (the exploration monitor's +11 to +12 of generation 9, whose half-width was 8, is the same
+size within its interval); the wins are +0.1 %, nowhere near significant: the seat does not win more hands, it wins them for more. With
+seats turned the table agrees: three tuned seats take about 7 points a hand from the one Normal seat while Normal keeps its quarter of
+the wins (25.1 %), which is the same finding from the other side, and B passes for that reason, not because the weights are weak.
+Against three random seats the points are +11.9 (significant on both ranges) but the pooled wins are 1.1 points below Normal's, an
+interval that only just excludes 0 (each range alone does not): a small loss of wins that the points do not hide. A rule that wants
+wins as well as points reads this as a miss, and it was fixed before any number was seen; the weights are a measurement, not a
+level. The two judged ranges are **spent** for these weights (the ledger refuses a replay), so a second tuning needs ranges of its own.
+
 ## Not done by this stage
 
-The judged run, any named constant and any change of a level (stage 4). `judge`, the verdict of the final weights above against
-the decision and confirmation ranges, does not exist yet; `kTunedProfile` and the arena player `tuned` are not added.
+Left for the owner: **which levels, if any, take the weights**, and whether they become a named level (the verdict is "not stronger",
+so no constant and no arena player was added, and levels 6..10 stay `kNormalProfile`); the cost of a level that takes them (a decision
+with the value terms is about six times Normal's at depth 1: "Cost"); the hints and the coach explain Normal's order, and a weighted
+profile is not supported there; and **any more tuning, which is a new entry** on ranges of its own.

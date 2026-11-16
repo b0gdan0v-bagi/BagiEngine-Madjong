@@ -33,7 +33,7 @@ Each preset builds into its own `build/<preset>/bin/`, so the Release arena and 
 build is much slower. The program is not part of `ctest`; the library it is made of (`src/Mahjong/Arena/`) is tested by
 `ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaReportJsonTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
 
-The weights of the weighted player are tuned by self-play with `python3 tools/mahjong_tune.py train`, which drives this program through `--json` (the method, its budget and the pilot: `docs/bot-weights.md`).
+The weights of the weighted player are tuned by self-play with `python3 tools/mahjong_tune.py train`, which drives this program through `--json` (the method, its budget and the pilot: `docs/bot-weights.md`), and `judge` plays the three judged calls of the final weights once (the verdict, "not stronger than Normal", is in "The judged run (stage 4)" there).
 
 Commands (`A` is `build/macos-release/bin/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
 
