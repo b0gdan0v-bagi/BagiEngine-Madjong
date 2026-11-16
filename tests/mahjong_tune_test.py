@@ -13,6 +13,7 @@ import contextlib
 import io
 import json
 import math
+import os
 import re
 import shutil
 import stat
@@ -21,6 +22,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY / "tools"))
@@ -445,6 +447,25 @@ class TrainTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("git work tree", err)
         self.assertFalse(log.parent.exists())
+        self.assertEqual(self.calls(), [])
+
+    def test_a_tilde_in_the_log_is_expanded_once_for_the_guard_and_the_files(self) -> None:
+        home = self.temp / "home"
+        home.mkdir()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "USERPROFILE": str(home)}):
+            code, _, err = self.train(Path("~") / "kept" / "log.jsonl", generations=1)
+        self.assertEqual(code, 0, err)
+        self.assertTrue((home / "kept" / "log.jsonl").is_file())
+        self.assertFalse((Path.cwd() / "~").exists())
+        self.assertFalse((REPOSITORY / "~").exists())
+
+    def test_a_tilde_that_leads_into_the_repository_is_refused(self) -> None:
+        home = REPOSITORY / "tune-test-never-created-home"
+        with mock.patch.dict(os.environ, {"HOME": str(home), "USERPROFILE": str(home)}):
+            code, _, err = self.train(Path("~") / "log.jsonl")
+        self.assertEqual(code, 2)
+        self.assertIn("git work tree", err)
+        self.assertFalse(home.exists())
         self.assertEqual(self.calls(), [])
 
     def test_an_existing_log_is_never_overwritten(self) -> None:

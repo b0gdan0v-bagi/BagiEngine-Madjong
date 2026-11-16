@@ -76,7 +76,7 @@ namespace BECore::Mahjong::Arena {
             json["drawnPercent"] = Rounded(PercentOf(focus.focus.drawn, focus.focus.hands));
             json["declaredPercent"] = Rounded(PercentOf(focus.focus.declared, focus.focus.hands));
             json["avgWinScore"] = Rounded(AverageOf(focus.focus.winScore, focus.focus.wins));
-            json["others"] = OthersRowToJson(focus.others, static_cast<int64_t>(kSeatCount - 1));
+            json["others"] = OthersRowToJson(focus.others, static_cast<int64_t>(kOthersSeats));
             json["ends"] = EndsToJson(focus);
             json["paired"] = isBaseline ? Json(nullptr) : PairedAgainstToJson(focus, baseline);
             return json;

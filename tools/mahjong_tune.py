@@ -241,11 +241,21 @@ def run_arena(arena: Path, focus: Sequence[str], others: str, first: int, seeds:
         document = json.loads(result.stdout)
         if document["format"] != DOCUMENT_FORMAT or document["version"] != DOCUMENT_VERSION or len(document["focus"]) != len(focus):
             raise ValueError("another document than the one asked for")
-        for entry in document["focus"][1:]:
-            entry["paired"]["pointsPerHand"]["mean"], entry["paired"]["winPercent"]["mean"], entry["pointsPerHand"]["mean"], entry["winPercent"]["mean"]
+        read_document_cells(document)
     except (ValueError, KeyError, TypeError) as error:
         raise TuneError(f"the arena printed a document the tuner cannot read ({error!r}): {result.stdout[:200]!r}") from error
     return document
+
+
+def read_document_cells(document: dict) -> None:
+    """Reads every cell the tuner uses later, so a missing one is a `KeyError` here (a `TuneError` of `run_arena`), not a crash mid-record."""
+    document["handsPerFocus"]
+    for index, entry in enumerate(document["focus"]):
+        entry["pointsPerHand"]["mean"], entry["winPercent"]["mean"]
+        if index > 0:
+            for metric in ("pointsPerHand", "winPercent"):
+                cell = entry["paired"][metric]
+                cell["half"], cell["mean"], cell["significant"]
 
 
 def interval_of(cell: dict) -> dict:
@@ -412,23 +422,25 @@ def signed(cell: dict) -> str:
 def train(options: TrainOptions, clock: Callable[[], float] = time.monotonic, out=None) -> int:
     out = out or sys.stdout
     began = clock()
+    # One path for the guard and every file operation: a literal `~` (a shell that did not expand it) must not pass as a relative name.
+    log = options.log.expanduser().resolve()
     check_ranges(options.train_first, options.seeds, options.generations, options.explore_first, options.monitor_seeds)
-    check_log_path(options.log)
+    check_log_path(log)
     expected = header_of(options)
-    if options.log.exists() and not options.resume:
-        raise TuneRefused(f"{options.log} exists; --resume continues it, and a log is never overwritten")
-    if options.resume and not options.log.exists():
-        raise TuneRefused(f"--resume, but {options.log} does not exist")
+    if log.exists() and not options.resume:
+        raise TuneRefused(f"{log} exists; --resume continues it, and a log is never overwritten")
+    if options.resume and not log.exists():
+        raise TuneRefused(f"--resume, but {log} does not exist")
     if options.resume:
-        header, generations = read_log(options.log)
+        header, generations = read_log(log)
         check_header(header, expected)
         state = state_of_record(generations[-1]) if generations else initial_state()
         previous_seconds = generations[-1]["wallSeconds"] if generations else 0.0
-        print(f"resuming {options.log}: {len(generations)} generations done, target {options.generations}", file=out)
+        print(f"resuming {log}: {len(generations)} generations done, target {options.generations}", file=out)
     else:
         header = start_header(options)
-        options.log.parent.mkdir(parents=True, exist_ok=True)
-        append_line(options.log, header)
+        log.parent.mkdir(parents=True, exist_ok=True)
+        append_line(log, header)
         state, generations, previous_seconds = initial_state(), [], 0.0
         print(f"start weights against Normal on [{options.explore_first}, {options.explore_first + options.monitor_seeds}): exactly 0, as it must be", file=out)
     done = len(generations)
@@ -438,12 +450,12 @@ def train(options: TrainOptions, clock: Callable[[], float] = time.monotonic, ou
                   f"{generation} of {options.generations} generations in the log, --resume goes on", file=out)
             return EXIT_DONE
         record, state = play_generation(options, state, generation, clock)
-        append_line(options.log, record)
+        append_line(log, record)
         previous_seconds = record["wallSeconds"]
         monitor = record["monitor"]
         print(f"generation {generation}: the mean against Normal {signed(monitor['pairedPoints'])} points a hand, {signed(monitor['pairedWins'])} wins %"
               f"{' (significant)' if monitor['pairedPoints']['significant'] else ''}, {record['wallSeconds']:.1f} s", file=out)
-    print(f"{options.generations} generations in {options.log}", file=out)
+    print(f"{options.generations} generations in {log}", file=out)
     return EXIT_DONE
 
 

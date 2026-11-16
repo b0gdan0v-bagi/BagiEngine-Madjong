@@ -26,7 +26,6 @@ namespace BECore::Mahjong::Arena {
         constexpr int kSignificantWidth = static_cast<int>(kSignificantWord.size());
         constexpr StringView kOthersLabel = "others (per seat)";
         constexpr double kNanosecondsPerMicrosecond = 1000.0;
-        constexpr size_t kOthersSeats = kSeatCount - 1;
 
         void EndLine(String& text, size_t lineStart) {
             size_t end = text.size();

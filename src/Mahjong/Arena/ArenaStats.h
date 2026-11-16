@@ -8,6 +8,8 @@ namespace BECore::Mahjong::Arena {
     inline constexpr double kIntervalZ = 1.96;
     inline constexpr size_t kMinSeedsForInterval = 2;
     inline constexpr double kPercent = 100.0;
+    /// The seats that are not the focus player's: what the `others` rows sum over.
+    inline constexpr size_t kOthersSeats = kSeatCount - 1;
 
     /// A mean over seeds and its interval `mean - half .. mean + half`.
     struct MeanInterval {
