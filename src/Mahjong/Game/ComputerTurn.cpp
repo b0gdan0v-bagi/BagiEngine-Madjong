@@ -1,6 +1,7 @@
 #include "ComputerTurn.h"
 
 #include <EASTL/sort.h>
+#include <Mahjong/Game/ComputerWeights.h>
 #include <Mahjong/Game/DiscardDanger.h>
 #include <Mahjong/Game/OwnDraws.h>
 
@@ -234,6 +235,9 @@ namespace BECore::Mahjong {
                 if (!values.empty()) {
                     return HandAction::MakeDiscard(values.front().tile);
                 }
+            }
+            if (profile.weighted) {
+                return HandAction::MakeDiscard(ChooseWeightedDiscard(view, rng, profile));
             }
             const DiscardRating best = BestDiscard(counts, MeldCountOf(view), view, rng, profile.readDanger);
             return HandAction::MakeDiscard(best.tile);
