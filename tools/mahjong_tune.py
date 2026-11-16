@@ -1,18 +1,41 @@
 #!/usr/bin/env python3
-"""The pure part of the tuner of the weighted computer player (docs/bot-weights.md): the list of weights, the arena spec of a weight vector,
-the cross-entropy sampling and update over log1p(weight), and the guards that keep the training off the exploration and the judged seeds.
-Standard library only."""
+"""Tunes the weights of the weighted computer player (`docs/bot-weights.md`) by self-play in the bot arena, with the cross-entropy method.
 
+    python3 tools/mahjong_tune.py train --seed 1 --candidates 16 --seeds 250 [--generations 20] [--monitor-seeds 250] [--max-seconds 480]
+        [--arena build/macos-release/bin/BagiMahjongArena] [--log ~/.claude/plans/mahjong-tune/train.jsonl] [--resume] [--jobs 0]
+
+One generation is one arena call (`--json`): the current mean is the first focus player and the baseline of the paired rows, the N sampled
+candidates follow it, and all three other seats are the mean; a candidate's score is its paired points a hand. The elite (the best quarter)
+move the mean and the spread of `log1p(weight)` (`update_state`). The mean is then looked at once, against three Normal seats, on the
+exploration range: the curve of the run, never used to choose. Training seeds are `>= 200000`; the judged ranges of `docs/bot-weights.md`
+("The split") are never played, and a command that would is refused, not clamped (`check_ranges`).
+
+The log is a JSONL file, one line per record, written and flushed after each generation (a header first). It lies outside git
+(`check_log_path`), is never overwritten, and `--resume` appends to it: the state is read from its last line, and a resumed run writes the
+same bytes (but `wallSeconds`) as an uninterrupted one. `--generations` is the number of generations the log should hold; `--max-seconds`
+stops before a generation that would end after that many seconds since the command started (exit 0, the log is resumable).
+
+Exit code: 0 done (also when stopped by `--max-seconds`), 1 the arena failed or a file cannot be read, 2 a refused or wrong command line.
+Standard library only.
+"""
+
+import argparse
+import json
 import math
+import os
 import random
 import subprocess
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_ARENA = ROOT / "build" / "macos-release" / "bin" / "BagiMahjongArena"
 DEFAULT_LOG = Path.home() / ".claude" / "plans" / "mahjong-tune" / "train.jsonl"
 
+EXIT_DONE = 0
 EXIT_FAILED = 1
 EXIT_REFUSED = 2
 
@@ -194,3 +217,278 @@ def check_log_path(path: Path, git: str = "git") -> None:
         return
     if toplevel is not None:
         raise TuneRefused(f"{path} lies inside the git work tree {toplevel}; a tuning log is kept outside git (default {DEFAULT_LOG.parent})")
+
+
+# ----- the arena -----
+
+DOCUMENT_FORMAT = "bagi-arena-report"
+DOCUMENT_VERSION = 1
+NORMAL_SPEC = "normal"
+ROUND_DIGITS = 6
+
+
+def run_arena(arena: Path, focus: Sequence[str], others: str, first: int, seeds: int, jobs: int) -> dict:
+    """One arena call with `--json`; the parsed document, or `TuneError` with the arena's own message."""
+    command = [str(arena), "--focus", ",".join(focus), "--others", others, "--first", str(first), "--seeds", str(seeds), "--jobs", str(jobs), "--json"]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True)
+    except OSError as error:
+        raise TuneError(f"cannot run the arena {arena}: {error}") from error
+    if result.returncode != 0:
+        message = (result.stderr.strip() or result.stdout.strip() or "no message")
+        raise TuneError(f"the arena failed (exit {result.returncode}): {message}")
+    try:
+        document = json.loads(result.stdout)
+        if document["format"] != DOCUMENT_FORMAT or document["version"] != DOCUMENT_VERSION or len(document["focus"]) != len(focus):
+            raise ValueError("another document than the one asked for")
+        for entry in document["focus"][1:]:
+            entry["paired"]["pointsPerHand"]["mean"], entry["paired"]["winPercent"]["mean"], entry["pointsPerHand"]["mean"], entry["winPercent"]["mean"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise TuneError(f"the arena printed a document the tuner cannot read ({error!r}): {result.stdout[:200]!r}") from error
+    return document
+
+
+def interval_of(cell: dict) -> dict:
+    return {"half": cell["half"], "mean": cell["mean"]}
+
+
+def paired_of(cell: dict) -> dict:
+    return {"half": cell["half"], "mean": cell["mean"], "significant": cell["significant"]}
+
+
+def monitor_record(document: dict) -> dict:
+    """The mean (the second focus player) against Normal (the first) on the exploration range."""
+    entry = document["focus"][1]
+    return {
+        "pointsPerHand": entry["pointsPerHand"]["mean"],
+        "pairedPoints": paired_of(entry["paired"]["pointsPerHand"]),
+        "pairedWins": paired_of(entry["paired"]["winPercent"]),
+        "winPercent": entry["winPercent"]["mean"],
+    }
+
+
+def hands_of(document: dict) -> int:
+    return document["handsPerFocus"] * len(document["focus"])
+
+
+# ----- the log -----
+
+HEADER = "header"
+GENERATION = "generation"
+
+
+def log_line(record: dict) -> str:
+    return json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"
+
+
+def read_log(path: Path) -> tuple:
+    """`(header, generation records)`; `TuneError` for a line that is not a record, or a record out of order."""
+    header, generations = None, []
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        try:
+            record = json.loads(line)
+            kind = record["kind"]
+        except (ValueError, KeyError, TypeError) as error:
+            raise TuneError(f"{path}, line {number}: not a record of the log ({error!r})") from error
+        if number == 1:
+            if kind != HEADER:
+                raise TuneError(f"{path}, line 1: the log does not start with a header")
+            header = record
+        elif kind != GENERATION or record.get("generation") != number - 2:
+            raise TuneError(f"{path}, line {number}: expected the record of generation {number - 2}")
+        else:
+            generations.append(record)
+    if header is None:
+        raise TuneError(f"{path} is empty")
+    return header, generations
+
+
+def state_of_record(record: dict) -> State:
+    return State(tuple(float(record["mu"][weight.name]) for weight in WEIGHTS), tuple(float(record["sigma"][weight.name]) for weight in WEIGHTS))
+
+
+def check_header(found: dict, expected: dict) -> None:
+    """A resume continues the same run: every option that decides the numbers must be the log's."""
+    for key in sorted(expected):
+        if found.get(key) != expected[key]:
+            raise TuneRefused(f"the log was made with {key} {found.get(key)!r}, this command says {expected[key]!r}; --resume continues the same run")
+
+
+# ----- train -----
+
+
+@dataclass(frozen=True)
+class TrainOptions:
+    arena: Path
+    log: Path
+    seed: int
+    candidates: int
+    seeds: int
+    generations: int
+    monitor_seeds: int
+    train_first: int
+    explore_first: int
+    jobs: int
+    max_seconds: Optional[float]
+    resume: bool
+
+
+def header_of(options: TrainOptions) -> dict:
+    return {
+        "candidates": options.candidates,
+        "exploreFirst": options.explore_first,
+        "kind": HEADER,
+        "monitorSeeds": options.monitor_seeds,
+        "seed": options.seed,
+        "seeds": options.seeds,
+        "startWeights": weights_dict(start_weights()),
+        "trainFirst": options.train_first,
+        "weightNames": [weight.name for weight in WEIGHTS],
+    }
+
+
+def monitor_call(options: TrainOptions, weights: Weights) -> dict:
+    return run_arena(options.arena, [NORMAL_SPEC, weights_spec(weights)], NORMAL_SPEC, options.explore_first, options.monitor_seeds, options.jobs)
+
+
+def start_header(options: TrainOptions) -> dict:
+    """The header with the monitoring row of the start weights, which must be Normal's: exactly 0 on points and on wins."""
+    document = monitor_call(options, start_weights())
+    row = monitor_record(document)
+    if row["pairedPoints"]["mean"] != 0 or row["pairedWins"]["mean"] != 0:
+        raise TuneError(f"the start weights are not Normal's: against Normal they score {row['pairedPoints']['mean']} points a hand and "
+                        f"{row['pairedWins']['mean']} wins %, not exactly 0 (ComputerLevel.h and WEIGHTS differ?)")
+    header = header_of(options)
+    header["startMonitor"] = row
+    return header
+
+
+def play_generation(options: TrainOptions, state: State, generation: int, clock: Callable[[], float]) -> tuple:
+    """One generation: the record to write and the new state."""
+    began = clock()
+    mean = mean_weights(state)
+    candidates = sample_candidates(state, options.candidates, options.seed, generation)
+    first, _ = training_range(options.train_first, options.seeds, generation)
+    players = [weights_spec(mean)] + [weights_spec(weights) for weights in candidates]
+    document = run_arena(options.arena, players, weights_spec(mean), first, options.seeds, options.jobs)
+    focus = document["focus"]
+    scores = [entry["paired"]["pointsPerHand"]["mean"] for entry in focus[1:]]
+    elite = elite_indices(scores)
+    new_state = update_state(state, candidates, elite)
+    monitor = monitor_call(options, mean_weights(new_state))
+    record = {
+        "baseline": {"pointsPerHand": focus[0]["pointsPerHand"]["mean"], "winPercent": focus[0]["winPercent"]["mean"]},
+        "candidates": [
+            {"pairedPoints": interval_of(entry["paired"]["pointsPerHand"]), "pairedWins": interval_of(entry["paired"]["winPercent"]),
+             "weights": weights_dict(weights)}
+            for entry, weights in zip(focus[1:], candidates)],
+        "elite": elite,
+        "first": first,
+        "generation": generation,
+        "hands": hands_of(document) + hands_of(monitor),
+        "kind": GENERATION,
+        "mean": weights_dict(mean),
+        "monitor": monitor_record(monitor),
+        "mu": {weight.name: value for weight, value in zip(WEIGHTS, new_state.mu)},
+        "newMean": weights_dict(mean_weights(new_state)),
+        "seeds": options.seeds,
+        "sigma": {weight.name: value for weight, value in zip(WEIGHTS, new_state.sigma)},
+        "wallSeconds": round(clock() - began, 3),
+    }
+    return record, new_state
+
+
+def append_line(path: Path, record: dict) -> None:
+    with open(path, "a", encoding="utf-8") as stream:
+        stream.write(log_line(record))
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def signed(cell: dict) -> str:
+    return f"{cell['mean']:+.2f} +- {cell['half']:.2f}"
+
+
+def train(options: TrainOptions, clock: Callable[[], float] = time.monotonic, out=None) -> int:
+    out = out or sys.stdout
+    began = clock()
+    check_ranges(options.train_first, options.seeds, options.generations, options.explore_first, options.monitor_seeds)
+    check_log_path(options.log)
+    expected = header_of(options)
+    if options.log.exists() and not options.resume:
+        raise TuneRefused(f"{options.log} exists; --resume continues it, and a log is never overwritten")
+    if options.resume and not options.log.exists():
+        raise TuneRefused(f"--resume, but {options.log} does not exist")
+    if options.resume:
+        header, generations = read_log(options.log)
+        check_header(header, expected)
+        state = state_of_record(generations[-1]) if generations else initial_state()
+        previous_seconds = generations[-1]["wallSeconds"] if generations else 0.0
+        print(f"resuming {options.log}: {len(generations)} generations done, target {options.generations}", file=out)
+    else:
+        header = start_header(options)
+        options.log.parent.mkdir(parents=True, exist_ok=True)
+        append_line(options.log, header)
+        state, generations, previous_seconds = initial_state(), [], 0.0
+        print(f"start weights against Normal on [{options.explore_first}, {options.explore_first + options.monitor_seeds}): exactly 0, as it must be", file=out)
+    done = len(generations)
+    for generation in range(done, options.generations):
+        if options.max_seconds is not None and clock() - began + previous_seconds >= options.max_seconds:
+            print(f"stopped before generation {generation} (--max-seconds {options.max_seconds:g}, the last generation took {previous_seconds:.1f} s): "
+                  f"{generation} of {options.generations} generations in the log, --resume goes on", file=out)
+            return EXIT_DONE
+        record, state = play_generation(options, state, generation, clock)
+        append_line(options.log, record)
+        previous_seconds = record["wallSeconds"]
+        monitor = record["monitor"]
+        print(f"generation {generation}: the mean against Normal {signed(monitor['pairedPoints'])} points a hand, {signed(monitor['pairedWins'])} wins %"
+              f"{' (significant)' if monitor['pairedPoints']['significant'] else ''}, {record['wallSeconds']:.1f} s", file=out)
+    print(f"{options.generations} generations in {options.log}", file=out)
+    return EXIT_DONE
+
+
+# ----- the command line -----
+
+DEFAULT_GENERATIONS = 20
+DEFAULT_MONITOR_SEEDS = 250
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Tunes the weights of the weighted computer player by self-play in the bot arena (docs/bot-weights.md).")
+    commands = parser.add_subparsers(dest="command", required=True)
+    train_parser = commands.add_parser("train", help="CEM generations over the weights of WEIGHTS")
+    train_parser.add_argument("--arena", type=Path, default=DEFAULT_ARENA, help=f"BagiMahjongArena (default {DEFAULT_ARENA.relative_to(ROOT)})")
+    train_parser.add_argument("--log", type=Path, default=DEFAULT_LOG, help=f"the JSONL log, outside git (default {DEFAULT_LOG})")
+    train_parser.add_argument("--seed", type=int, required=True, help="the seed of the run (the candidates are a function of it)")
+    train_parser.add_argument("--candidates", type=int, required=True, help="candidates a generation")
+    train_parser.add_argument("--seeds", type=int, required=True, help="the arena's seeds in a generation (four hands for each player a seed)")
+    train_parser.add_argument("--generations", type=int, default=DEFAULT_GENERATIONS, help=f"generations the log should hold (default {DEFAULT_GENERATIONS})")
+    train_parser.add_argument("--monitor-seeds", type=int, default=DEFAULT_MONITOR_SEEDS,
+                              help=f"seeds of the monitoring call (default {DEFAULT_MONITOR_SEEDS})")
+    train_parser.add_argument("--max-seconds", type=float, default=None, help="stop before a generation that would end after this many seconds")
+    train_parser.add_argument("--resume", action="store_true", help="continue an existing log of the same run")
+    train_parser.add_argument("--jobs", type=int, default=0, help="the arena's --jobs (default 0: one per core)")
+    train_parser.add_argument("--train-first", type=int, default=TRAIN_FIRST_MIN, help=f"the first training seed (default and least {TRAIN_FIRST_MIN})")
+    train_parser.add_argument("--explore-first", type=int, default=DEFAULT_EXPLORE_FIRST,
+                              help=f"the first seed of the monitoring call (default {DEFAULT_EXPLORE_FIRST}, inside [{EXPLORE_RANGE[0]}, {EXPLORE_RANGE[1]}))")
+    return parser
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    arguments = build_parser().parse_args(argv)
+    if arguments.candidates < 2:
+        print("error: --candidates is at least 2", file=sys.stderr)
+        return EXIT_REFUSED
+    options = TrainOptions(
+        arena=arguments.arena, log=arguments.log, seed=arguments.seed, candidates=arguments.candidates, seeds=arguments.seeds,
+        generations=arguments.generations, monitor_seeds=arguments.monitor_seeds, train_first=arguments.train_first,
+        explore_first=arguments.explore_first, jobs=arguments.jobs, max_seconds=arguments.max_seconds, resume=arguments.resume)
+    try:
+        return train(options)
+    except TuneError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return error.exit_code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

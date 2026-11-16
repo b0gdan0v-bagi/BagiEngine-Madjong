@@ -133,4 +133,12 @@ if(ENGINE_BUILD_TESTS)
     else()
         message(WARNING "Python3 not found, the test MahjongCollectLogs is not registered")
     endif()
+
+    # tools/mahjong_tune.py: the CEM functions, the guards and `train` against a fake arena script (no build needed); standard library only
+    if(Python3_FOUND)
+        add_test(NAME MahjongTune COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/mahjong_tune_test.py)
+        set_tests_properties(MahjongTune PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+    else()
+        message(WARNING "Python3 not found, the test MahjongTune is not registered")
+    endif()
 endif()

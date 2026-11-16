@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""Tests of the pure part of tools/mahjong_tune.py: the list of weights against the C++ it mirrors, the arena spec, the CEM sampling and update,
-and the guards of the ranges and of the log path; no build.
+"""Tests of tools/mahjong_tune.py: the pure functions of the CEM and the guards, then `train` against a fake arena (a script that prints the
+`--json` document of BagiMahjongArena); no build.
 
     python3 tests/mahjong_tune_test.py
 
-Registered as the ctest entry MahjongTune."""
+The fake arena values a player `f(w) = -scale * sum((log1p(w_i) - log1p(target_i))^2)`, `normal` having the start weights, and answers the
+paired points a hand of a focus player as `f(player) - f(first)` plus a noise from a hash of the seed and the player index. Every call it gets
+is appended to a file, so a test reads back what the tuner asked for. Registered as the ctest entry MahjongTune.
+"""
 
 import contextlib
+import io
+import json
 import math
 import re
+import shutil
+import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -19,11 +27,105 @@ sys.path.insert(0, str(REPOSITORY / "tools"))
 
 import mahjong_tune as tune  # noqa: E402
 
-SKIP_ON_WINDOWS = unittest.skipIf(sys.platform == "win32", "the guard of the log path asks git by a POSIX path")
+SKIP_ON_WINDOWS = unittest.skipIf(sys.platform == "win32", "the fake arena is a script with a shebang, the log guard asks git by a POSIX path")
 
 # What the judged ranges of docs/bot-weights.md are, written again here so a change of the constants in the tool is noticed.
 DECISION_RANGE = (100000, 101000)
 CONFIRMATION_RANGE = (130000, 131000)
+
+FAKE_ARENA = """#!{python}
+import hashlib, json, math, sys
+config = json.load(open({config!r}))
+argv = sys.argv[1:]
+with open({calls!r}, "a") as calls:
+    calls.write(json.dumps(argv) + "\\n")
+count = sum(1 for _ in open({calls!r}))
+options = {{argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i].startswith("--")}}
+if count - 1 == config.get("failOnCall"):
+    print("the fake arena fails on purpose", file=sys.stderr)
+    sys.exit(1)
+if count - 1 == config.get("garbageOnCall"):
+    print("this is not a document")
+    sys.exit(0)
+names = {names!r}
+start = {start!r}
+target = config["target"]
+normal = config.get("normal", start)
+
+def players(text):
+    parts = []
+    for part in text.split(","):
+        if parts and "=" in part and ":" not in part:
+            parts[-1] += "," + part
+        else:
+            parts.append(part)
+    return parts
+
+def weights_of(spec):
+    if spec == "normal":
+        return list(normal)
+    knobs = dict(item.split("=") for item in spec.split(":", 1)[1].split(","))
+    assert knobs.pop("weighted") == "1"
+    return [int(knobs[name]) for name in names]
+
+def value(weights):
+    return -config["scale"] * sum((math.log1p(w) - math.log1p(t)) ** 2 for w, t in zip(weights, target))
+
+def noise(first, index):
+    digest = hashlib.sha256(f"{{first}}:{{index}}".encode()).digest()
+    return (digest[0] / 255 * 2 - 1) * config["noise"]
+
+def cell(mean):
+    return {{"mean": round(mean, 6), "half": config["half"], "hasInterval": True}}
+
+def paired(mean):
+    return dict(cell(mean), significant=abs(mean) > config["half"])
+
+first = int(options["--first"])
+focus = players(options["--focus"])
+base = weights_of(focus[0])
+entries = []
+for index, spec in enumerate(focus):
+    weights = weights_of(spec)
+    points = 0.0 if weights == base else value(weights) - value(base) + noise(first, index)
+    wins = points * 2
+    entry = dict(name=spec, hands=4 * int(options["--seeds"]), winPercent=cell(25 + wins), pointsPerHand=cell(value(base) + points),
+                 drawnPercent=0, declaredPercent=0, avgWinScore=0)
+    entry["paired"] = None if index == 0 else dict(against=focus[0], pointsPerHand=paired(points), winPercent=paired(wins),
+                                                   gaveWinPercent=paired(0), standingScore=paired(0))
+    entries.append(entry)
+print(json.dumps({{"format": "bagi-arena-report", "version": 1, "first": first, "seeds": int(options["--seeds"]),
+                  "handsPerFocus": 4 * int(options["--seeds"]), "others": options["--others"], "focus": entries}}))
+"""
+
+DEFAULT_CONFIG = {"scale": 1.0, "noise": 0.05, "half": 0.1}
+
+
+def run_main(*argv: str) -> tuple:
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        try:
+            code = tune.main(list(argv))
+        except SystemExit as exit_request:  # argparse
+            code = exit_request.code
+    return code, out.getvalue(), err.getvalue()
+
+
+def true_value(weights, target) -> float:
+    return -sum((math.log1p(w) - math.log1p(t)) ** 2 for w, t in zip(weights, target))
+
+
+def read_records(path: Path) -> list:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def without_wall_seconds(path: Path) -> str:
+    lines = []
+    for record in read_records(path):
+        record.pop("wallSeconds", None)
+        lines.append(tune.log_line(record))
+    return "".join(lines)
+
 
 class SourcesTest(unittest.TestCase):
     """The list of weights is held to the C++ it mirrors."""
@@ -205,6 +307,249 @@ class GuardTest(unittest.TestCase):
     def test_the_default_log_is_outside_the_repository(self) -> None:
         self.assertFalse(tune.DEFAULT_LOG.is_relative_to(REPOSITORY))
         self.assertEqual(tune.DEFAULT_LOG.parent, Path.home() / ".claude" / "plans" / "mahjong-tune")
+
+
+@SKIP_ON_WINDOWS
+class TrainTest(unittest.TestCase):
+    CANDIDATES = 12
+    SEEDS = 40
+    MONITOR_SEEDS = 60
+
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+        self.start = tune.start_weights()
+        # The optimum is a factor of about 3 away in the big weights and well above 0 in the weights that start at 0.
+        self.target = tuple(40 if weight.start == 0 else round(weight.start * 2.7) for weight in tune.WEIGHTS)
+        self.config_path = self.temp / "config.json"
+        self.set_config(**DEFAULT_CONFIG)
+        self.calls_path = self.temp / "calls.jsonl"
+        self.arena = self.temp / "arena.py"
+        self.arena.write_text(FAKE_ARENA.format(python=sys.executable, config=str(self.config_path), calls=str(self.calls_path),
+                                                names=[weight.name for weight in tune.WEIGHTS], start=list(self.start)), encoding="utf-8")
+        self.arena.chmod(self.arena.stat().st_mode | stat.S_IXUSR)
+
+    def set_config(self, **config) -> None:
+        self.config_path.write_text(json.dumps({"target": list(self.target), **config}), encoding="utf-8")
+
+    def train(self, log: Path, *extra: str, seed: int = 7, generations: int = 6, candidates: int = None) -> tuple:
+        return run_main("train", "--arena", str(self.arena), "--log", str(log), "--seed", str(seed), "--candidates", str(candidates or self.CANDIDATES),
+                        "--seeds", str(self.SEEDS), "--monitor-seeds", str(self.MONITOR_SEEDS), "--generations", str(generations), "--jobs", "1", *extra)
+
+    def calls(self) -> list:
+        if not self.calls_path.exists():
+            return []
+        calls = []
+        for line in self.calls_path.read_text(encoding="utf-8").splitlines():
+            argv = json.loads(line)
+            call = {argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i] != "--json" and argv[i].startswith("--")}
+            call["--json"] = argv[-1] == "--json"
+            calls.append(call)
+        return calls
+
+    def test_the_tuner_climbs_the_noisy_objective(self) -> None:
+        log = self.temp / "climb.jsonl"
+        code, out, err = self.train(log, generations=12)
+        self.assertEqual((code, err), (0, ""), out)
+        records = read_records(log)
+        self.assertEqual(records[0]["kind"], "header")
+        self.assertEqual(len(records), 13)
+        final = tune.weights_from_dict(records[-1]["newMean"])
+        self.assertGreater(true_value(final, self.target), true_value(self.start, self.target) + 10.0)
+        # the curve the monitoring reports says the same
+        self.assertGreater(records[-1]["monitor"]["pairedPoints"]["mean"], 1.0)
+        self.assertEqual(records[0]["startMonitor"]["pairedPoints"]["mean"], 0)
+
+    def test_the_record_of_a_generation_holds_what_the_doc_promises(self) -> None:
+        log = self.temp / "record.jsonl"
+        self.train(log, generations=1)
+        header, record = read_records(log)
+        self.assertEqual(header["weightNames"], [weight.name for weight in tune.WEIGHTS])
+        for key in ("baseline", "candidates", "elite", "first", "generation", "hands", "mean", "monitor", "mu", "newMean", "seeds", "sigma", "wallSeconds"):
+            self.assertIn(key, record)
+        self.assertEqual(record["mean"], tune.weights_dict(self.start))
+        self.assertEqual(len(record["candidates"]), self.CANDIDATES)
+        self.assertEqual(len(record["elite"]), 3)
+        self.assertEqual(record["hands"], (1 + self.CANDIDATES) * 4 * self.SEEDS + 2 * 4 * self.MONITOR_SEEDS)
+        self.assertEqual(set(record["monitor"]["pairedPoints"]), {"mean", "half", "significant"})
+        self.assertEqual(record["elite"], tune.elite_indices([c["pairedPoints"]["mean"] for c in record["candidates"]]))
+        self.assertEqual(self.log_keys_sorted(log), True)
+
+    def log_keys_sorted(self, log: Path) -> bool:
+        return all(tune.log_line(json.loads(line)) == line + "\n" for line in log.read_text(encoding="utf-8").splitlines())
+
+    def test_the_same_seed_gives_the_same_log_and_another_seed_another(self) -> None:
+        one, two, other = (self.temp / name for name in ("one.jsonl", "two.jsonl", "other.jsonl"))
+        self.train(one, generations=3)
+        self.train(two, generations=3)
+        self.train(other, generations=3, seed=8)
+        self.assertEqual(without_wall_seconds(one), without_wall_seconds(two))
+        self.assertNotEqual(without_wall_seconds(one), without_wall_seconds(other))
+
+    def test_a_resumed_run_equals_an_uninterrupted_one(self) -> None:
+        whole, parts = self.temp / "whole.jsonl", self.temp / "parts.jsonl"
+        self.assertEqual(self.train(whole, generations=5)[0], 0)
+        self.assertEqual(self.train(parts, generations=2)[0], 0)
+        code, out, err = self.train(parts, "--resume", generations=5)
+        self.assertEqual((code, err), (0, ""), out)
+        self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
+        code, out, _ = self.train(parts, "--resume", generations=5)  # nothing left to do
+        self.assertEqual(code, 0)
+        self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
+
+    def test_every_call_of_the_arena_is_a_legal_one(self) -> None:
+        log = self.temp / "legal.jsonl"
+        self.train(log, generations=4)
+        calls = self.calls()
+        self.assertEqual(len(calls), 1 + 4 * 2)  # the start's monitoring, then a training and a monitoring call a generation
+        trained, ranges = [], []
+        mean = tune.weights_spec(self.start)
+        for call in calls:
+            first, seeds = int(call["--first"]), int(call["--seeds"])
+            ranges.append((first, first + seeds))
+            self.assertTrue(call["--json"])
+            if call["--others"] == "normal":  # a monitoring call
+                self.assertEqual(first, 4000)
+                self.assertLessEqual(seeds, 1000)
+                self.assertTrue(call["--focus"].startswith("normal,normal:weighted=1,"))
+            else:
+                self.assertGreaterEqual(first, 200000)
+                trained.append((first, first + seeds))
+                self.assertTrue(call["--focus"].startswith(call["--others"] + ","))
+                self.assertEqual(call["--others"].count(","), len(tune.WEIGHTS))
+                self.assertEqual(len(call["--focus"].split("normal:weighted=1")) - 1, 1 + self.CANDIDATES)
+            for judged in (DECISION_RANGE, CONFIRMATION_RANGE):
+                self.assertFalse(first < judged[1] and judged[0] < first + seeds, (first, seeds))
+        self.assertEqual(len(trained), 4)
+        self.assertEqual(len(set(trained)), 4)
+        for left, right in zip(sorted(trained), sorted(trained)[1:]):
+            self.assertLessEqual(left[1], right[0])  # no overlap
+        self.assertEqual(calls[1]["--others"], mean)  # generation 0 plays the start weights as the mean
+
+    def test_a_judged_range_is_refused_through_the_command_line(self) -> None:
+        log = self.temp / "refused.jsonl"
+        code, _, err = self.train(log, "--train-first", "100000")
+        self.assertEqual(code, 2)
+        self.assertIn("200000", err)
+        code, _, err = self.train(log, "--explore-first", "100000")
+        self.assertEqual(code, 2)
+        self.assertIn("[4000, 5000)", err)
+        code, _, err = self.train(log, "--train-first", "99000", generations=1)
+        self.assertEqual(code, 2)
+        self.assertFalse(log.exists())
+        self.assertEqual(self.calls(), [])
+
+    def test_a_log_inside_the_repository_is_refused_before_anything_is_made(self) -> None:
+        log = REPOSITORY / "tune-test-never-created" / "log.jsonl"
+        code, _, err = self.train(log)
+        self.assertEqual(code, 2)
+        self.assertIn("git work tree", err)
+        self.assertFalse(log.parent.exists())
+        self.assertEqual(self.calls(), [])
+
+    def test_an_existing_log_is_never_overwritten(self) -> None:
+        log = self.temp / "exists.jsonl"
+        log.write_text("keep me\n", encoding="utf-8")
+        code, _, err = self.train(log)
+        self.assertEqual(code, 2)
+        self.assertIn("--resume", err)
+        self.assertEqual(log.read_text(encoding="utf-8"), "keep me\n")
+
+    def test_resume_of_a_missing_log_is_refused(self) -> None:
+        code, _, err = self.train(self.temp / "missing.jsonl", "--resume")
+        self.assertEqual(code, 2)
+        self.assertIn("does not exist", err)
+
+    def test_a_resume_with_other_options_says_which(self) -> None:
+        log = self.temp / "mismatch.jsonl"
+        self.train(log, generations=1)
+        before = log.read_text(encoding="utf-8")
+        code, _, err = self.train(log, "--resume", seed=99)
+        self.assertEqual(code, 2)
+        self.assertIn("seed", err)
+        code, _, err = self.train(log, "--resume", candidates=5)
+        self.assertEqual(code, 2)
+        self.assertIn("candidates", err)
+        code, _, err = self.train(log, "--resume", "--train-first", "300000")
+        self.assertEqual(code, 2)
+        self.assertIn("trainFirst", err)
+        self.assertEqual(log.read_text(encoding="utf-8"), before)
+
+    def test_start_weights_that_are_not_normal_stop_the_run_with_its_message(self) -> None:
+        self.set_config(normal=[weight + 1 for weight in self.start], **DEFAULT_CONFIG)
+        log = self.temp / "notnormal.jsonl"
+        code, _, err = self.train(log)
+        self.assertEqual(code, 1)
+        self.assertIn("the start weights are not Normal's", err)
+        self.assertFalse(log.exists())
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_an_arena_that_fails_stops_without_a_partial_line(self) -> None:
+        for config in ({"failOnCall": 1}, {"garbageOnCall": 1}, {"failOnCall": 2}, {"garbageOnCall": 2}):
+            with self.subTest(config):
+                self.calls_path.unlink(missing_ok=True)
+                self.set_config(**DEFAULT_CONFIG, **config)
+                log = self.temp / ("fail%s.jsonl" % json.dumps(config).replace(" ", ""))
+                code, _, err = self.train(log, generations=3)
+                self.assertEqual(code, 1)
+                self.assertTrue(("fake arena fails" in err) or ("cannot read" in err), err)
+                lines = log.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(len(lines), 1)  # the header only: no line of the generation that did not finish
+                self.assertEqual(json.loads(lines[0])["kind"], "header")
+
+    def test_a_failing_start_call_leaves_no_log(self) -> None:
+        self.set_config(**DEFAULT_CONFIG, failOnCall=0)
+        log = self.temp / "nostart.jsonl"
+        code, _, err = self.train(log)
+        self.assertEqual(code, 1)
+        self.assertIn("the arena failed (exit 1)", err)
+        self.assertFalse(log.exists())
+
+    def test_a_missing_arena_is_a_failure_not_a_crash(self) -> None:
+        code, _, err = run_main("train", "--arena", str(self.temp / "nothing-here"), "--log", str(self.temp / "x.jsonl"), "--seed", "1",
+                                "--candidates", "4", "--seeds", "10")
+        self.assertEqual(code, 1)
+        self.assertIn("cannot run the arena", err)
+
+    def test_max_seconds_stops_before_a_generation_that_would_not_fit(self) -> None:
+        log = self.temp / "budget.jsonl"
+        code, out, _ = self.train(log, "--max-seconds", "0")
+        self.assertEqual(code, 0)
+        self.assertIn("stopped before generation 0", out)
+        self.assertEqual([record["kind"] for record in read_records(log)], ["header"])
+        calls_after_header = len(self.calls())
+        self.assertEqual(calls_after_header, 1)  # the start's monitoring only
+        code, out, _ = self.train(log, "--resume", generations=2)  # and it goes on from there
+        self.assertEqual(code, 0)
+        self.assertEqual([record["kind"] for record in read_records(log)], ["header", "generation", "generation"])
+
+    def test_a_clock_decides_the_stop_by_the_last_generation(self) -> None:
+        log = self.temp / "clock.jsonl"
+        ticks = iter(range(0, 10000, 10))  # every look at the clock is 10 s later
+        options = tune.TrainOptions(arena=self.arena, log=log, seed=3, candidates=4, seeds=10, generations=50, monitor_seeds=20, train_first=200000,
+                                    explore_first=4000, jobs=1, max_seconds=95.0, resume=False)
+        out = io.StringIO()
+        self.assertEqual(tune.train(options, clock=lambda: next(ticks), out=out), 0)
+        done = len(read_records(log)) - 1
+        self.assertTrue(1 <= done < 50, out.getvalue())
+        self.assertIn("stopped before generation %d" % done, out.getvalue())
+
+    def test_the_log_is_read_back_by_the_tuner_itself(self) -> None:
+        log = self.temp / "readback.jsonl"
+        self.train(log, generations=2)
+        header, generations = tune.read_log(log)
+        self.assertEqual(len(generations), 2)
+        self.assertEqual(tune.mean_weights(tune.state_of_record(generations[0])), tune.weights_from_dict(generations[0]["newMean"]))
+        self.assertEqual(tune.weights_from_dict(generations[1]["mean"]), tune.weights_from_dict(generations[0]["newMean"]))
+        log.write_text(log.read_text(encoding="utf-8") + "{broken\n", encoding="utf-8")
+        with self.assertRaises(tune.TuneError):
+            tune.read_log(log)
+
+    def test_the_tool_runs_as_a_program(self) -> None:
+        result = subprocess.run([sys.executable, str(REPOSITORY / "tools" / "mahjong_tune.py"), "train", "--seed", "1", "--candidates", "4", "--seeds", "10",
+                                 "--log", str(REPOSITORY / "tune-test-never-created.jsonl")], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("git work tree", result.stderr)
 
 
 if __name__ == "__main__":
