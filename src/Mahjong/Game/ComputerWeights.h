@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerTurn.h>
 
@@ -38,5 +39,34 @@ namespace BECore::Mahjong {
     /// The discard of the highest rating; kinds with an equal rating are the ties, in the order of the tile ids, and `PickOne` takes one
     /// (a number is drawn from `rng` exactly when there is more than one, as in `BestDiscard`). An empty hand gives an invalid tile.
     [[nodiscard]] Tile ChooseWeightedDiscard(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
+
+    /// The rating of a hand of 13 tiles (as held, or after a claim and its best discard): `wShanten * (kShantenCeiling - shanten) +
+    /// wAcceptance * acceptance`.
+    [[nodiscard]] int64_t RateHandWeighted(const LevelProfile& profile, int shanten, int acceptance) noexcept;
+
+    /// Whether a claim is acceptable: `claim - pass + bonus > wClaimMargin + wClaimWall * liveCount / kWallWeightUnit`, where `bonus` is
+    /// `wClaimValue` for a pung or kong of a value tile at an equal shanten and 0 otherwise. Compared without a division, so the slope
+    /// is not rounded.
+    [[nodiscard]] bool ClaimPassesGate(const LevelProfile& profile, int64_t claimRating, int64_t passRating, bool valueAtEqualShanten, int liveCount) noexcept;
+
+    /// A pung, kong or chow of the window with the hand after it: the shanten and acceptance of the best discard by the discard rating
+    /// (the first of equal ratings by tile id, no rng; a kong has no discard yet and is the hand as it stands, as `RateClaim`), its
+    /// rating `claim` = `RateHandWeighted + wClaimRank * ClaimRank` and the gate.
+    struct WeightedClaim {
+        HandAction action;
+        int shanten = 0;
+        int acceptance = 0;
+        int64_t rating = 0;
+        bool acceptable = false;
+    };
+
+    /// Every pung, kong and chow of `view.legal` (no mahjong, no pass), in the order of `view.legal`, rated against the pass: the hand
+    /// as held, `shantenBefore` and its acceptance. `takeValueClaimsAtEqualShanten` is not read: `wClaimValue` is its weight.
+    [[nodiscard]] Vector<WeightedClaim> RateClaimsWeighted(const TableView& view, int shantenBefore, const LevelProfile& profile);
+
+    /// The acceptable claim of the highest rating (not of the gate's number: the bonus is not in the order); equal ratings are the
+    /// ties in the order of `view.legal`, and `PickOne` takes one (a number is drawn exactly when there is more than one). nullopt when
+    /// none is acceptable. The roll of `skipClaimPercent` is the caller's (`DecideClaim`).
+    [[nodiscard]] Optional<HandAction> ChooseWeightedClaim(const TableView& view, MahjongRng& rng, const LevelProfile& profile, int shantenBefore);
 
 }  // namespace BECore::Mahjong

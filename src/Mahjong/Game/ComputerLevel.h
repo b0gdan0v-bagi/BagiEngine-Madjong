@@ -128,6 +128,9 @@ namespace BECore::Mahjong {
     /// The most unseen copies the acceptance of a hand can count: every kind, every copy.
     inline constexpr int kAcceptanceMax = kKindCount * kCopiesPerTile;
 
+    /// The largest `ClaimRank` (a kong; `ComputerClaim.h` asserts it).
+    inline constexpr int kClaimRankMax = 2;
+
     /// The tiles left in the wall at which the wall slope of a claim (`wClaimWall`) is one whole weight: `wClaimWall * liveCount / kWallWeightUnit`.
     inline constexpr int kWallWeightUnit = 100;
 
@@ -141,18 +144,19 @@ namespace BECore::Mahjong {
     inline constexpr int kNormalWeightShanten = 4400;
 
     /// The claim weights with which a claim is acceptable exactly when Normal's rule says so: a gain of acceptance alone is never
-    /// enough (the margin is the whole span of acceptance), a lowered shanten always is, a value claim at an equal shanten is.
+    /// enough (the margin is the whole span of acceptance and of rank), a lowered shanten always is, a value claim at an equal shanten is.
     inline constexpr int kNormalWeightClaimRank = 1;
     inline constexpr int kNormalWeightClaimWall = 0;
-    inline constexpr int kNormalWeightClaimMargin = kNormalWeightAcceptance * kAcceptanceMax;
+    inline constexpr int kNormalWeightClaimMargin = kNormalWeightAcceptance * kAcceptanceMax + kNormalWeightClaimRank * kClaimRankMax;
     inline constexpr int kNormalWeightClaimValue = kNormalWeightShanten;
 
+    static_assert(kNormalWeightClaimRank * kClaimRankMax < kNormalWeightAcceptance, "acceptance outranks the claim rank");
     static_assert(kNormalWeightKeep * kKeepSpread < kNormalWeightSafeStep, "danger outranks keep value");
     static_assert(kKeepSpread * kNormalWeightKeep + kDangerWorst * kNormalWeightSafeStep < kNormalWeightAcceptance, "acceptance outranks danger and keep value");
     static_assert(kAcceptanceMax * kNormalWeightAcceptance < kNormalWeightShanten, "shanten outranks acceptance");
     static_assert(kNormalWeightShanten - kNormalWeightAcceptance * kAcceptanceMax > kNormalWeightClaimMargin, "a lowered shanten passes the claim gate whatever the acceptance does");
     static_assert(kNormalWeightClaimValue - kNormalWeightAcceptance * kAcceptanceMax > kNormalWeightClaimMargin, "a value claim at an equal shanten passes the gate");
-    static_assert(kNormalWeightClaimMargin >= kNormalWeightAcceptance * kAcceptanceMax, "a gain of acceptance alone never passes the gate");
+    static_assert(kNormalWeightClaimMargin >= kNormalWeightAcceptance * kAcceptanceMax + kNormalWeightClaimRank * kClaimRankMax, "a gain of acceptance and rank alone never passes the gate");
     static_assert(kNormalWeightShanten <= kWeightMax && kNormalWeightClaimMargin <= kWeightMax, "the defaults are in the range of the knobs");
 
     /**

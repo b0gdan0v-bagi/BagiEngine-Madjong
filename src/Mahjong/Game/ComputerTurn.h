@@ -132,8 +132,8 @@ namespace BECore::Mahjong {
      *
      * The first rule that applies wins (`TurnStep`; the rules in order: `Game/CLAUDE.md`, "Computer player"). With
      * `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 1 and may replace the choice of steps 2 to 5.
-     * Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
-     * steps 1 and 2 take them whenever the model lists them.
+     * With `profile.weighted` step 5 is the weighted chooser (`ComputerWeights.h`). Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at
+     * them), but steps 1 and 2 take them whenever the model lists them.
      *
      * With a `handoff`, a decision that is a search is not played: the run (begun, so the one draw is made) goes into `handoff->run`
      * and `Pass` comes back as a placeholder. Any other decision is answered as without a handoff and leaves `handoff->run` empty.

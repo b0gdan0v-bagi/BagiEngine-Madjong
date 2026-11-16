@@ -1,21 +1,17 @@
 #include "ComputerClaim.h"
 
+#include <Mahjong/Game/ComputerWeights.h>
 #include <Mahjong/Game/OwnDraws.h>
 
 namespace BECore::Mahjong {
 
     namespace {
 
-        /// Whether a claim of `kind` at a rating that is no better than the hand as it is (`s1 == s0`) is still worth it.
-        bool KeepsValueAtEqualShanten(const TableView& view, ClaimKind kind) noexcept {
-            return (kind == ClaimKind::Pung || kind == ClaimKind::Kong) && IsValueTile(view.pendingTile, view.seatWind, view.roundWind);
-        }
-
         bool IsAcceptable(const TableView& view, const HandAction& action, const DiscardRating& after, int shantenBefore, const LevelProfile& profile) noexcept {
             if (after.shanten != shantenBefore) {
                 return after.shanten < shantenBefore;
             }
-            return profile.takeValueClaimsAtEqualShanten && KeepsValueAtEqualShanten(view, action.claim);
+            return profile.takeValueClaimsAtEqualShanten && IsValueClaim(view, action.claim);
         }
 
         /// The acceptable claims no other acceptable claim beats (several when they are equal in every respect).
@@ -41,6 +37,10 @@ namespace BECore::Mahjong {
         }
 
     }  // namespace
+
+    bool IsValueClaim(const TableView& view, ClaimKind kind) noexcept {
+        return (kind == ClaimKind::Pung || kind == ClaimKind::Kong) && IsValueTile(view.pendingTile, view.seatWind, view.roundWind);
+    }
 
     int ClaimRank(ClaimKind kind) noexcept {
         switch (kind) {
@@ -178,6 +178,13 @@ namespace BECore::Mahjong {
             } else if (const Optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
                 return {*searched, searched->kind == ActionKind::Claim ? ClaimStep::Claim : ClaimStep::NoGain};
             }
+        }
+        if (profile.weighted) {
+            const Optional<HandAction> chosen = ChooseWeightedClaim(view, rng, profile, shantenBefore);
+            if (!chosen.has_value()) {
+                return {HandAction::MakePass(), ClaimStep::NoGain};
+            }
+            return {Roll(rng, profile.skipClaimPercent) ? HandAction::MakePass() : *chosen, ClaimStep::Claim};
         }
         const Vector<HandAction> best = BestClaims(view, shantenBefore, profile);
         if (best.empty()) {

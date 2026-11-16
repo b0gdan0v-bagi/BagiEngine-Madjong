@@ -39,4 +39,70 @@ namespace BECore::Mahjong {
         return PickOne(ties, rng);
     }
 
+    int64_t RateHandWeighted(const LevelProfile& profile, int shanten, int acceptance) noexcept {
+        return static_cast<int64_t>(profile.wShanten) * (kShantenCeiling - shanten) + static_cast<int64_t>(profile.wAcceptance) * acceptance;
+    }
+
+    bool ClaimPassesGate(const LevelProfile& profile, int64_t claimRating, int64_t passRating, bool valueAtEqualShanten, int liveCount) noexcept {
+        const int64_t gain = claimRating - passRating + (valueAtEqualShanten ? profile.wClaimValue : 0);
+        return (gain - profile.wClaimMargin) * kWallWeightUnit > static_cast<int64_t>(profile.wClaimWall) * liveCount;
+    }
+
+    namespace {
+
+        /// The shanten and acceptance of the hand after `claim`, as the weighted seat plays it on.
+        DiscardRating HandAfterClaim(const TableView& view, const HandAction& claim, const LevelProfile& profile) {
+            if (claim.claim == ClaimKind::Kong) {
+                return RateClaim(view, claim);
+            }
+            const Vector<WeightedDiscard> rated = RateDiscardsWeighted(view, ConcealedAfterClaim(view, claim), MeldCountOf(view) + 1, profile);
+            const WeightedDiscard* best = nullptr;
+            for (const WeightedDiscard& discard : rated) {
+                best = best == nullptr || discard.rating > best->rating ? &discard : best;
+            }
+            return best == nullptr ? DiscardRating{} : DiscardRating{best->tile, best->shanten, best->acceptance};
+        }
+
+    }  // namespace
+
+    Vector<WeightedClaim> RateClaimsWeighted(const TableView& view, int shantenBefore, const LevelProfile& profile) {
+        const int meldCount = MeldCountOf(view);
+        const int64_t pass = RateHandWeighted(profile, shantenBefore, AcceptanceOf(view, CountTiles(view.own.concealed), meldCount));
+        Vector<WeightedClaim> claims;
+        for (const HandAction& action : view.legal) {
+            if (action.kind != ActionKind::Claim || action.claim == ClaimKind::Mahjong) {
+                continue;
+            }
+            const DiscardRating after = HandAfterClaim(view, action, profile);
+            WeightedClaim claim;
+            claim.action = action;
+            claim.shanten = after.shanten;
+            claim.acceptance = after.acceptance;
+            claim.rating = RateHandWeighted(profile, after.shanten, after.acceptance) + static_cast<int64_t>(profile.wClaimRank) * ClaimRank(action.claim);
+            claim.acceptable = ClaimPassesGate(profile, claim.rating, pass, after.shanten == shantenBefore && IsValueClaim(view, action.claim), view.liveCount);
+            claims.push_back(claim);
+        }
+        return claims;
+    }
+
+    Optional<HandAction> ChooseWeightedClaim(const TableView& view, MahjongRng& rng, const LevelProfile& profile, int shantenBefore) {
+        const Vector<WeightedClaim> claims = RateClaimsWeighted(view, shantenBefore, profile);
+        const WeightedClaim* best = nullptr;
+        for (const WeightedClaim& claim : claims) {
+            if (claim.acceptable && (best == nullptr || claim.rating > best->rating)) {
+                best = &claim;
+            }
+        }
+        if (best == nullptr) {
+            return std::nullopt;
+        }
+        Vector<HandAction> ties;
+        for (const WeightedClaim& claim : claims) {
+            if (claim.acceptable && claim.rating == best->rating) {
+                ties.push_back(claim.action);
+            }
+        }
+        return PickOne(ties, rng);
+    }
+
 }  // namespace BECore::Mahjong

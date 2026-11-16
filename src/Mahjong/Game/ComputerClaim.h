@@ -11,11 +11,16 @@ namespace BECore::Mahjong {
     inline constexpr int kClaimRankKong = 2;
     inline constexpr int kClaimRankPung = 1;
     inline constexpr int kClaimRankChow = 0;
+    static_assert(kClaimRankKong == kClaimRankMax, "the largest rank that the claim weights assume");
     /// A mahjong claim is taken at once and never compared with another claim; it has a rank of its own so that no other number is meant.
     inline constexpr int kClaimRankMahjong = -1;
 
     /// The tie-break rank of a kind of claim (`kClaimRank...`).
     [[nodiscard]] int ClaimRank(ClaimKind kind) noexcept;
+
+    /// Whether `kind` of `view.pendingTile` is a pung or kong of a value tile (`IsValueTile`): the claim Normal still takes at an equal
+    /// shanten, for the double.
+    [[nodiscard]] bool IsValueClaim(const TableView& view, ClaimKind kind) noexcept;
 
     /// The concealed tiles of the seat after it claims `view.pendingTile` as `claim` (a `HandAction` of kind `Claim`, not mahjong):
     /// the tiles of the new set that the seat holds are out (chow: the other two of the sequence, pung: two, kong: three). The pending
@@ -105,6 +110,9 @@ namespace BECore::Mahjong {
      * above 0 the search (`ComputerSearch.h`) runs after step 2 and may replace the choice of steps 3 and 4. With `profile.ownDrawsClaimDepth` above 0 the value of each answer (`ValueClaims`,
      * `OwnDraws.h`) decides instead of steps 3 and 4: a claim only when worth strictly more than the pass, no rng. A claim is acceptable when `RateClaim` lowers the shanten, or keeps it for a pung or
      * kong of a value tile (`IsValueTile`) while `profile.takeValueClaimsAtEqualShanten`; with `profile.skipClaimPercent` a roll passes the claim that was chosen.
+     *
+     * With `profile.weighted` the claim is chosen and gated by the weights (`ComputerWeights.h`) instead of steps 3 and 4, and the roll of
+     * `skipClaimPercent` follows as ever.
      *
      * No defence: every loser pays the winner the same, so a discard that wins for another seat costs the discarder nothing extra.
      * Always an element of `view.legal` (`Pass` is, for a seat that has not decided).
