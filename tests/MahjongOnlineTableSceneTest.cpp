@@ -3,6 +3,7 @@
 #include <BECore/UI/UIInputClicker.h>
 #include <Common/Printers.h>
 #include <Common/TempPath.h>
+#include <Mahjong/Online/OnlineMirror.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Table/ActionButtons.h>
@@ -251,6 +252,27 @@ namespace BECore::Mahjong::Tests {
             }
         }
         EXPECT_EQ(_world.Judge().Offences().size(), 0u);
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AWinOnADiscardWhoseWinnerLacksTheWinningTileIsDrawnWithoutAnAssertion) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayToHandOver());
+        // The reader refuses such a result; the table is made by hand to hold that the scene never trusts the tile to be there.
+        OnlineTable table = Table();
+        ASSERT_TRUE(table.result.has_value());
+        OnlineResult& result = *table.result;
+        result.kind = ResultKind::Win;
+        result.source = WinSource::Discard;
+        result.winner = 1;
+        result.winningTile = Tile::Suited(TileSuit::Dots, 1);
+        result.seats[1].concealed.clear();
+        DisplayState state;
+        MakeDisplayState(table, _game->GetOnline().Lobby(), state);
+        ShowOnlineTable(_game->GetMatch(), _game->GetSession(), state, false);
+        Frame();
+        Frame();
+        EXPECT_EQ(_game->GetMatch().Hand().Result()->winner, 1);
+        EXPECT_TRUE(_game->IsOnlineTable());
     }
 
     TEST_F(MahjongOnlineTableSceneTest, AClickOnAHandTileSendsTheListedDiscardAndTheNextViewMovesThePile) {
