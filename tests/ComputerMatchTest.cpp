@@ -283,7 +283,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// A weighted profile of the default nine weights with the two value weights set and the horizon of both.
+        /// A weighted profile of the default eight weights with the two value weights set and the horizon of both.
         LevelProfile ValuedWeighted(int valueDiscard, int valueClaim, int depth) {
             LevelProfile profile = Weighted(kNormalProfile);
             profile.wValueDiscard = valueDiscard;
@@ -302,7 +302,7 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
-    // The value terms call `ValueDiscards` / `ValueClaims` on every decision of the seat: the matches here are a few seconds more of Debug time
+    // The value terms call `ValueDiscards` / `ValueClaims` on every decision of the seat: the matches here are about 15 s more of Debug time
     // than the weighted test above (depth 1: the weights of each term alone and together; depth 2: one case).
     TEST(ComputerMatchTest, OneWeightedSeatWithTheValueWeightsPlaysLegallyAndTheSameMatchTwice) {
         for (const int weight : kValueWeights) {

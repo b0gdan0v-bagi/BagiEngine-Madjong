@@ -42,8 +42,8 @@ most `kOwnDrawsMaxCandidates` kinds, in milli-points (`kMilliPerPoint` 1000 a po
 `expected` minus the lowest `expected` of the rated kinds: 0 for the worst rated kind and for every kind it does not rate, never
 negative, so a larger weight always means more of the better discard. Not a discard turn (nothing rated): `V` is 0 for all. It is
 **computed only when `wValueDiscard > 0` and `weightedValueDepth > 0`**: at 0 the call is not made, so the choice, the draws from the
-rng and the cost are the nine-weight family's. It is added only in the choice of the discard of step 5 (`ChooseWeightedDiscard`);
-the best discard after a claim stays by the nine-weight rating (the claim's own value is `G`), and `ownDrawsDepth > 0` still goes first.
+rng and the cost are the eight-weight family's. It is added only in the choice of the discard of step 5 (`ChooseWeightedDiscard`);
+the best discard after a claim stays by the eight-weight rating (the claim's own value is `G`), and `ownDrawsDepth > 0` still goes first.
 
 **Claim** (a window with a pung, kong or chow listed, after the mahjong and the waiting hand are answered; it takes the place of
 `BestClaims` and of the final `Roll(skipClaimPercent)` only when `weighted`; `ownDrawsClaimDepth` and the search stay ahead). For
@@ -287,7 +287,7 @@ workers of the todo loop; noted, not corrected.
 - **Command 1**: 434.4 s wall (the tool's generations: 35.2, 116.6, 131.1, 73.4 and 76.2 s), generations 0 to 4, stopped by
   `--max-seconds` before generation 5 (exit 0).
 - **Command 2** (`--resume`): 389.8 s, generations 5 to 9 (60.8, 70.8, 69.3, 82.4 and 106.5 s), the log reached `G = 10` (exit 0).
-- **Command 3** (`--resume`): 0.05 s; the log held 10 of 10 generations and the tool did nothing, as the plan said it would.
+- **Command 3** (`--resume`): 0.05 s; it was run and only read the log, which held 10 of 10 generations, so it played none.
 - **In all**: 824 s of wall time (the sum of the generations 822.3 s), 10 generations, **158000 hands** (10 x 15600 plus the start
   monitoring 2000), **0 tie generations**. The budget's `G` was reached; the budget text is not edited. The generations were faster than the probe's 132 s
   from the fourth on (60 to 107 s), because the load fell; the budget's guess of three commands was two.
@@ -381,7 +381,7 @@ the value weights are 4, `weightedValueDepth` is the `d` of the row:
 
 (The table sums the threads' microseconds and `--time` reads a clock around every decision.) The discard value dominates: it rates
 up to `kOwnDrawsMaxCandidates` kinds a turn, the claim value once a window. With the discard value a decision is about six
-times the nine-weight player's at depth 1 and fifty to sixty times at depth 2. The paired rows against Normal on the same seeds are read only to see that the value
+times the eight-weight player's at depth 1 and fifty to sixty times at depth 2. The paired rows against Normal on the same seeds are read only to see that the value
 weights change the play (they do: the rows differ from Normal's, and the points a hand are within their intervals' noise); they are
 **not a result**: for both at 4, depth 1, +3.02 +- 4.98 points a hand and -0.85 +- 1.42 wins %; at depth 2 +2.86 +- 4.92 and -0.80 +- 1.41.
 

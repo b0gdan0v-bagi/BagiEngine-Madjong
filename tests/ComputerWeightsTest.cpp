@@ -373,7 +373,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_EQ(above[id], 0) << "kind " << id << " hand " << index << " step " << step;
                 }
             }
-            // The rating of step 5 carries it: `wValueDiscard * V` and the nine weights' part, which is 0 here.
+            // The rating of step 5 carries it: `wValueDiscard * V` and the eight weights' part, which is 0 here.
             for (const WeightedDiscard& discard : RateDiscardsWeighted(view, CountTiles(view.own.concealed), MeldCountOf(view), profile, true)) {
                 EXPECT_EQ(discard.value, above[discard.tile.Id()]);
                 EXPECT_EQ(discard.rating, above[discard.tile.Id()]);
