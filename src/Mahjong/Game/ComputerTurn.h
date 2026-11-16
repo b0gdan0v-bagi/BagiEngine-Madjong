@@ -13,6 +13,7 @@ namespace BECore::Mahjong {
     inline constexpr int kKeepTerminal = 1;
     inline constexpr int kKeepSimple = 2;
     inline constexpr int kKeepValueTile = 3;  // a dragon, the own wind, the round wind: a pung of it scores a double
+    static_assert(kKeepValueTile - kKeepWorthless == kKeepSpread, "the span of KeepValue that the weighted rating assumes");
 
     /// The copies of `tile` the seat cannot see (`kCopiesPerTile - view.visible`, never below 0); 0 for a tile that is not playable.
     [[nodiscard]] int UnseenCopies(const TableView& view, Tile tile) noexcept;
@@ -131,8 +132,8 @@ namespace BECore::Mahjong {
      *
      * The first rule that applies wins (`TurnStep`; the rules in order: `Game/CLAUDE.md`, "Computer player"). With
      * `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 1 and may replace the choice of steps 2 to 5.
-     * Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
-     * steps 1 and 2 take them whenever the model lists them.
+     * With `profile.weighted` step 5 is the weighted chooser (`ComputerWeights.h`). Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at
+     * them), but steps 1 and 2 take them whenever the model lists them.
      *
      * With a `handoff`, a decision that is a search is not played: the run (begun, so the one draw is made) goes into `handoff->run`
      * and `Pass` comes back as a placeholder. Any other decision is answered as without a handoff and leaves `handoff->run` empty.

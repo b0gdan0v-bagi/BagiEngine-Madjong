@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerView.h>
 
 namespace BECore::Mahjong {
@@ -10,6 +11,7 @@ namespace BECore::Mahjong {
      * `Safe < Low < Medium < High`. A grade is a reading, not a probability: it never says a tile is certain to win or to pass.
      */
     CORE_ENUM(Danger, uint8_t, Safe, Low, Medium, High)
+    static_assert(static_cast<int>(Danger::High) == kDangerWorst, "the worst grade that the weighted rating assumes");
 
     /// Sequence ways of a kind at which the grade is `High` / `Medium` (fewer live ways: `Low`).
     inline constexpr int kSequenceWaysHigh = 3;

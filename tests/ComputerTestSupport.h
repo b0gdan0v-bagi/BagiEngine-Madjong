@@ -1,6 +1,8 @@
 #pragma once
 
+#include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/HandModel.h>
+#include <Mahjong/Game/MahjongRng.h>
 #include <initializer_list>
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
@@ -59,6 +61,38 @@ namespace BECore::Mahjong::Tests {
     /// Seat 1 is to act with the fourth 5p drawn and an open pung of 5p laid; the seats in `declaring` have declared.
     inline HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}) {
         return OpenPungModel(kSeat1Hand, kSeat2Waits, kSeat3Waits, declaring);
+    }
+
+    /// `profile` with the weighted choosers switched on.
+    inline LevelProfile Weighted(LevelProfile profile) {
+        profile.weighted = true;
+        return profile;
+    }
+
+    /// A weighted profile with all ten weights at `weight` (`weightedValueDepth` stays at its default).
+    inline LevelProfile WeightedAt(int weight) {
+        LevelProfile profile = Weighted(kNormalProfile);
+        profile.wShanten = profile.wAcceptance = profile.wKeep = profile.wSafe = weight;
+        profile.wClaimRank = profile.wClaimValue = profile.wClaimMargin = profile.wClaimWall = weight;
+        profile.wValueDiscard = profile.wValueClaim = weight;
+        return profile;
+    }
+
+    /// A weighted profile with all ten weights drawn from the whole range `0..kWeightMax`.
+    inline LevelProfile RandomWeights(MahjongRng& rng) {
+        auto weight = [&rng] { return static_cast<int>(rng.Below(kWeightMax + 1)); };
+        LevelProfile profile = Weighted(kNormalProfile);
+        profile.wShanten = weight();
+        profile.wAcceptance = weight();
+        profile.wKeep = weight();
+        profile.wSafe = weight();
+        profile.wClaimRank = weight();
+        profile.wClaimValue = weight();
+        profile.wClaimMargin = weight();
+        profile.wClaimWall = weight();
+        profile.wValueDiscard = weight();
+        profile.wValueClaim = weight();
+        return profile;
     }
 
 }  // namespace BECore::Mahjong::Tests

@@ -64,10 +64,6 @@ namespace BECore::Mahjong::Arena {
             AddLine(text, "platforms", value);
         }
 
-        double PercentOf(int64_t part, int64_t whole) {
-            return whole > 0 ? kPercent * static_cast<double>(part) / static_cast<double>(whole) : 0.0;
-        }
-
         String Plain(double value) {
             return Format("{:.{}f}", value, kPrecision);
         }

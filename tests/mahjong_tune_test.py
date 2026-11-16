@@ -1,0 +1,1194 @@
+#!/usr/bin/env python3
+"""Tests of tools/mahjong_tune.py: the pure functions of the CEM and the guards, then `train` against a fake arena (a script that prints the
+`--json` document of BagiMahjongArena); no build.
+
+    python3 tests/mahjong_tune_test.py
+
+The fake arena values a player `f(w) = -scale * sum((log1p(w_i) - log1p(target_i))^2)`, `normal` having the start weights, and answers the
+paired points a hand of a focus player as `f(player) - f(first)` plus a noise from a hash of the seed and the player index. Every call it gets
+is appended to a file, so a test reads back what the tuner asked for. Two toy plateaus make twins (paired points 0 with half-width 0, as the real
+arena says of a player that played the same hands): `dead` weights that `f` does not read, and a ball `plateau` (in `log1p` units, around `normal`)
+inside which `f` is flat. Registered as the ctest entry MahjongTune.
+"""
+
+import contextlib
+import io
+import json
+import math
+import os
+import re
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+REPOSITORY = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY / "tools"))
+
+import mahjong_tune as tune  # noqa: E402
+
+SKIP_ON_WINDOWS = unittest.skipIf(sys.platform == "win32", "the fake arena is a script with a shebang, the log guard asks git by a POSIX path")
+
+# What the judged ranges of docs/bot-weights.md are, written again here so a change of the constants in the tool is noticed.
+DECISION_RANGE = (100000, 101000)
+CONFIRMATION_RANGE = (130000, 131000)
+
+FAKE_ARENA = """#!{python}
+import hashlib, json, math, sys
+config = json.load(open({config!r}))
+argv = sys.argv[1:]
+with open({calls!r}, "a") as calls:
+    calls.write(json.dumps(argv) + "\\n")
+count = sum(1 for _ in open({calls!r}))
+options = {{argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i].startswith("--")}}
+if count - 1 == config.get("failOnCall"):
+    print("the fake arena fails on purpose", file=sys.stderr)
+    sys.exit(1)
+if count - 1 == config.get("garbageOnCall"):
+    print("this is not a document")
+    sys.exit(0)
+names = {names!r}
+start = {start!r}
+target = config["target"]
+normal = config.get("normal", start)
+
+def players(text):
+    parts = []
+    for part in text.split(","):
+        if parts and "=" in part and ":" not in part:
+            parts[-1] += "," + part
+        else:
+            parts.append(part)
+    return parts
+
+def weights_of(spec):
+    if spec == "normal":
+        return list(normal)
+    knobs = dict(item.split("=") for item in spec.split(":", 1)[1].split(","))
+    assert knobs.pop("weighted") == "1"
+    return [int(knobs[name]) for name in names]
+
+dead = set(config.get("dead", []))
+
+def live(weights):
+    return [w for index, w in enumerate(weights) if index not in dead]
+
+def flat(weights):
+    radius = config.get("plateau")
+    return radius is not None and all(abs(math.log1p(w) - math.log1p(n)) <= radius for w, n in zip(live(weights), live(normal)))
+
+def value(weights):
+    if flat(weights):
+        weights = normal
+    return -config["scale"] * sum((math.log1p(w) - math.log1p(t)) ** 2 for w, t in zip(live(weights), live(target)))
+
+def noise(first, index):
+    digest = hashlib.sha256(f"{{first}}:{{index}}".encode()).digest()
+    return (digest[0] / 255 * 2 - 1) * config["noise"]
+
+def cell(mean, half=None):
+    return {{"mean": round(mean, 6), "half": config["half"] if half is None else half, "hasInterval": True}}
+
+def paired(mean, half=None):
+    return dict(cell(mean, half), significant=abs(mean) > config["half"])
+
+first = int(options["--first"])
+focus = players(options["--focus"])
+base = weights_of(focus[0])
+entries = []
+for index, spec in enumerate(focus):
+    weights = weights_of(spec)
+    twin = live(weights) == live(base) or (flat(weights) and flat(base))
+    points = 0.0 if twin else value(weights) - value(base) + noise(first, index)
+    half = 0 if twin else None
+    wins = points * 2
+    entry = dict(name=spec, hands=4 * int(options["--seeds"]), winPercent=cell(25 + wins), pointsPerHand=cell(value(base) + points),
+                 drawnPercent=0, declaredPercent=0, avgWinScore=0)
+    entry["paired"] = None if index == 0 else dict(against=focus[0], pointsPerHand=paired(points, half), winPercent=paired(wins, half),
+                                                   gaveWinPercent=paired(0), standingScore=paired(0))
+    entries.append(entry)
+print(json.dumps({{"format": "bagi-arena-report", "version": 1, "first": first, "seeds": int(options["--seeds"]),
+                  "handsPerFocus": 4 * int(options["--seeds"]), "others": options["--others"], "focus": entries}}))
+"""
+
+JUDGE_ARENA = """#!{python}
+import json, sys
+config = json.load(open({config!r}))
+argv = sys.argv[1:]
+with open({calls!r}, "a") as calls:
+    calls.write(json.dumps(argv) + "\\n")
+options = {{argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i].startswith("--")}}
+others = options["--others"]
+count = 1 if options["--focus"] == "normal" else 2
+judgement = "B" if count == 1 else ("A" if others == "normal" else "C")
+key = judgement + ":" + options["--first"]
+if key in config.get("failKeys", []):
+    print("the fake arena fails on purpose", file=sys.stderr)
+    sys.exit(1)
+row = config["calls"][key]
+seeds = int(options["--seeds"])
+
+def interval(values):
+    return {{"mean": values[0], "half": values[1], "hasInterval": True}}
+
+def paired(values):
+    return dict(interval(values), significant=values[2])
+
+entries = [dict(name="normal", pointsPerHand=interval(row["points"]) if judgement == "B" else interval([0, 0]),
+                winPercent=interval(row["wins"]) if judgement == "B" else interval([25, 0]), paired=None)]
+if count == 2:
+    entries.append(dict(name="tuned", pointsPerHand=interval([9, 9]), winPercent=interval([9, 9]),
+                        paired=dict(pointsPerHand=paired(row["points"]), winPercent=paired(row["wins"]))))
+print(json.dumps({{"format": "bagi-arena-report", "version": 1, "first": int(options["--first"]), "seeds": seeds, "handsPerFocus": 4 * seeds,
+                  "others": others, "focus": entries}}))
+"""
+
+DEFAULT_CONFIG = {"scale": 1.0, "noise": 0.05, "half": 0.1}
+
+
+def run_main(*argv: str) -> tuple:
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        try:
+            code = tune.main(list(argv))
+        except SystemExit as exit_request:  # argparse
+            code = exit_request.code
+    return code, out.getvalue(), err.getvalue()
+
+
+def true_value(weights, target) -> float:
+    return -sum((math.log1p(w) - math.log1p(t)) ** 2 for w, t in zip(weights, target))
+
+
+def read_records(path: Path) -> list:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def without_wall_seconds(path: Path) -> str:
+    lines = []
+    for record in read_records(path):
+        record.pop("wallSeconds", None)
+        lines.append(tune.log_line(record))
+    return "".join(lines)
+
+
+class SourcesTest(unittest.TestCase):
+    """The list of weights is held to the C++ it mirrors."""
+
+    def test_the_weights_are_the_w_knobs_of_the_arena_players_in_order(self) -> None:
+        text = (REPOSITORY / "src/Mahjong/Arena/ArenaPlayer.h").read_text(encoding="utf-8")
+        names = re.findall(r'\{"(w[A-Z]\w*)", &LevelProfile::\1, nullptr, kWeightMax\}', text)
+        self.assertEqual([weight.name for weight in tune.WEIGHTS], names)
+
+    def test_the_maximum_is_kWeightMax(self) -> None:
+        text = (REPOSITORY / "src/Mahjong/Game/ComputerLevel.h").read_text(encoding="utf-8")
+        self.assertEqual(int(re.search(r"kWeightMax = (\d+);", text).group(1)), tune.WEIGHT_MAX)
+        self.assertTrue(all(weight.maximum == tune.WEIGHT_MAX for weight in tune.WEIGHTS))
+
+    def test_the_starts_are_the_normal_defaults_of_ComputerLevel_h(self) -> None:
+        # The defaults are named constants of arithmetic on other constants (`kNormalWeightClaimMargin`): read them all and evaluate.
+        text = (REPOSITORY / "src/Mahjong/Game/ComputerLevel.h").read_text(encoding="utf-8")
+        constants = {"kKindCount": 34, "kCopiesPerTile": 4}  # Tile.h; a change of either moves `wClaimMargin` and fails the comparison below
+        for name, expression in re.findall(r"inline constexpr int (\w+) = ([^;]+);", text):
+            if re.fullmatch(r"[\w\s*+\-()]+", expression):
+                with contextlib.suppress(NameError):  # a name of another header
+                    constants[name] = int(eval(expression, {"__builtins__": {}}, dict(constants)))  # noqa: S307 (names and + - * only)
+        for name in ("kAcceptanceMax", "kClaimRankMax"):
+            self.assertIn(name, constants)
+        self.assertEqual(constants["kAcceptanceMax"], 136)
+        for weight in tune.WEIGHTS:
+            self.assertEqual(constants["kNormalWeight" + weight.name[1:]], weight.start, weight.name)
+
+
+class SpecTest(unittest.TestCase):
+    def test_the_two_value_weights_are_the_last_coordinates_and_start_at_zero(self) -> None:
+        self.assertEqual([weight.name for weight in tune.WEIGHTS[-2:]], ["wValueDiscard", "wValueClaim"])
+        self.assertEqual([weight.start for weight in tune.WEIGHTS[-2:]], [0, 0])
+        for name in ("wValueDiscard", "wValueClaim"):
+            self.assertEqual(tune.weights_spec(tune.start_weights()).count(f",{name}="), 1)
+
+    def test_the_spec_has_every_weight_once_in_order_and_one_player(self) -> None:
+        spec = tune.weights_spec(tune.start_weights())
+        self.assertTrue(spec.startswith("normal:weighted=1,"))
+        knobs = spec.split(":", 1)[1].split(",")
+        self.assertEqual(knobs[0], "weighted=1")
+        self.assertEqual([knob.split("=")[0] for knob in knobs[1:]], [weight.name for weight in tune.WEIGHTS])
+        self.assertNotIn(",,", spec)
+        self.assertFalse(spec.endswith(","))
+
+    def test_the_values_round_trip(self) -> None:
+        weights = tuple(range(7, 7 + len(tune.WEIGHTS)))
+        knobs = dict(item.split("=") for item in tune.weights_spec(weights).split(":", 1)[1].split(","))
+        self.assertEqual(tuple(int(knobs[weight.name]) for weight in tune.WEIGHTS), weights)
+        self.assertEqual(tune.weights_from_dict(tune.weights_dict(weights)), weights)
+
+    def test_the_start_state_is_the_start_weights(self) -> None:
+        state = tune.initial_state()
+        self.assertEqual(tune.mean_weights(state), tune.start_weights())
+        for weight, sigma in zip(tune.WEIGHTS, state.sigma):
+            self.assertEqual(sigma, tune.SIGMA_START if weight.start > 0 else tune.SIGMA_START_ZERO)
+
+
+class SamplingTest(unittest.TestCase):
+    def test_a_candidate_set_is_a_function_of_the_state_the_seed_and_the_generation(self) -> None:
+        state = tune.initial_state()
+        first = tune.sample_candidates(state, 8, 3, 5)
+        self.assertEqual(first, tune.sample_candidates(state, 8, 3, 5))
+        self.assertNotEqual(first, tune.sample_candidates(state, 8, 3, 6))
+        self.assertNotEqual(first, tune.sample_candidates(state, 8, 4, 5))
+
+    def test_candidates_are_whole_numbers_within_the_range(self) -> None:
+        wide = tune.State(tuple([tune.X_CEILING] * len(tune.WEIGHTS)), tuple([5.0] * len(tune.WEIGHTS)))
+        for candidate in tune.sample_candidates(wide, 200, 1, 0):
+            for value in candidate:
+                self.assertIsInstance(value, int)
+                self.assertTrue(0 <= value <= tune.WEIGHT_MAX)
+
+    def test_a_zero_start_samples_above_zero_and_clamps_below(self) -> None:
+        index = [weight.name for weight in tune.WEIGHTS].index("wSafe")
+        values = [candidate[index] for candidate in tune.sample_candidates(tune.initial_state(), 200, 2, 0)]
+        self.assertTrue(any(value > 0 for value in values))
+        self.assertTrue(any(value == 0 for value in values))
+
+    def test_a_value_weight_that_starts_at_zero_samples_above_zero(self) -> None:
+        for name in ("wValueDiscard", "wValueClaim"):
+            index = [weight.name for weight in tune.WEIGHTS].index(name)
+            self.assertTrue(any(candidate[index] > 0 for candidate in tune.sample_candidates(tune.initial_state(), 200, 2, 0)), name)
+
+    def test_the_elite_are_the_best_quarter_ties_by_index(self) -> None:
+        self.assertEqual(tune.elite_indices([1.0, 5.0, 3.0, 5.0, 0.0, 2.0, 4.0, 1.0]), [1, 3])
+        self.assertEqual(tune.elite_indices([2.0] * 8), [0, 1])
+        self.assertEqual(len(tune.elite_indices([0.0] * 5)), 2)  # ceil(5 / 4)
+        self.assertEqual(len(tune.elite_indices([0.0] * 2)), 1)
+
+
+class UpdateTest(unittest.TestCase):
+    def test_the_mean_moves_halfway_to_the_elite_and_the_spread_shrinks(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([2.0] * count), tuple([1.0] * count))
+        high = tuple([54] * count)  # x = log1p(54), about 4
+        candidates = [high, high, tuple([0] * count), tuple([0] * count)]
+        updated = tune.update_state(state, candidates, [0, 1])
+        x = math.log1p(54)
+        for mu in updated.mu:
+            self.assertAlmostEqual(mu, 0.5 * 2.0 + 0.5 * x, places=5)
+        for sigma in updated.sigma:  # the elite agree: their std is 0, so the spread halves
+            self.assertAlmostEqual(sigma, 0.5, places=6)
+
+    def test_the_spread_follows_the_elite_std(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([3.0] * count), tuple([0.4] * count))
+        candidates = [tuple([0] * count), tuple([round(math.expm1(2.0))] * count)]
+        updated = tune.update_state(state, candidates, [0, 1])
+        xs = [0.0, math.log1p(round(math.expm1(2.0)))]
+        std = abs(xs[1] - xs[0]) / 2
+        for sigma in updated.sigma:
+            self.assertAlmostEqual(sigma, 0.5 * 0.4 + 0.5 * std, places=5)
+
+    def test_the_spread_never_goes_below_the_floor(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([2.0] * count), tuple([tune.SIGMA_FLOOR] * count))
+        updated = tune.update_state(state, [tuple([7] * count)] * 4, [0, 1])
+        self.assertEqual(updated.sigma, tuple([tune.SIGMA_FLOOR] * count))
+
+    def test_the_state_is_kept_at_the_precision_of_the_log(self) -> None:
+        count = len(tune.WEIGHTS)
+        updated = tune.update_state(tune.initial_state(), [tuple([13] * count), tuple([17] * count)], [0, 1])
+        for value in updated.mu + updated.sigma:
+            self.assertEqual(value, round(value, tune.STATE_DIGITS))
+
+
+class TieTest(unittest.TestCase):
+    TWIN = {"mean": 0.0, "half": 0.0}
+
+    def test_a_twin_is_exactly_zero_with_no_interval(self) -> None:
+        self.assertTrue(tune.is_twin(self.TWIN))
+        self.assertFalse(tune.is_twin({"mean": 0.0, "half": 0.01}))  # it played other hands and came out level
+        self.assertFalse(tune.is_twin({"mean": 0.01, "half": 0.0}))
+        self.assertFalse(tune.is_twin({"mean": -3.0, "half": 1.0}))
+
+    def test_a_generation_is_a_tie_only_when_every_member_of_the_elite_is_a_twin(self) -> None:
+        worse, better = {"mean": -2.0, "half": 0.5}, {"mean": 1.5, "half": 0.5}
+        cells = [self.TWIN, worse, self.TWIN, self.TWIN, worse, self.TWIN, self.TWIN, self.TWIN]
+        elite = tune.elite_indices([cell["mean"] for cell in cells])
+        self.assertEqual(elite, [0, 2])
+        self.assertTrue(tune.is_tie_generation(cells, elite))
+        cells[4] = better  # one that beat the mean is in the elite: the old update
+        elite = tune.elite_indices([cell["mean"] for cell in cells])
+        self.assertEqual(elite, [4, 0])
+        self.assertFalse(tune.is_tie_generation(cells, elite))
+
+    def test_a_twin_among_better_ones_stays_in_the_elite_and_moves_the_state_as_before(self) -> None:
+        count = len(tune.WEIGHTS)
+        better = {"mean": 2.0, "half": 0.5}
+        cells = [self.TWIN, better, {"mean": -1.0, "half": 0.5}, self.TWIN, {"mean": -4.0, "half": 0.5}, {"mean": -3.0, "half": 0.5},
+                 {"mean": -2.0, "half": 0.5}, {"mean": -5.0, "half": 0.5}]
+        elite = tune.elite_indices([cell["mean"] for cell in cells])
+        self.assertEqual(elite, [1, 0])  # the twin is in it, behind the better one
+        self.assertFalse(tune.is_tie_generation(cells, elite))
+        candidates = [tuple([9] * count)] * 8
+        state = tune.initial_state()
+        self.assertNotEqual(tune.update_state(state, candidates, elite), state)
+
+    def test_a_tie_generation_keeps_the_mean_and_widens_the_spread_up_to_the_start_spread(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([2.0] * count), tuple([0.2] * count))
+        widened = tune.widen_state(state)
+        self.assertEqual(widened.mu, state.mu)
+        self.assertEqual(widened.sigma, tuple([0.25] * count))
+        caps = tuple(tune.SIGMA_START if weight.start > 0 else tune.SIGMA_START_ZERO for weight in tune.WEIGHTS)
+        near = tune.State(state.mu, tuple(cap * 0.9 for cap in caps))
+        self.assertEqual(tune.widen_state(near).sigma, caps)  # never above the start's
+        self.assertEqual(tune.widen_state(tune.State(state.mu, caps)).sigma, caps)
+
+    def test_a_spread_that_collapsed_to_the_floor_is_back_at_the_start_spread_after_enough_ties(self) -> None:
+        count = len(tune.WEIGHTS)
+        state = tune.State(tuple([2.0] * count), tuple([tune.SIGMA_FLOOR] * count))
+        caps = tuple(tune.SIGMA_START if weight.start > 0 else tune.SIGMA_START_ZERO for weight in tune.WEIGHTS)
+        steps = math.ceil(math.log(max(caps) / tune.SIGMA_FLOOR, tune.TIE_WIDENING))
+        for _ in range(steps - 1):
+            state = tune.widen_state(state)
+        self.assertNotEqual(state.sigma, caps)
+        state = tune.widen_state(state)
+        self.assertEqual(state.sigma, caps)
+        for value in state.sigma:
+            self.assertEqual(value, round(value, tune.STATE_DIGITS))
+
+
+class GuardTest(unittest.TestCase):
+    DEFAULTS = dict(train_first=200000, seeds=250, generations=20, explore_first=4000, explore_seeds=250)
+
+    def refused(self, **changes) -> str:
+        with self.assertRaises(tune.TuneRefused) as caught:
+            tune.check_ranges(**{**self.DEFAULTS, **changes})
+        return str(caught.exception)
+
+    def test_the_defaults_pass(self) -> None:
+        tune.check_ranges(**self.DEFAULTS)
+        tune.check_ranges(**{**self.DEFAULTS, "explore_seeds": 1000})
+
+    def test_the_judged_ranges_are_the_ones_of_the_doc(self) -> None:
+        self.assertEqual(tune.JUDGED_RANGES, (DECISION_RANGE, CONFIRMATION_RANGE))
+        self.assertEqual(tune.TRAIN_FIRST_MIN, 200000)
+        self.assertEqual(tune.EXPLORE_RANGE, (4000, 5000))
+
+    def test_a_training_call_below_200000_is_refused(self) -> None:
+        self.assertIn("200000", self.refused(train_first=199999))
+        self.assertIn("200000", self.refused(train_first=100000))
+
+    def test_the_exploration_range_must_lie_in_4000_to_5000(self) -> None:
+        self.assertIn("[4000, 5000)", self.refused(explore_first=3999))
+        self.assertIn("[4000, 5000)", self.refused(explore_first=4000, explore_seeds=1001))
+        self.assertIn("[4000, 5000)", self.refused(explore_first=100000, explore_seeds=100))
+
+    def test_a_judged_range_is_refused_by_name_whoever_asks(self) -> None:
+        # A training start that the first rule would also refuse is not the way to test this one: take the exploration and a generation.
+        # No legal command can reach a judged range (the rules above keep it away); the check stays as the last line, tried here by moving it.
+        original = tune.JUDGED_RANGES
+        try:
+            tune.JUDGED_RANGES = ((200100, 200200),)
+            self.assertIn("judged range [200100, 200200)", self.refused())
+            tune.JUDGED_RANGES = ((4100, 4200),)
+            self.assertIn("the exploration range", self.refused())
+        finally:
+            tune.JUDGED_RANGES = original
+
+    def test_the_seed_must_not_overflow_a_uint32(self) -> None:
+        self.assertIn("uint32", self.refused(train_first=2 ** 32 - 1000, seeds=1000, generations=2))
+
+    def test_counts_below_one_are_refused(self) -> None:
+        for name in ("seeds", "generations", "explore_seeds"):
+            self.assertIn("at least 1", self.refused(**{name: 0}))
+
+    @SKIP_ON_WINDOWS
+    def test_a_log_inside_a_git_work_tree_is_refused_even_when_ignored(self) -> None:
+        with self.assertRaises(tune.TuneRefused) as caught:
+            tune.check_log_path(REPOSITORY / "logs" / "mahjong-tune-never-created.jsonl")  # `logs/` is git-ignored
+        self.assertIn("git work tree", str(caught.exception))
+        self.assertFalse((REPOSITORY / "logs" / "mahjong-tune-never-created.jsonl").exists())
+
+    def test_a_log_outside_git_passes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="mahjong_tune_test_") as folder:
+            tune.check_log_path(Path(folder) / "deeper" / "not-yet" / "log.jsonl")
+
+    def test_without_git_a_path_under_the_repository_is_refused_and_another_passes(self) -> None:
+        with self.assertRaises(tune.TuneRefused):
+            tune.check_log_path(REPOSITORY / "tune.jsonl", git="no-such-git-program")
+        with tempfile.TemporaryDirectory(prefix="mahjong_tune_test_") as folder:
+            tune.check_log_path(Path(folder) / "log.jsonl", git="no-such-git-program")
+
+    def test_the_default_log_is_outside_the_repository(self) -> None:
+        self.assertFalse(tune.DEFAULT_LOG.is_relative_to(REPOSITORY))
+        self.assertEqual(tune.DEFAULT_LOG.parent, Path.home() / ".claude" / "plans" / "mahjong-tune")
+
+
+def paired_call(points, wins) -> dict:
+    """A stored call of A or C: each argument is `(mean, half)` or `(mean, half, significant)`; significant is `mean` outside the interval otherwise."""
+    def row(values):
+        mean, half = values[:2]
+        return {"half": half, "mean": mean, "significant": values[2] if len(values) > 2 else abs(mean) > half}
+    return {"hands": 4000, "points": row(points), "wallSeconds": 1.5, "wins": row(wins)}
+
+
+def own_call(points, wins) -> dict:
+    """A stored call of B: Normal's own rows, `(mean, half)`."""
+    return {"hands": 1000, "points": {"half": points[1], "mean": points[0]}, "wallSeconds": 1.5, "wins": {"half": wins[1], "mean": wins[0]}}
+
+
+def finished_log(folder: Path, generations: int = tune.TRAINING_GENERATIONS, name: str = "train.jsonl") -> Path:
+    """A `train` log of toy numbers: the new mean of generation g has `wShanten` 5000 + g, and the best monitored row is the first one."""
+    path = folder / name
+    header = {"candidates": 4, "exploreFirst": 4000, "kind": "header", "monitorSeeds": 10, "seed": 1, "seeds": 10,
+              "startWeights": tune.weights_dict(tune.start_weights()), "trainFirst": 200000, "weightNames": [weight.name for weight in tune.WEIGHTS]}
+    lines = [tune.log_line(header)]
+    for generation in range(generations):
+        new_mean = tune.weights_dict(tuple(5000 + generation if weight.name == "wShanten" else weight.start for weight in tune.WEIGHTS))
+        monitor = {"pairedPoints": {"half": 1.0, "mean": 9.0 - generation, "significant": True}}
+        lines.append(tune.log_line({"generation": generation, "kind": "generation", "monitor": monitor, "newMean": new_mean}))
+    path.write_text("".join(lines), encoding="utf-8")
+    return path
+
+
+class PoolTest(unittest.TestCase):
+    def test_the_pool_is_the_mean_of_the_means_and_the_root_of_the_squares_over_two(self) -> None:
+        pooled = tune.pool({"half": 3.0, "mean": 2.0}, {"half": 4.0, "mean": 3.0})
+        self.assertEqual((pooled["mean"], pooled["half"]), (2.5, 2.5))
+        negative = tune.pool({"half": 0.0, "mean": -4.0}, {"half": 0.0, "mean": 2.0})
+        self.assertEqual((negative["mean"], negative["half"]), (-1.0, 0.0))
+
+    def test_the_ranges_are_two_of_one_length(self) -> None:
+        self.assertEqual(tune.JUDGED_FIRSTS, (100000, 130000))
+        self.assertEqual(tune.JUDGED_SEEDS, 1000)
+        self.assertEqual(tune.JUDGED_RANGES[1][1] - tune.JUDGED_RANGES[1][0], tune.JUDGED_SEEDS)
+
+
+class JudgementTest(unittest.TestCase):
+    GOOD = (paired_call((3.0, 1.0), (2.0, 1.0)), paired_call((4.0, 1.0), (3.0, 1.0)))
+
+    def a(self, first, second):
+        return tune.judge_a((first, second))
+
+    def test_a_passes_when_both_ranges_are_significant_and_positive(self) -> None:
+        judgement = self.a(*self.GOOD)
+        self.assertTrue(judgement.passed)
+        self.assertEqual(judgement.failures, ())
+        self.assertEqual(judgement.pooled["points"]["mean"], 3.5)
+        self.assertEqual(judgement.pooled["wins"]["mean"], 2.5)
+
+    def test_a_fails_alone_on_a_range_that_is_not_significant(self) -> None:
+        for metric in ("points", "wins"):
+            for index in (0, 1):
+                calls = [dict(call) for call in self.GOOD]
+                calls[index] = {**calls[index], metric: {"half": 1.0, "mean": 3.0, "significant": False}}
+                judgement = self.a(*calls)
+                self.assertFalse(judgement.passed, (metric, index))
+                self.assertEqual(len(judgement.failures), 1)
+                self.assertIn("not significant", judgement.failures[0])
+
+    def test_a_fails_on_a_negative_mean_even_when_significant_and_the_pool_stays_positive(self) -> None:
+        negative = paired_call((-1.0, 0.5), (2.0, 1.0))
+        self.assertTrue(negative["points"]["significant"])
+        judgement = self.a(negative, paired_call((9.0, 1.0), (3.0, 1.0)))
+        self.assertFalse(judgement.passed)
+        self.assertGreater(judgement.pooled["points"]["mean"], 0)
+        self.assertEqual(len(judgement.failures), 1)
+        self.assertIn("not above 0", judgement.failures[0])
+
+    def test_a_fails_on_a_pooled_mean_at_or_below_0_of_two_significant_rows_of_opposite_sign(self) -> None:
+        judgement = self.a(paired_call((2.0, 0.5), (2.0, 0.5)), paired_call((-2.0, 0.5), (2.0, 0.5)))
+        self.assertFalse(judgement.passed)
+        self.assertEqual(judgement.pooled["points"]["mean"], 0.0)
+        self.assertTrue(any("pooled points" in text for text in judgement.failures))
+        self.assertFalse(any("pooled wins" in text for text in judgement.failures))
+
+    def test_a_fails_when_the_points_are_fine_and_the_wins_are_not(self) -> None:
+        judgement = self.a(paired_call((3.0, 1.0), (0.5, 1.0)), paired_call((4.0, 1.0), (0.4, 1.0)))
+        self.assertFalse(judgement.passed)
+        self.assertTrue(all("wins" in text for text in judgement.failures))
+        self.assertGreater(judgement.pooled["points"]["mean"], 0)
+
+    B_BOTH = (own_call((2.0, 3.0), (27.0, 3.0)), own_call((3.0, 4.0), (28.0, 4.0)))  # pooled: 2.5 +- 2.5 and 27.5 +- 2.5, both exactly on the line
+
+    def test_b_passes_when_the_pooled_interval_just_reaches_the_line_and_fails_a_hair_above(self) -> None:
+        self.assertTrue(tune.judge_b(self.B_BOTH).passed)
+        above_points = (own_call((2.0, 3.0), (27.0, 3.0)), own_call((3.0001, 4.0), (28.0, 4.0)))
+        judgement = tune.judge_b(above_points)
+        self.assertFalse(judgement.passed)
+        self.assertEqual(len(judgement.failures), 1)
+        self.assertIn("points", judgement.failures[0])
+        above_wins = (own_call((2.0, 3.0), (27.0, 3.0)), own_call((3.0, 4.0), (28.0001, 4.0)))
+        judgement = tune.judge_b(above_wins)
+        self.assertFalse(judgement.passed)
+        self.assertEqual(len(judgement.failures), 1)
+        self.assertIn("wins", judgement.failures[0])
+
+    def test_b_passes_when_normal_is_well_below_the_line(self) -> None:
+        self.assertTrue(tune.judge_b((own_call((-9.0, 1.0), (20.0, 1.0)), own_call((-8.0, 1.0), (19.0, 1.0)))).passed)
+
+    C_EDGE = (paired_call((-2.0, 3.0), (-3.0, 3.0)), paired_call((-3.0, 4.0), (-2.0, 4.0)))  # pooled: -2.5 +- 2.5 and -2.5 +- 2.5
+
+    def test_c_passes_when_the_pooled_interval_just_reaches_0_and_fails_below(self) -> None:
+        self.assertTrue(tune.judge_c(self.C_EDGE).passed)
+        points_below = (paired_call((-2.0, 3.0), (-3.0, 3.0)), paired_call((-3.0001, 4.0), (-2.0, 4.0)))
+        judgement = tune.judge_c(points_below)
+        self.assertEqual((judgement.passed, len(judgement.failures)), (False, 1))
+        self.assertIn("points", judgement.failures[0])
+        wins_below = (paired_call((-2.0, 3.0), (-3.0, 3.0)), paired_call((-3.0, 4.0), (-2.0001, 4.0)))
+        judgement = tune.judge_c(wins_below)
+        self.assertEqual((judgement.passed, len(judgement.failures)), (False, 1))
+        self.assertIn("wins", judgement.failures[0])
+
+    def test_c_is_not_made_to_fail_by_a_range_that_is_significantly_negative_alone(self) -> None:
+        self.assertTrue(tune.judge_c((paired_call((-6.0, 1.0), (1.0, 1.0)), paired_call((8.0, 1.0), (1.0, 1.0)))).passed)
+
+    def verdict_of(self, a, b, c) -> tuple:
+        results = (tune.judge_a(a), tune.judge_b(b), tune.judge_c(c))
+        return tune.verdict(results)
+
+    def test_the_verdict_is_stronger_only_when_all_three_pass(self) -> None:
+        failed_a = (paired_call((3.0, 1.0), (0.1, 1.0)),) * 2
+        failed_b = (own_call((9.0, 1.0), (30.0, 1.0)),) * 2
+        failed_c = (paired_call((-9.0, 1.0), (-9.0, 1.0)),) * 2
+        self.assertEqual(self.verdict_of(JudgementTest.GOOD, (own_call((-1.0, 1.0), (24.0, 1.0)),) * 2, self.C_EDGE), (True, "stronger than Normal"))
+        self.assertEqual(self.verdict_of(failed_a, (own_call((-1.0, 1.0), (24.0, 1.0)),) * 2, self.C_EDGE), (False, "not stronger than Normal (A failed)"))
+        self.assertEqual(self.verdict_of(JudgementTest.GOOD, failed_b, self.C_EDGE), (False, "not stronger than Normal (B failed)"))
+        self.assertEqual(self.verdict_of(JudgementTest.GOOD, (own_call((-1.0, 1.0), (24.0, 1.0)),) * 2, failed_c),
+                         (False, "not stronger than Normal (C failed)"))
+        self.assertEqual(self.verdict_of(failed_a, failed_b, failed_c), (False, "not stronger than Normal (A, B, C failed)"))
+
+
+class StoredCallTest(unittest.TestCase):
+    DOCUMENT = {
+        "handsPerFocus": 4000,
+        "focus": [
+            {"pointsPerHand": {"half": 1.5, "mean": 0.25}, "winPercent": {"half": 0.5, "mean": 26.0}, "paired": None},
+            {"pointsPerHand": {"half": 9.0, "mean": 9.0}, "winPercent": {"half": 9.0, "mean": 9.0},
+             "paired": {"pointsPerHand": {"half": 2.0, "mean": 3.0, "significant": True, "hasInterval": True},
+                        "winPercent": {"half": 0.75, "mean": 1.0, "significant": False, "hasInterval": True}}},
+        ],
+    }
+
+    def test_a_and_c_keep_the_paired_rows_of_the_tuned_seat(self) -> None:
+        for judgement in (tune.JUDGEMENT_A, tune.JUDGEMENT_C):
+            stored = tune.stored_call(judgement, self.DOCUMENT, 12.3456)
+            self.assertEqual(stored, {"hands": 8000, "points": {"half": 2.0, "mean": 3.0, "significant": True}, "wallSeconds": 12.346,
+                                      "wins": {"half": 0.75, "mean": 1.0, "significant": False}})
+
+    def test_b_keeps_normals_own_rows(self) -> None:
+        document = {**self.DOCUMENT, "focus": self.DOCUMENT["focus"][:1]}
+        self.assertEqual(tune.stored_call(tune.JUDGEMENT_B, document, 2.0),
+                         {"hands": 4000, "points": {"half": 1.5, "mean": 0.25}, "wallSeconds": 2.0, "wins": {"half": 0.5, "mean": 26.0}})
+
+
+class WeightsSourceTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+
+    def test_a_finished_log_gives_the_last_new_mean_not_the_best_monitored_one(self) -> None:
+        log = finished_log(self.temp)
+        weights = tune.weights_of_finished_log(log)
+        self.assertEqual(weights[0], 5000 + tune.TRAINING_GENERATIONS - 1)  # the best monitored row is generation 0 (+9)
+        self.assertEqual(weights[1:], tune.start_weights()[1:])
+        self.assertEqual(tune.weights_of_finished_log(finished_log(self.temp, 3, "three.jsonl"), 3)[0], 5002)
+
+    def test_an_unfinished_or_a_longer_log_is_refused(self) -> None:
+        for count in (0, 3, tune.TRAINING_GENERATIONS - 1, tune.TRAINING_GENERATIONS + 1):
+            with self.assertRaises(tune.TuneRefused, msg=count) as caught:
+                tune.weights_of_finished_log(finished_log(self.temp, count, f"log{count}.jsonl"))
+            self.assertIn("generations", str(caught.exception))
+
+    def test_a_log_that_is_not_a_train_log_is_refused(self) -> None:
+        log = finished_log(self.temp)
+        lines = log.read_text(encoding="utf-8").splitlines(keepends=True)
+        header = json.loads(lines[0])
+        header["weightNames"] = header["weightNames"][:-1]
+        log.write_text(tune.log_line(header) + "".join(lines[1:]), encoding="utf-8")
+        with self.assertRaises(tune.TuneRefused):
+            tune.weights_of_finished_log(log)
+        log.write_text("".join(lines[1:]), encoding="utf-8")  # no header
+        with self.assertRaises(tune.TuneError):
+            tune.weights_of_finished_log(log)
+        with self.assertRaises(tune.TuneError):
+            tune.weights_of_finished_log(self.temp / "missing.jsonl")
+
+    def option(self, **changes) -> str:
+        values = {weight.name: weight.start for weight in tune.WEIGHTS}
+        values.update(changes)
+        return ",".join(f"{name}={value}" for name, value in values.items() if value is not None)
+
+    def test_the_weights_option_takes_every_name_once(self) -> None:
+        self.assertEqual(tune.weights_from_option(self.option()), tune.start_weights())
+        self.assertEqual(tune.weights_from_option(self.option(wShanten=0, wKeep=tune.WEIGHT_MAX))[:3], (0, tune.start_weights()[1], tune.WEIGHT_MAX))
+        shuffled = ",".join(reversed(self.option().split(",")))
+        self.assertEqual(tune.weights_from_option(shuffled), tune.start_weights())
+
+    def test_the_weights_option_refuses_a_missing_a_doubled_an_unknown_or_an_out_of_range_name(self) -> None:
+        refused = [self.option(wSafe=None), self.option() + ",wSafe=1", self.option() + ",wLuck=1", self.option(wSafe=tune.WEIGHT_MAX + 1),
+                   self.option(wSafe=-1), self.option(wSafe="x"), self.option(wSafe=""), "", "wSafe", self.option() + ",", self.option(wSafe="1.5")]
+        for text in refused:
+            with self.assertRaises(tune.TuneRefused, msg=text):
+                tune.weights_from_option(text)
+
+
+class LedgerTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+        self.spec = tune.weights_spec(tune.start_weights())
+
+    def test_a_missing_ledger_is_empty_and_a_round_trip_keeps_the_entries(self) -> None:
+        path = self.temp / "deeper" / "judged.json"
+        self.assertEqual(tune.read_ledger(path)["entries"], {})
+        key = tune.ledger_key(self.spec, "A", 100000, 1000)
+        entry = paired_call((1.0, 0.5), (0.25, 0.5))
+        tune.write_ledger(path, tune.with_entry(tune.read_ledger(path), key, entry))
+        self.assertEqual(tune.read_ledger(path)["entries"], {key: entry})
+        self.assertFalse(path.with_name(path.name + ".tmp").exists())
+
+    def test_the_key_differs_by_spec_call_and_range(self) -> None:
+        base = tune.ledger_key(self.spec, "A", 100000, 1000)
+        others = [tune.ledger_key(self.spec.replace("wKeep=1", "wKeep=2"), "A", 100000, 1000), tune.ledger_key(self.spec, "B", 100000, 1000),
+                  tune.ledger_key(self.spec, "A", 130000, 1000), tune.ledger_key(self.spec, "A", 100000, 999)]
+        self.assertEqual(len({base, *others}), 5)
+
+    def test_an_entry_is_never_replaced(self) -> None:
+        key = tune.ledger_key(self.spec, "A", 100000, 1000)
+        ledger = tune.with_entry(tune.empty_ledger(), key, {"hands": 1})
+        with self.assertRaises(tune.TuneError):
+            tune.with_entry(ledger, key, {"hands": 2})
+        self.assertEqual(ledger["entries"][key], {"hands": 1})
+        self.assertEqual(tune.empty_ledger()["entries"], {})  # `with_entry` made a new one
+
+    def test_a_ledger_of_another_format_or_version_is_refused(self) -> None:
+        path = self.temp / "judged.json"
+        for text in ('{"entries": {}, "format": "other", "version": 1}', '{"entries": {}, "format": "%s", "version": 2}' % tune.LEDGER_FORMAT):
+            path.write_text(text, encoding="utf-8")
+            with self.assertRaises(tune.TuneRefused):
+                tune.read_ledger(path)
+        for text in ("{broken", "[]", "{}"):
+            path.write_text(text, encoding="utf-8")
+            with self.assertRaises(tune.TuneError):
+                tune.read_ledger(path)
+
+    def test_a_half_written_temp_file_is_not_the_ledger(self) -> None:
+        path = self.temp / "judged.json"
+        path.with_name("judged.json.tmp").write_text('{"entries": {"x": 1', encoding="utf-8")
+        self.assertEqual(tune.read_ledger(path)["entries"], {})
+        key = tune.ledger_key(self.spec, "C", 130000, 1000)
+        tune.write_ledger(path, tune.with_entry(tune.empty_ledger(), key, {"hands": 3}))
+        self.assertEqual(tune.read_ledger(path)["entries"], {key: {"hands": 3}})
+        path.with_name("judged.json.tmp").write_text("{garbage", encoding="utf-8")
+        self.assertEqual(tune.read_ledger(path)["entries"], {key: {"hands": 3}})  # the old ledger stays readable beside a stale temp
+
+    @SKIP_ON_WINDOWS
+    def test_a_ledger_inside_a_git_work_tree_is_refused_and_not_written(self) -> None:
+        path = REPOSITORY / "logs" / "judged-test-never-created.json"
+        with self.assertRaises(tune.TuneRefused):
+            tune.write_ledger(path, tune.empty_ledger())
+        self.assertFalse(path.exists())
+        self.assertFalse(path.with_name(path.name + ".tmp").exists())
+
+
+@SKIP_ON_WINDOWS
+class JudgeTest(unittest.TestCase):
+    """`judge` against a fake arena that answers each of the six calls with the toy row of the config (by judgement and first seed)."""
+
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+        self.weights = tuple(weight.start + 1 for weight in tune.WEIGHTS)
+        self.spec = tune.weights_spec(self.weights)
+        self.config_path, self.calls_path, self.ledger = self.temp / "config.json", self.temp / "calls.jsonl", self.temp / "judged.json"
+        self.arena = self.temp / "arena.py"
+        self.arena.write_text(JUDGE_ARENA.format(python=sys.executable, config=str(self.config_path), calls=str(self.calls_path)), encoding="utf-8")
+        self.arena.chmod(self.arena.stat().st_mode | stat.S_IXUSR)
+        self.set_outcome()
+
+    # rows are [mean, half, significant] for A and C, [mean, half] for B
+    STRONGER = {"A:100000": {"points": [3.0, 1.0, True], "wins": [2.0, 1.0, True]}, "A:130000": {"points": [4.0, 1.0, True], "wins": [3.0, 1.0, True]},
+                "B:100000": {"points": [-1.0, 1.0], "wins": [24.0, 1.0]}, "B:130000": {"points": [-2.0, 1.0], "wins": [23.0, 1.0]},
+                "C:100000": {"points": [5.0, 1.0, True], "wins": [4.0, 1.0, True]}, "C:130000": {"points": [6.0, 1.0, True], "wins": [5.0, 1.0, True]}}
+
+    def set_outcome(self, changes: dict = None, **config) -> None:
+        calls = {**self.STRONGER, **(changes or {})}
+        self.config_path.write_text(json.dumps({"calls": calls, **config}), encoding="utf-8")
+
+    def judge(self, *extra: str, weights: str = None) -> tuple:
+        source = ["--weights", weights or ",".join(f"{weight.name}={value}" for weight, value in zip(tune.WEIGHTS, self.weights))]
+        return run_main("judge", *source, "--arena", str(self.arena), "--ledger", str(self.ledger), "--jobs", "1", *extra)
+
+    def calls(self) -> list:
+        if not self.calls_path.exists():
+            return []
+        result = []
+        for line in self.calls_path.read_text(encoding="utf-8").splitlines():
+            argv = json.loads(line)
+            result.append({argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i].startswith("--")} | {"json": argv[-1] == "--json"})
+        return result
+
+    def test_six_calls_and_the_verdict_stronger(self) -> None:
+        code, out, err = self.judge()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(self.calls()), 6)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], f"weights: {self.spec}")
+        self.assertEqual(lines[-1], "verdict: stronger than Normal")
+        self.assertEqual(sum(1 for line in lines if " passes" in line), 3)
+        self.assertEqual(sum(1 for line in lines if line.startswith(("A ", "B ", "C ")) and "first" in line), 6)
+        self.assertIn("pooled points +3.50 +- 0.71", out)
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 6)
+
+    def test_every_call_is_the_one_the_rule_describes(self) -> None:
+        self.judge()
+        normal, other = "normal", self.spec
+        expected = []
+        for focus, others in (([normal, other], normal), ([normal], other), ([normal, other], "random")):
+            for first in (100000, 130000):
+                expected.append({"--focus": ",".join(focus), "--others": others, "--first": str(first), "--seeds": "1000", "--jobs": "1", "json": True})
+        self.assertEqual(self.calls(), expected)
+        self.assertIn(",", self.calls()[2]["--others"])  # a spec with commas is one value of --others
+
+    def test_a_weaker_outcome_names_what_failed_and_still_plays_all_six(self) -> None:
+        self.set_outcome({"B:100000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]}, "B:130000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]}})
+        code, out, _ = self.judge()
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.calls()), 6)
+        self.assertIn("B seats turned: pooled points +9.00 +- 0.71, wins % +30.00 +- 0.71: fails: ", out)
+        self.assertEqual(out.splitlines()[-1], "verdict: not stronger than Normal (B failed)")
+
+    def test_a_failed_a_does_not_skip_b_and_c_and_c_can_pass_beside_it(self) -> None:
+        self.set_outcome({"A:100000": {"points": [3.0, 5.0, False], "wins": [2.0, 1.0, True]}})
+        code, out, _ = self.judge()
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.calls()), 6)
+        self.assertEqual(out.splitlines()[-1], "verdict: not stronger than Normal (A failed)")
+        self.assertIn(": pooled points +5.50 +- 0.71, wins % +4.50 +- 0.71: passes", out)
+        self.assertIn("A against Normal: ", out)
+
+    def test_all_three_can_fail(self) -> None:
+        bad = {"A:100000": {"points": [-3.0, 1.0, True], "wins": [-2.0, 1.0, True]}, "A:130000": {"points": [-3.0, 1.0, True], "wins": [-2.0, 1.0, True]},
+               "B:100000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]}, "B:130000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]},
+               "C:100000": {"points": [-9.0, 1.0, True], "wins": [-9.0, 1.0, True]}, "C:130000": {"points": [-9.0, 1.0, True], "wins": [-9.0, 1.0, True]}}
+        self.set_outcome(bad)
+        _, out, _ = self.judge()
+        self.assertEqual(out.splitlines()[-1], "verdict: not stronger than Normal (A, B, C failed)")
+
+    def test_a_second_judge_plays_nothing_and_prints_the_same_bytes(self) -> None:
+        _, first, _ = self.judge()
+        ledger_before = self.ledger.read_bytes()
+        self.calls_path.unlink()
+        self.set_outcome({"A:100000": {"points": [-50.0, 1.0, True], "wins": [-50.0, 1.0, True]}})  # what the arena says now must not matter
+        code, second, _ = self.judge()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.calls(), [])
+        self.assertEqual(second, first)
+        self.assertEqual(self.ledger.read_bytes(), ledger_before)
+
+    def test_a_ledger_with_three_entries_plays_the_other_three(self) -> None:
+        self.set_outcome(failKeys=["B:130000"])
+        code, out, err = self.judge()
+        self.assertEqual(code, 1)
+        self.assertIn("the arena failed (exit 1)", err)
+        self.assertNotIn("verdict", out)
+        self.assertEqual(len(self.calls()), 4)  # A, A, B, and the B that failed
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 3)  # the failed call has no entry
+        self.calls_path.unlink()
+        self.set_outcome()
+        code, out, err = self.judge()
+        self.assertEqual(code, 0, err)
+        self.assertEqual([call["--first"] for call in self.calls()], ["130000", "100000", "130000"])
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 6)
+        self.assertEqual(out.splitlines()[-1], "verdict: stronger than Normal")
+
+    def test_another_spec_has_its_own_six(self) -> None:
+        self.judge()
+        other = ",".join(f"{weight.name}={weight.start + 2}" for weight in tune.WEIGHTS)
+        code, _, err = self.judge(weights=other)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(self.calls()), 12)
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 12)
+
+    def test_the_weights_of_a_finished_log_are_judged(self) -> None:
+        log = finished_log(self.temp)
+        code, out, err = run_main("judge", "--from-log", str(log), "--arena", str(self.arena), "--ledger", str(self.ledger), "--jobs", "1")
+        self.assertEqual(code, 0, err)
+        last = tune.weights_of_finished_log(log)
+        self.assertEqual(out.splitlines()[0], f"weights: {tune.weights_spec(last)}")
+        self.assertEqual(len(self.calls()), 6)
+
+    def test_an_unfinished_log_or_both_sources_or_a_bad_weights_option_are_refused_before_any_call(self) -> None:
+        unfinished = finished_log(self.temp, 4, "unfinished.jsonl")
+        for arguments in (("--from-log", str(unfinished)), ("--from-log", str(unfinished), "--weights", "wShanten=1"), ("--weights", "wShanten=1"),
+                          ("--weights", "wShanten=1,wShanten=2")):
+            code, _, err = run_main("judge", *arguments, "--arena", str(self.arena), "--ledger", str(self.ledger))
+            self.assertEqual(code, 2, arguments)
+            self.assertTrue(err, arguments)
+        self.assertEqual(self.calls(), [])
+        self.assertFalse(self.ledger.exists())
+
+    def test_the_ranges_are_not_options(self) -> None:
+        for option in (("--first", "4000"), ("--seeds", "5")):
+            code, _, err = self.judge(*option)
+            self.assertEqual(code, 2)
+            self.assertIn("unrecognized arguments", err)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_ledger_inside_a_git_work_tree_is_refused_before_any_call(self) -> None:
+        self.ledger = REPOSITORY / "logs" / "judged-test-never-created.json"
+        code, _, err = self.judge()
+        self.assertEqual(code, 2)
+        self.assertIn("git work tree", err)
+        self.assertEqual(self.calls(), [])
+        self.assertFalse(self.ledger.exists())
+
+    def test_a_ledger_of_another_version_is_refused_before_any_call(self) -> None:
+        self.ledger.write_text(json.dumps({"entries": {}, "format": tune.LEDGER_FORMAT, "version": 99}), encoding="utf-8")
+        code, _, err = self.judge()
+        self.assertEqual(code, 2)
+        self.assertIn("version", err)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_missing_arena_is_a_failure_with_nothing_stored(self) -> None:
+        code, _, err = run_main("judge", "--weights", ",".join(f"{weight.name}={weight.start}" for weight in tune.WEIGHTS),
+                                "--arena", str(self.temp / "nothing-here"), "--ledger", str(self.ledger))
+        self.assertEqual(code, 1)
+        self.assertIn("cannot run the arena", err)
+        self.assertFalse(self.ledger.exists())
+
+    def test_train_still_refuses_the_judged_ranges(self) -> None:
+        code, _, err = run_main("train", "--seed", "1", "--candidates", "4", "--seeds", "10", "--train-first", "100000",
+                                "--log", str(self.temp / "train.jsonl"), "--arena", str(self.arena))
+        self.assertEqual(code, 2)
+        self.assertIn("200000", err)
+        self.assertEqual(self.calls(), [])
+
+
+@SKIP_ON_WINDOWS
+class TrainTest(unittest.TestCase):
+    CANDIDATES = 12
+    SEEDS = 40
+    MONITOR_SEEDS = 60
+
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+        self.start = tune.start_weights()
+        # The optimum is a factor of about 3 away in the big weights and well above 0 in the weights that start at 0.
+        self.target = tuple(40 if weight.start == 0 else round(weight.start * 2.7) for weight in tune.WEIGHTS)
+        self.config_path = self.temp / "config.json"
+        self.set_config(**DEFAULT_CONFIG)
+        self.calls_path = self.temp / "calls.jsonl"
+        self.arena = self.temp / "arena.py"
+        self.arena.write_text(FAKE_ARENA.format(python=sys.executable, config=str(self.config_path), calls=str(self.calls_path),
+                                                names=[weight.name for weight in tune.WEIGHTS], start=list(self.start)), encoding="utf-8")
+        self.arena.chmod(self.arena.stat().st_mode | stat.S_IXUSR)
+
+    def set_config(self, **config) -> None:
+        self.config_path.write_text(json.dumps({"target": list(self.target), **config}), encoding="utf-8")
+
+    def train(self, log: Path, *extra: str, seed: int = 7, generations: int = 6, candidates: int = None) -> tuple:
+        return run_main("train", "--arena", str(self.arena), "--log", str(log), "--seed", str(seed), "--candidates", str(candidates or self.CANDIDATES),
+                        "--seeds", str(self.SEEDS), "--monitor-seeds", str(self.MONITOR_SEEDS), "--generations", str(generations), "--jobs", "1", *extra)
+
+    def calls(self) -> list:
+        if not self.calls_path.exists():
+            return []
+        calls = []
+        for line in self.calls_path.read_text(encoding="utf-8").splitlines():
+            argv = json.loads(line)
+            call = {argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i] != "--json" and argv[i].startswith("--")}
+            call["--json"] = argv[-1] == "--json"
+            calls.append(call)
+        return calls
+
+    def test_the_tuner_climbs_the_noisy_objective(self) -> None:
+        log = self.temp / "climb.jsonl"
+        code, out, err = self.train(log, generations=12)
+        self.assertEqual((code, err), (0, ""), out)
+        records = read_records(log)
+        self.assertEqual(records[0]["kind"], "header")
+        self.assertEqual(len(records), 13)
+        final = tune.weights_from_dict(records[-1]["newMean"])
+        self.assertGreater(true_value(final, self.target), true_value(self.start, self.target) + 10.0)
+        # the curve the monitoring reports says the same
+        self.assertGreater(records[-1]["monitor"]["pairedPoints"]["mean"], 1.0)
+        self.assertEqual(records[0]["startMonitor"]["pairedPoints"]["mean"], 0)
+
+    def test_the_record_of_a_generation_holds_what_the_doc_promises(self) -> None:
+        log = self.temp / "record.jsonl"
+        self.train(log, generations=1)
+        header, record = read_records(log)
+        self.assertEqual(header["weightNames"], [weight.name for weight in tune.WEIGHTS])
+        for key in ("baseline", "candidates", "elite", "first", "generation", "hands", "mean", "monitor", "mu", "newMean", "seeds", "sigma", "tie",
+                    "wallSeconds"):
+            self.assertIn(key, record)
+        self.assertEqual(record["mean"], tune.weights_dict(self.start))
+        self.assertEqual(len(record["candidates"]), self.CANDIDATES)
+        self.assertEqual(len(record["elite"]), 3)
+        self.assertEqual(record["hands"], (1 + self.CANDIDATES) * 4 * self.SEEDS + 2 * 4 * self.MONITOR_SEEDS)
+        self.assertEqual(set(record["monitor"]["pairedPoints"]), {"mean", "half", "significant"})
+        self.assertEqual(record["elite"], tune.elite_indices([c["pairedPoints"]["mean"] for c in record["candidates"]]))
+        self.assertEqual(self.log_keys_sorted(log), True)
+
+    def log_keys_sorted(self, log: Path) -> bool:
+        return all(tune.log_line(json.loads(line)) == line + "\n" for line in log.read_text(encoding="utf-8").splitlines())
+
+    def test_the_same_seed_gives_the_same_log_and_another_seed_another(self) -> None:
+        one, two, other = (self.temp / name for name in ("one.jsonl", "two.jsonl", "other.jsonl"))
+        self.train(one, generations=3)
+        self.train(two, generations=3)
+        self.train(other, generations=3, seed=8)
+        self.assertEqual(without_wall_seconds(one), without_wall_seconds(two))
+        self.assertNotEqual(without_wall_seconds(one), without_wall_seconds(other))
+
+    def test_a_resumed_run_equals_an_uninterrupted_one(self) -> None:
+        whole, parts = self.temp / "whole.jsonl", self.temp / "parts.jsonl"
+        self.assertEqual(self.train(whole, generations=5)[0], 0)
+        self.assertEqual(self.train(parts, generations=2)[0], 0)
+        code, out, err = self.train(parts, "--resume", generations=5)
+        self.assertEqual((code, err), (0, ""), out)
+        self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
+        code, out, _ = self.train(parts, "--resume", generations=5)  # nothing left to do
+        self.assertEqual(code, 0)
+        self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
+
+    def plateau_config(self) -> None:
+        """Two dead weights and a ball around Normal inside which the objective is flat: many candidates are twins, a few escape."""
+        names = [weight.name for weight in tune.WEIGHTS]
+        self.set_config(**DEFAULT_CONFIG, dead=[names.index("wClaimWall"), names.index("wClaimRank")], plateau=5.0)
+
+    def test_a_candidate_that_differs_only_in_a_dead_weight_is_a_twin_of_the_mean(self) -> None:
+        self.plateau_config()
+        log = self.temp / "dead.jsonl"
+        self.train(log, generations=1)
+        _, record = read_records(log)
+        names = [weight.name for weight in tune.WEIGHTS]
+        dead = [names.index("wClaimWall"), names.index("wClaimRank")]
+        mean = tune.weights_from_dict(record["mean"])
+        for candidate in record["candidates"]:
+            weights = tune.weights_from_dict(candidate["weights"])
+            only_dead = all(w == m for index, (w, m) in enumerate(zip(weights, mean)) if index not in dead)
+            if only_dead:
+                self.assertEqual((candidate["pairedPoints"]["mean"], candidate["pairedPoints"]["half"]), (0, 0), candidate)
+            self.assertEqual(tune.is_twin(candidate["pairedPoints"]), candidate["pairedPoints"]["half"] == 0 and candidate["pairedPoints"]["mean"] == 0)
+
+    def test_the_tuner_leaves_the_plateau_and_a_tie_generation_leaves_the_mean_alone(self) -> None:
+        self.plateau_config()
+        log = self.temp / "plateau.jsonl"
+        code, out, err = self.train(log, generations=12, candidates=16)
+        self.assertEqual((code, err), (0, ""), out)
+        records = read_records(log)[1:]
+        ties = [record for record in records if record["tie"]]
+        self.assertTrue(ties, "the toy has to produce a tie generation for this case to mean anything")
+        self.assertIn("tie generation", out)
+        previous = None
+        for record in records:
+            self.assertIsInstance(record["tie"], bool)
+            if record["tie"]:
+                self.assertEqual(record["elite"], [])
+                cells = [candidate["pairedPoints"] for candidate in record["candidates"]]
+                self.assertTrue(tune.is_tie_generation(cells, tune.elite_indices([cell["mean"] for cell in cells])))
+                if previous is not None:
+                    self.assertEqual(record["mu"], previous["mu"])
+            else:
+                self.assertEqual(len(record["elite"]), 4)
+                cells = [candidate["pairedPoints"] for candidate in record["candidates"]]
+                self.assertFalse(tune.is_tie_generation(cells, record["elite"]))
+            previous = record
+        final = tune.weights_from_dict(records[-1]["newMean"])
+        self.assertGreater(true_value(final, self.target), true_value(self.start, self.target) + 1.0)
+        self.assertNotEqual(records[-1]["mu"], {weight.name: round(math.log1p(weight.start), tune.STATE_DIGITS) for weight in tune.WEIGHTS})
+
+    def test_a_resumed_run_equals_an_uninterrupted_one_with_tie_generations_in_it(self) -> None:
+        self.plateau_config()
+        whole, parts = self.temp / "whole.jsonl", self.temp / "parts.jsonl"
+        self.assertEqual(self.train(whole, generations=8, candidates=16)[0], 0)
+        ties = [record["generation"] for record in read_records(whole)[1:] if record["tie"]]
+        self.assertTrue(ties and ties[0] < 6, ties)
+        self.assertEqual(self.train(parts, generations=ties[0] + 1, candidates=16)[0], 0)  # stops right after a tie generation
+        self.assertTrue(read_records(parts)[-1]["tie"])
+        code, out, err = self.train(parts, "--resume", generations=8, candidates=16)
+        self.assertEqual((code, err), (0, ""), out)
+        self.assertEqual(without_wall_seconds(parts), without_wall_seconds(whole))
+
+    def test_every_call_of_the_arena_is_a_legal_one(self) -> None:
+        log = self.temp / "legal.jsonl"
+        self.train(log, generations=4)
+        calls = self.calls()
+        self.assertEqual(len(calls), 1 + 4 * 2)  # the start's monitoring, then a training and a monitoring call a generation
+        trained, ranges = [], []
+        mean = tune.weights_spec(self.start)
+        for call in calls:
+            first, seeds = int(call["--first"]), int(call["--seeds"])
+            ranges.append((first, first + seeds))
+            self.assertTrue(call["--json"])
+            if call["--others"] == "normal":  # a monitoring call
+                self.assertEqual(first, 4000)
+                self.assertLessEqual(seeds, 1000)
+                self.assertTrue(call["--focus"].startswith("normal,normal:weighted=1,"))
+            else:
+                self.assertGreaterEqual(first, 200000)
+                trained.append((first, first + seeds))
+                self.assertTrue(call["--focus"].startswith(call["--others"] + ","))
+                self.assertEqual(call["--others"].count(","), len(tune.WEIGHTS))
+                self.assertEqual(len(call["--focus"].split("normal:weighted=1")) - 1, 1 + self.CANDIDATES)
+            for judged in (DECISION_RANGE, CONFIRMATION_RANGE):
+                self.assertFalse(first < judged[1] and judged[0] < first + seeds, (first, seeds))
+        self.assertEqual(len(trained), 4)
+        self.assertEqual(len(set(trained)), 4)
+        for left, right in zip(sorted(trained), sorted(trained)[1:]):
+            self.assertLessEqual(left[1], right[0])  # no overlap
+        self.assertEqual(calls[1]["--others"], mean)  # generation 0 plays the start weights as the mean
+
+    def test_a_judged_range_is_refused_through_the_command_line(self) -> None:
+        log = self.temp / "refused.jsonl"
+        code, _, err = self.train(log, "--train-first", "100000")
+        self.assertEqual(code, 2)
+        self.assertIn("200000", err)
+        code, _, err = self.train(log, "--explore-first", "100000")
+        self.assertEqual(code, 2)
+        self.assertIn("[4000, 5000)", err)
+        code, _, err = self.train(log, "--train-first", "99000", generations=1)
+        self.assertEqual(code, 2)
+        self.assertFalse(log.exists())
+        self.assertEqual(self.calls(), [])
+
+    def test_a_log_inside_the_repository_is_refused_before_anything_is_made(self) -> None:
+        log = REPOSITORY / "tune-test-never-created" / "log.jsonl"
+        code, _, err = self.train(log)
+        self.assertEqual(code, 2)
+        self.assertIn("git work tree", err)
+        self.assertFalse(log.parent.exists())
+        self.assertEqual(self.calls(), [])
+
+    def test_a_tilde_in_the_log_is_expanded_once_for_the_guard_and_the_files(self) -> None:
+        home = self.temp / "home"
+        home.mkdir()
+        with mock.patch.dict(os.environ, {"HOME": str(home), "USERPROFILE": str(home)}):
+            code, _, err = self.train(Path("~") / "kept" / "log.jsonl", generations=1)
+        self.assertEqual(code, 0, err)
+        self.assertTrue((home / "kept" / "log.jsonl").is_file())
+        self.assertFalse((Path.cwd() / "~").exists())
+        self.assertFalse((REPOSITORY / "~").exists())
+
+    def test_a_tilde_that_leads_into_the_repository_is_refused(self) -> None:
+        home = REPOSITORY / "tune-test-never-created-home"
+        with mock.patch.dict(os.environ, {"HOME": str(home), "USERPROFILE": str(home)}):
+            code, _, err = self.train(Path("~") / "log.jsonl")
+        self.assertEqual(code, 2)
+        self.assertIn("git work tree", err)
+        self.assertFalse(home.exists())
+        self.assertEqual(self.calls(), [])
+
+    def test_an_existing_log_is_never_overwritten(self) -> None:
+        log = self.temp / "exists.jsonl"
+        log.write_text("keep me\n", encoding="utf-8")
+        code, _, err = self.train(log)
+        self.assertEqual(code, 2)
+        self.assertIn("--resume", err)
+        self.assertEqual(log.read_text(encoding="utf-8"), "keep me\n")
+
+    def test_resume_of_a_missing_log_is_refused(self) -> None:
+        code, _, err = self.train(self.temp / "missing.jsonl", "--resume")
+        self.assertEqual(code, 2)
+        self.assertIn("does not exist", err)
+
+    def test_a_resume_with_other_options_says_which(self) -> None:
+        log = self.temp / "mismatch.jsonl"
+        self.train(log, generations=1)
+        before = log.read_text(encoding="utf-8")
+        code, _, err = self.train(log, "--resume", seed=99)
+        self.assertEqual(code, 2)
+        self.assertIn("seed", err)
+        code, _, err = self.train(log, "--resume", candidates=5)
+        self.assertEqual(code, 2)
+        self.assertIn("candidates", err)
+        code, _, err = self.train(log, "--resume", "--train-first", "300000")
+        self.assertEqual(code, 2)
+        self.assertIn("trainFirst", err)
+        self.assertEqual(log.read_text(encoding="utf-8"), before)
+
+    def test_start_weights_that_are_not_normal_stop_the_run_with_its_message(self) -> None:
+        self.set_config(normal=[weight + 1 for weight in self.start], **DEFAULT_CONFIG)
+        log = self.temp / "notnormal.jsonl"
+        code, _, err = self.train(log)
+        self.assertEqual(code, 1)
+        self.assertIn("the start weights are not Normal's", err)
+        self.assertFalse(log.exists())
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_an_arena_that_fails_stops_without_a_partial_line(self) -> None:
+        for config in ({"failOnCall": 1}, {"garbageOnCall": 1}, {"failOnCall": 2}, {"garbageOnCall": 2}):
+            with self.subTest(config):
+                self.calls_path.unlink(missing_ok=True)
+                self.set_config(**DEFAULT_CONFIG, **config)
+                log = self.temp / ("fail%s.jsonl" % json.dumps(config).replace(" ", ""))
+                code, _, err = self.train(log, generations=3)
+                self.assertEqual(code, 1)
+                self.assertTrue(("fake arena fails" in err) or ("cannot read" in err), err)
+                lines = log.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(len(lines), 1)  # the header only: no line of the generation that did not finish
+                self.assertEqual(json.loads(lines[0])["kind"], "header")
+
+    def test_a_failing_start_call_leaves_no_log(self) -> None:
+        self.set_config(**DEFAULT_CONFIG, failOnCall=0)
+        log = self.temp / "nostart.jsonl"
+        code, _, err = self.train(log)
+        self.assertEqual(code, 1)
+        self.assertIn("the arena failed (exit 1)", err)
+        self.assertFalse(log.exists())
+
+    def test_a_missing_arena_is_a_failure_not_a_crash(self) -> None:
+        code, _, err = run_main("train", "--arena", str(self.temp / "nothing-here"), "--log", str(self.temp / "x.jsonl"), "--seed", "1",
+                                "--candidates", "4", "--seeds", "10")
+        self.assertEqual(code, 1)
+        self.assertIn("cannot run the arena", err)
+
+    def test_max_seconds_stops_before_a_generation_that_would_not_fit(self) -> None:
+        log = self.temp / "budget.jsonl"
+        code, out, _ = self.train(log, "--max-seconds", "0")
+        self.assertEqual(code, 0)
+        self.assertIn("stopped before generation 0", out)
+        self.assertEqual([record["kind"] for record in read_records(log)], ["header"])
+        calls_after_header = len(self.calls())
+        self.assertEqual(calls_after_header, 1)  # the start's monitoring only
+        code, out, _ = self.train(log, "--resume", generations=2)  # and it goes on from there
+        self.assertEqual(code, 0)
+        self.assertEqual([record["kind"] for record in read_records(log)], ["header", "generation", "generation"])
+
+    def test_a_clock_decides_the_stop_by_the_last_generation(self) -> None:
+        log = self.temp / "clock.jsonl"
+        ticks = iter(range(0, 10000, 10))  # every look at the clock is 10 s later
+        options = tune.TrainOptions(arena=self.arena, log=log, seed=3, candidates=4, seeds=10, generations=50, monitor_seeds=20, train_first=200000,
+                                    explore_first=4000, jobs=1, max_seconds=95.0, resume=False)
+        out = io.StringIO()
+        self.assertEqual(tune.train(options, clock=lambda: next(ticks), out=out), 0)
+        done = len(read_records(log)) - 1
+        self.assertTrue(1 <= done < 50, out.getvalue())
+        self.assertIn("stopped before generation %d" % done, out.getvalue())
+
+    def test_the_log_is_read_back_by_the_tuner_itself(self) -> None:
+        log = self.temp / "readback.jsonl"
+        self.train(log, generations=2)
+        header, generations = tune.read_log(log)
+        self.assertEqual(len(generations), 2)
+        self.assertEqual(tune.mean_weights(tune.state_of_record(generations[0])), tune.weights_from_dict(generations[0]["newMean"]))
+        self.assertEqual(tune.weights_from_dict(generations[1]["mean"]), tune.weights_from_dict(generations[0]["newMean"]))
+        log.write_text(log.read_text(encoding="utf-8") + "{broken\n", encoding="utf-8")
+        with self.assertRaises(tune.TuneError):
+            tune.read_log(log)
+
+    def test_the_tool_runs_as_a_program(self) -> None:
+        result = subprocess.run([sys.executable, str(REPOSITORY / "tools" / "mahjong_tune.py"), "train", "--seed", "1", "--candidates", "4", "--seeds", "10",
+                                 "--log", str(REPOSITORY / "tune-test-never-created.jsonl")], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("git work tree", result.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

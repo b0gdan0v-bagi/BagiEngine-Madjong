@@ -262,6 +262,8 @@ hand and of wins % is significant and positive and the pooled (mean of the two) 
 "not significantly above". All runs below are Release, `--jobs 14`, `A=build/macos-release/bin/BagiMahjongArena`, on a machine shared with
 other sessions (the wall times are indicative).
 
+The weights tuned by self-play (`docs/bot-weights.md`) were judged by this rule on these two ranges and are **not stronger than Normal**: more points a hand, no more wins ("The judged run (stage 4)" there).
+
 ### Levels 1..5 against three Normal seats (step 1: the scale today)
 
 ```bash

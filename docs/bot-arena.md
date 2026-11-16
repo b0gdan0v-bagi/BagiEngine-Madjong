@@ -31,7 +31,9 @@ build/macos-release/bin/BagiMahjongArena --help
 
 Each preset builds into its own `build/<preset>/bin/`, so the Release arena and the Debug `MahjongTests` live side by side. Run the arena in Release: a Debug
 build is much slower. The program is not part of `ctest`; the library it is made of (`src/Mahjong/Arena/`) is tested by
-`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
+`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaReportJsonTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
+
+The weights of the weighted player are tuned by self-play with `python3 tools/mahjong_tune.py train`, which drives this program through `--json` (the method, its budget and the pilot: `docs/bot-weights.md`), and `judge` plays the three judged calls of the final weights once (the verdict, "not stronger than Normal", is in "The judged run (stage 4)" there).
 
 Commands (`A` is `build/macos-release/bin/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
 
@@ -42,11 +44,12 @@ A --focus normal,easy --others random --seeds 1000                 # several pla
 A --focus normal,normal:skipClaimPercent=20 --others normal        # a profile with knobs against the plain Normal
 A --focus normal --seeds 100 --time                                # add the time per decision
 A --focus normal,normal:searchWorlds=8 --others normal --seeds 1000 --jobs 0   # all the cores, the same bytes as --jobs 1
+A --focus normal,normal:weighted=1 --others normal --seeds 20 --json   # the report as one JSON document
 A --table-stats --first 4000 --seeds 1000 --jobs 14                # the table constants of the own-draws value (below)
 ```
 
 Options: `--focus LIST` (default `normal`), `--others SPEC` (default `random`), `--first N` (default 4000), `--seeds COUNT` (default 250: 1000
-hands per focus player), `--jobs N` (default 1; see below), `--time`, `--table-stats`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
+hands per focus player), `--jobs N` (default 1; see below), `--time`, `--json`, `--table-stats`, `--help`. `--json` prints the report as one JSON document and a newline instead of the text (the numbers of the text with six decimals; the schema is in `ArenaReportJson.h`; not with `--time`, `--logs`, `--check`, `--differences`, `--table-stats`). Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
 printed), 2 is a bad argument (printed with the usage).
 
 **Threads.** `--jobs N` is N threads in all (1 to 256; `--jobs 0` is one thread per core, the hardware concurrency). The seeds come first: a seed is played whole by
@@ -62,7 +65,7 @@ over-counts when the threads contend (shared cores, efficiency cores), so the De
 (`docs/bot-search.md`) is not read from a `--jobs 14` run.
 
 A player is `random`, a level `1` .. `10` (`easy` and `normal` are the names of 1 and 5), or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
-`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` `waitingKongByPoints` (0 or 1, on in Normal: a waiting hand weighs a kong that keeps its wait by points, `ComputerClaim.h`) and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the own-draws knobs, `ownDrawsDepth`, `ownDrawsPickWait`, `ownDrawsDiscardWins`, `ownDrawsClaimDepth` and `ownDrawsDeclareDepth`, are rated in `docs/own-draws-ev.md`) and the three knobs of
+`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` `waitingKongByPoints` (0 or 1, on in Normal: a waiting hand weighs a kong that keeps its wait by points, `ComputerClaim.h`) and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the own-draws knobs, `ownDrawsDepth`, `ownDrawsPickWait`, `ownDrawsDiscardWins`, `ownDrawsClaimDepth` and `ownDrawsDeclareDepth`, are rated in `docs/own-draws-ev.md`), the twelve of the weighted player (`weighted` 0 or 1, the ten weights `wShanten`, `wAcceptance`, `wKeep`, `wSafe`, `wClaimRank`, `wClaimValue`, `wClaimMargin`, `wClaimWall`, `wValueDiscard` and `wValueClaim`, each 0..65535, and `weightedValueDepth`, 0..`kOwnDrawsMaxDepth`: the horizon of the two value weights, read only when one is above 0; their defaults play as Normal: `docs/bot-weights.md`) and the three knobs of
 the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (0..12, default 4) and `searchMargin` (0..100 tenths of a standard
 error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
 plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes about 49 s on 20 seeds in Debug (one thread). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
