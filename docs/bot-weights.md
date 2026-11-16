@@ -335,7 +335,7 @@ more judgements, each read on the pooled interval of the two ranges:
   and 25 %;
 - **against three random seats**: the tuned player is not significantly worse than Normal, paired.
 
-The record says how each came out; a failed one makes the verdict "not stronger", whatever the first says. Only a verdict "stronger
+The record says how each came out; a failed one makes the verdict "not stronger", whatever the first says. `tools/mahjong_tune.py judge` applies the rule as numbers, the only place the judged ranges are played, once per weights (its ledger). **A** passes when on each range the paired points and wins are significant (the report's flag) and above 0, and the pooled mean of each is above 0; **B** when Normal's pooled `mean - half` is at most 0 for points a hand and at most 25 for wins %; **C** when the pooled `mean + half` of the paired points and of the paired wins is at least 0. Only a verdict "stronger
 than Normal" makes the weights a named profile (`kTunedProfile`, the arena player `tuned`, stage 4); which levels take them is the
 owner's decision.
 
