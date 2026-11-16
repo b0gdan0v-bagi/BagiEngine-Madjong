@@ -4,7 +4,8 @@ The entry `mahjong-selfplay-weight-tuning` asks whether a computer player whose 
 with the weights tuned by self-play in the bot arena (`docs/bot-arena.md`), beats Normal, whose order (shanten, then acceptance, then
 keep value) was set by hand. It is built in four stages, one slice each; this page is the record, written in the order of the work:
 the policy and the method **before any run**, the numbers after. Stage 1 (this section's code) delivers the family and its cost and
-no run of a tuner; the tuner, the training and the judged run are stages 2 to 4 and fill the sections marked so.
+no run of a tuner. Stage 2 adds the report (`--json`), the tuner and a pilot run of it ("The pilot"); the training and the judged run are
+stages 3 and 4.
 
 The code is `src/Mahjong/Game/ComputerWeights.{h,cpp}`, called from `ChooseDiscard` (`ComputerTurn.cpp`) and `DecideClaim`
 (`ComputerClaim.cpp`) only when `LevelProfile::weighted` is on; the weights and their defaults are in `ComputerLevel.h`. **No level
@@ -84,7 +85,7 @@ rank is in `C`, so the gate has to clear the rank too. Where this could not be e
 - **The weights that are judged** are the last generation's mean, rounded, fixed by this rule before the judged run: never the best
   generation by a monitored number.
 
-## The method (stage 2 fills the numbers)
+## The method
 
 **Cross-entropy (CEM), not SPSA.** One generation is one arena call: the current mean is the first focus player and N sampled
 candidates follow it, **all three other seats the current mean** (self-play, as Suphx trains); the first focus player is the
@@ -99,9 +100,107 @@ per weight with no step-size schedule to tune. SPSA's gain and perturbation sequ
 scale-ragged objective makes fragile, and it uses two cheap evaluations a step where a population is robust against the noise of one
 candidate.
 
-The budget (candidates, seeds a generation, generations) is sized from "Cost" below and written here by stages 2 and 3 before the
-run it is for. The pilot (stage 2) and the training (stage 3) record their curve and weights in this section; the numbers of
-stage 1 do not tune anything.
+**The tool and its numbers** (`tools/mahjong_tune.py train`, standard library only; the contract is in `tools/CLAUDE.md`). The
+coordinates are the eight weights of `WEIGHTS` (the Normal-equivalent defaults above, maximum `kWeightMax`). A candidate is
+`w = clamp(round(expm1(mu + sigma * gauss)), 0, 65535)` per weight; the start is `mu = log1p(default)` with `sigma` 0.5, and 2.0 for
+a weight whose default is 0 (`log1p(6)`; its samples below 0 become 0). The candidate's own `x = log1p(w)` is that of what was
+**played**, rounded and clamped. The elite are the best `ceil(N / 4)` by paired points a hand (ties by index) and the update is
+`mu' = (1 - a) mu + a mean(x_elite)`, `sigma' = max(0.05, (1 - a) sigma + a std(x_elite))` with `a` 0.5. The stream of a generation is
+`random.Random(seed * 1000003 + g)`, so a resume needs only the state of the last generation.
+
+**One generation is two arena calls.** Training: `--focus <mean>,<c1>,..,<cN> --others <mean> --first <200000 + g * seeds> --seeds
+<seeds> --jobs 0 --json` (the mean first: the baseline of the paired rows; every other seat the mean). Monitoring: `--focus
+normal,<new mean> --others normal --first 4000 --seeds <monitor seeds> --json`, read as the paired row of the new mean against
+Normal on the exploration range (it is looked at and **never used to choose**: the update reads the training call only). Before
+generation 0 the start mean is monitored once and must score exactly 0 on points and wins, else the tool stops ("the start weights
+are not Normal's"): a check that the weighted path with the defaults is Normal's.
+
+**The guards** refuse a run, never clamp it: a training seed below 200000, an exploration range outside `[4000, 5000)`, any range
+that touches the decision (`100000`) or confirmation (`130000`) range, an overflow of the 32-bit seed, a log inside a git work tree
+(even a git-ignored place), an existing log without `--resume`, a resume whose header (seed, candidates, seeds, ranges, weights)
+differs. The log is JSONL outside the repository (`~/.claude/plans/mahjong-tune/`): a header, then one record a generation (the
+weights played, every candidate's paired points and wins, the elite, the new mean, `mu`, `sigma`, the monitoring row, hands,
+`wallSeconds`); everything but `wallSeconds` is a function of the seed and the arena's answers, and a resumed run writes the same
+bytes as an uninterrupted one.
+
+**To repeat a run**: the same command line (below) with the same arena build. The seed and the options fix the log; the arena's
+`--json` bytes are the same at any `--jobs`.
+
+### The budget of the pilot (written before the pilot ran)
+
+The pilot is a smoke of the method, not a result: it asks whether the loop runs and what its curve looks like. At most 10 minutes of
+wall time in one foreground command; the tool stops before a generation that would end after 480 s, so the overrun of one generation
+stays under 600 s.
+
+- **Cost probe**, Release arena, `--jobs 0`, 2026-11-16, Apple M4 Pro, 14 logical cores, **load average about 90 from the other workers
+  of the todo loop** (the numbers are dearer than a quiet machine's, and so is the pilot's wall time per hand): one generation with
+  250 seeds and the monitoring call of 250 seeds took 16.3 s with 8 candidates (11000 hands) and 28.1 s with 16 candidates (19000
+  hands), 675 hands a second both times. That is about 0.7 times the 1000 hands a second of "Cost" below: all four seats are
+  weighted here, and the machine was loaded.
+- **Chosen**: 16 candidates, 250 seeds a generation (17 players x 1000 hands = 17000 hands), monitor seeds 250 (the start mean and the
+  new mean, 2 x 1000 hands), tool seed 7, `--generations 20`, `--max-seconds 480`. A generation is 19000 hands, about 28 s; the start
+  monitoring is 2000 hands, about 3 s. The time stop (480 s) leaves room for about **16 generations** (3 s + 16 x 28 s = 451 s;
+  one more would end after 480 s), 304000 hands plus 2000. `--generations 20` is only a ceiling that the time stop is expected to
+  reach first.
+- **The command**:
+  `python3 tools/mahjong_tune.py train --arena build/macos-release/bin/BagiMahjongArena --log ~/.claude/plans/mahjong-tune/pilot.jsonl
+  --seed 7 --candidates 16 --seeds 250 --monitor-seeds 250 --generations 20 --max-seconds 480 --jobs 0`.
+- A monitoring row of 250 seeds is 1000 hands: its half-width is about 1 to 2 points a hand and 0.2 to 0.6 wins %, so a curve is
+  readable only when the move is a few points; this is the noise the pilot is to show.
+
+### The pilot (stage 2; a smoke of the method, not a result)
+
+Run 2026-11-16 with the command of the budget above, one foreground command, the log
+`~/.claude/plans/mahjong-tune/pilot.jsonl` (outside the repository, as every output of the run). The machine was the one of the probe
+(load average 80 to 180 from the other workers; a 8 s run of the tuner's Python test overlapped it once): 474 s wall time, **18
+generations** (the budget said about 16: the generations took 19.7 to 36.5 s, 26.3 s on average, against the probe's 28 s, so two more
+fitted), 344000 hands (the start monitoring 2000 plus 18 x 19000), the tool stopped by `--max-seconds` before generation 18, as it
+should, with exit 0. The budget above was not edited.
+
+The curve: the mean of each generation against three Normal seats on the exploration range `[4000, 4250)` (1000 hands), paired points
+a hand and wins %, with the half-widths of the log; `significant` is the log's flag on either.
+
+| g | points a hand | wins % | significant | mean: wShanten wAcceptance wKeep wSafe wClaimRank wClaimValue wClaimMargin wClaimWall |
+|---|---|---|---|---|
+| 0 | -0.32 +- 2.07 | +0.0 +- 0.6 | no | 4864 14 1 1 1 5440 1540 1 |
+| 1 | -0.32 +- 2.07 | +0.0 +- 0.6 | no | 5060 13 1 1 1 5227 1421 1 |
+| 2 | -1.13 +- 2.27 | -0.1 +- 0.7 | no | 4536 13 1 1 0 5360 1414 3 |
+| 3 | -1.13 +- 2.27 | -0.1 +- 0.7 | no | 4601 14 1 1 0 5911 1437 3 |
+| 4 | -1.13 +- 2.27 | -0.1 +- 0.7 | no | 4614 15 1 1 0 6001 1530 3 |
+| 5 | -0.81 +- 0.86 | -0.1 +- 0.2 | no | 4615 15 1 0 0 5546 1502 2 |
+| 6 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 4563 14 1 0 1 5381 1389 1 |
+| 7 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 4437 13 1 0 1 5464 1484 1 |
+| 8 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 3993 13 1 0 1 5565 1410 2 |
+| 9 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 3923 13 1 0 1 5526 1534 2 |
+| 10 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 3885 13 1 0 1 5477 1556 2 |
+| 11 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 3618 13 1 0 1 5611 1549 2 |
+| 12 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 3761 13 1 0 1 5552 1488 2 |
+| 13 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 3943 13 1 0 1 5634 1482 2 |
+| 14 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 4195 13 1 0 1 5533 1430 2 |
+| 15 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 4155 13 1 0 1 5441 1508 2 |
+| 16 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 4201 13 1 0 1 5554 1485 3 |
+| 17 | +0.00 +- 0.00 | +0.0 +- 0.0 | no | 4410 13 1 0 1 5615 1482 2 |
+
+- **The last mean** (generation 17; the weights stage 4 would judge by the rule if this were the final run): `wShanten` 4410,
+  `wAcceptance` 13, `wKeep` 1, `wSafe` 0, `wClaimRank` 1, `wClaimValue` 5615, `wClaimMargin` 1482, `wClaimWall` 2.
+- **Best monitored mean so far**, a record only (nothing is chosen on the exploration range): +0.00 points and +0.0 wins %, first
+  at generation 6 and the same on every later one; no monitored mean was above Normal.
+- **What the curve shows.** Nothing above noise: the first six rows are within their half-widths of 0 (the 1000 hands of a row give
+  about +-1 to 2 points), and from generation 6 on the row is **exactly** Normal's (half-width 0): the mean plays the very same hands as
+  Normal. It is not a result and not a sign of learning, and it points at the method, not at the weights:
+  - **The objective is piecewise constant.** A play depends on the order the weights give, not on their values. The last mean has
+    `wAcceptance` 13 above the keep span (3) and `wShanten` above the acceptance span (136 x 13 = 1768), so its discards are Normal's,
+    and its claim gate (1482) is above what an acceptance gain alone reaches in practice. Different weights (rows 0 and 1) give the same
+    1000 hands.
+  - **The search collapses onto that plateau.** All 16 candidates scored exactly 0 against the mean at generation 8 and from 10 on
+    (14 of 16 at generation 7, 15 at 9, 6 or fewer before 6), and then the elite are the first four by index (the tie rule), which
+    carries no information, and the spread falls to the floor on the small weights (`wKeep`, `wSafe` 0.05) while the large ones drift. Large
+    moves of the early generations (a candidate at -46 points a hand) were rejected, the plateau around Normal was kept: this is what a
+    method that finds Normal's ordering again looks like, and it found nothing better in 18 generations of 16.
+  - **What this means for stage 3 and the training.** A generation whose candidates all tie says nothing: stage 3 decides what to
+    do with a tie (skip the update, keep the spread, widen it) and whether the start should be Normal itself or a point off the
+    plateau; the values and the noise (a row of 250 seeds cannot show a difference below about 1 point a hand; the candidates' own
+    half-widths were about 0.5 to 2 while they differed) are the facts it starts from. The method was not changed after the pilot.
 
 ## The verdict rule (fixed before any run)
 
@@ -142,5 +241,5 @@ real generation.
 
 ## Not done by this stage
 
-The JSON report and the tuner (stage 2), the own-draws value as a feature (stage 3), the judged run, any named constant and any
-change of a level (stage 4).
+The own-draws value as a feature and the training (stage 3), the judged run, any named constant and any change of a level (stage 4).
+`judge`, the verdict of the weights against the decision and confirmation ranges, does not exist yet.
