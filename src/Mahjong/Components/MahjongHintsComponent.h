@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BECore/Scene/IComponent.h>
+#include <BECore/Scene/Components/PointerTargetComponent.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/HintCard.h>
 
@@ -8,10 +8,6 @@ namespace BECore {
 
     namespace InputEvents {
         struct ActionEvent;
-    }
-
-    namespace SDLEvents {
-        struct MouseButtonDownEvent;
     }
 
 }  // namespace BECore
@@ -45,15 +41,16 @@ namespace BECore::Mahjong {
      * computers' turns (they move within a second of the person's action). The card is published only when what it says moved (`CardKey`) and
      * every variable of it is emptied when it goes down. The component only reads the ledger and clears it. **It never acts:** it performs no
      * action, moves no version and the control API does not know it.
+     *
+     * **The pointer.** The component is a `PointerTargetComponent` with the whole output window as its shape, on the node `Hints`, which
+     * is above the table, so it is asked first and only watches: a press clears a shown note or takes the advice down when it is on the card,
+     * and a press or a motion is never taken, so both go on to the table (and to a canvas above, which took them before).
      */
-    class MahjongHintsComponent : public IComponent {
+    class MahjongHintsComponent : public PointerTargetComponent {
         BE_CLASS(MahjongHintsComponent)
     public:
         MahjongHintsComponent() = default;
         ~MahjongHintsComponent() override;
-
-        void OnAttached() override;
-        void OnDraw() override;
 
         static MahjongHintsComponent* GetActive() noexcept {
             return s_active;
@@ -69,9 +66,14 @@ namespace BECore::Mahjong {
         /// display hand lists no action, so in a room `legal` is the server's list and nothing else; none while the link is down.
         [[nodiscard]] static TableView ViewOf(const MahjongGame& game, Seat viewer);
 
+    protected:
+        void OnTargetAttached() override;
+        void OnTargetDraw() override;
+        bool OnPointerPress(const PointerEvent& event) override;
+        bool OnPointerMove(const PointerEvent& event) override;
+
     private:
         void OnAction(const InputEvents::ActionEvent& event);
-        void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
         static void PublishChoice(const MahjongGame& game);
 
         /// What the hints depend on: when it is equal to the last frame's, nothing needs to be worked out again.

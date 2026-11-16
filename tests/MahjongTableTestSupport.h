@@ -12,6 +12,7 @@
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Games/GameManager.h>
+#include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
@@ -501,13 +502,13 @@ namespace BECore::Mahjong::Tests {
             _game->GetSession().MarkChanged();  // as a move would: what the components keep by the version is made again
         }
 
-        /// Whether `handler` is the table, the one pointer target of the scene's own that takes a press.
+        /// Whether `handler` is the table or the hints: the two pointer targets of the scene's own, which a press passes through to the table.
         bool IsOwnPointerTarget(const IUIInputHandler* handler) const {
-            return handler != nullptr && (handler == static_cast<const IUIInputHandler*>(_table));
+            return handler != nullptr && (handler == static_cast<const IUIInputHandler*>(_table) || handler == static_cast<const IUIInputHandler*>(MahjongHintsComponent::GetActive()));
         }
 
         /// A left click (press and release) at a point of the view through the engine's input path: a canvas above the table that takes it
-        /// consumes it, otherwise it reaches the table. True when a handler other than the table took the press.
+        /// consumes it, otherwise it reaches the table. True when a handler other than the table and the hints took the press.
         bool Click(float x, float y, SDL_MouseID which = 0) {
             UIInput& input = CoreManager::GetUIInput();
             const bool dispatched = input.DispatchMouseButtonDown(MouseButton(x, y, true, which));
