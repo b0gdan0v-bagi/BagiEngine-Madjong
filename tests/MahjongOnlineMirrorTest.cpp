@@ -344,6 +344,35 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(MahjongOnlineMirrorTest, ATableMadeByHandWithHugeCountsGivesACopyBoundedByTheSet) {
+        MahjongSeatedGame game = Started(kSeed);
+        OnlineTable table = ReadTable(game, 0);
+        constexpr int kHuge = std::numeric_limits<int>::max();
+        for (OnlineSeat& seat : table.seats) {
+            seat.concealedCount = kHuge;
+            seat.concealedKongs = kHuge;
+            seat.discardCount = kHuge;
+        }
+        table.wall = kHuge;
+        const DisplayState state = MakeDisplayState(table, MakeLobby());
+        EXPECT_LE(state.hand.live.size(), static_cast<size_t>(kViewMaxPile));
+        EXPECT_LE(state.hand.loose.size(), kLooseTiles);
+        size_t tiles = state.hand.live.size() + state.hand.loose.size() + state.hand.dead.size() + state.hand.discards.size();
+        for (const PlayerHand& hand : state.hand.hands) {
+            EXPECT_LE(hand.concealed.size(), static_cast<size_t>(kViewMaxConcealed));
+            EXPECT_LE(hand.melds.size(), static_cast<size_t>(kViewMaxMelds + table.seats[0].melds.size()));
+            EXPECT_LE(hand.discardCount, kViewMaxPile);
+            tiles += hand.concealed.size();
+        }
+        EXPECT_LE(tiles, static_cast<size_t>(kViewMaxPile + kSeatCount * kViewMaxConcealed + kDeadWallTiles)) << "a copy never holds more than the set, the dead wall and the hands";
+
+        Vector<Meld> melds;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            DisplayMelds(table, seat, melds);
+            EXPECT_LE(melds.size(), static_cast<size_t>(kViewMaxMelds) + table.seats[static_cast<size_t>(seat)].melds.size());
+        }
+    }
+
     TEST(MahjongOnlineMirrorTest, TheActorIsTheViewerWhenItHasActionsElseTheSeatTheHandWaitsFor) {
         MahjongSeatedGame game = Started(kSeed);
         const Seat mover = game.GetMatch().Hand().CurrentSeat();

@@ -19,7 +19,8 @@ namespace BECore::Mahjong {
      * difference. A payment involving `east` is multiplied by `kEastPaymentFactor`. The result is zero-sum. A `winner` that is no seat
      * (`kNoSeat`, a drawn hand) gives all zeros.
      *
-     * The amounts are `int`: with a sane limit (`LimitCap`) they do not overflow.
+     * The amounts are `int`: a score is at most `LimitCap(limit)` and a playable match has `limit <= kMaxLimit` (`IsPlayable`), so a
+     * seat's change is at most (`kSeatCount` - 1) x `kEastPaymentFactor` x `LimitCap(kMaxLimit)`; a larger limit is not checked here.
      */
     [[nodiscard]] SeatScores Settle(const SeatScores& rounded, Seat winner, Seat east);
 

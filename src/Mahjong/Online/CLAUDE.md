@@ -20,7 +20,7 @@
 
 | File | Purpose |
 |------|---------|
-| `OnlineTable.h/.cpp` | `ListHandActions` (the hand actions of `actions`, no `next_hand`: the `legal` of the viewer's `TableView`); `ReadOnlineView(view, actions, out, scratch)`: the server's `view` and `actions` (untrusted JSON, checked helpers) into plain data with the game's value types; errors name the key; `out` is touched only on success, and both tables keep their lists' capacity |
+| `OnlineTable.h/.cpp` | `ListHandActions` (the hand actions of `actions`, no `next_hand`: the `legal` of the viewer's `TableView`); `ReadOnlineView(view, actions, out, scratch)`: the server's `view` and `actions` (untrusted JSON, checked helpers) into plain data with the game's value types; errors name the key; `out` is touched only on success, and both tables keep their lists' capacity. It also refuses what a table of the rules cannot hold (`kViewMax*`: counts and lists over a hand, a set or a pile, `handsTotal` not 8 or 16, no acting seat in a running hand, a win on a discard without the tile in the winner's hand); a good server never sends these, so the format number stays |
 | `OnlineWords.h/.cpp` | every code the client can meet (`kKnownOnlineCodes`) with its key in `config/UIStrings.xml` (`online.*`); several codes share a key where the player can do nothing different; `stale_action` alone is silent |
 | `OnlineClient.h/.cpp` | the model, and `SessionToJson` / `SessionFromJson` |
 | `TextEntry.h/.cpp` | one bounded text (a room code or a name), its pad of keys, `CharFromKeycode` |
@@ -38,7 +38,7 @@
 
 ## The display copy
 
-The online table is drawn by the scene components of the local game, which read `Match` / `HandModel` / `TableSession`. So `MakeDisplayState(OnlineTable, OnlineLobby)` turns a view into the arguments of `HandModel::ForDisplay`, `Match::ShowRemote` and `TableSession::ShowRemote` (`Game/CLAUDE.md`, "Display copies") and `ShowOnlineTable` puts them in. **Not `Restore`:** a client does not know the other hands or the wall (so the counts never add up) nor the claims of the other seats, and `Restore` refuses such a state; a display model is read, never played.
+The online table is drawn by the scene components of the local game, which read `Match` / `HandModel` / `TableSession`. So `MakeDisplayState(OnlineTable, OnlineLobby)` turns a view into the arguments of `HandModel::ForDisplay`, `Match::ShowRemote` and `TableSession::ShowRemote` (`Game/CLAUDE.md`, "Display copies") and `ShowOnlineTable` puts them in. The counts of the table are clamped by the same `kViewMax*`, so a table made by hand, not read, never makes a copy bigger than a set. **Not `Restore`:** a client does not know the other hands or the wall (so the counts never add up) nor the claims of the other seats, and `Restore` refuses such a state; a display model is read, never played.
 
 - **Real:** the own concealed tiles and melds, open melds, bonus tiles, the pile, scores, turn, winds (from `east`), and, once the hand is over, all four hands and the result. **Invalid tiles:** the other hands, their concealed kongs (a `Kong` meld after the open ones), the live wall, the reserve and the dead wall. The reserve is derived from the tile count, so `Remaining()` (the wall ring) equals the model's.
 - **Claim window:** the own seat is `Waiting` when `actions` lists a claim or a pass, else `Passed`; the others `Passed` (a view does not say), no `LastClaimWindow`.

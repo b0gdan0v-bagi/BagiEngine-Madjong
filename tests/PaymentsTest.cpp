@@ -15,6 +15,9 @@ namespace BECore::Mahjong::Tests {
         constexpr int kWorkedSeat2Delta = -160;
         constexpr int kWorkedSeat3Delta = -280;
 
+        // The largest score a playable match has (`kMaxLimit`), written out: the settlements below are the most a seat can move by.
+        constexpr int kLargestScore = 1'000'000;
+
         // Scores in steps of the rounding, to try every shape of table.
         constexpr int kScoreSteps[] = {0, 10, 30, 130, 500};
 
@@ -25,6 +28,20 @@ namespace BECore::Mahjong::Tests {
         }
 
     }  // namespace
+
+    TEST(PaymentsTest, TheLargestSettlementsAreSixTimesTheLargestScoreAndZeroSum) {
+        // East wins with the largest score, the others have none: three payments of twice the score.
+        const SeatScores eastWins = Settle({kLargestScore, 0, 0, 0}, kSeat0, kSeat0);
+        ExpectDeltas(eastWins, {6 * kLargestScore, -2 * kLargestScore, -2 * kLargestScore, -2 * kLargestScore});
+
+        // East loses to seat 1 and scored nothing while seats 2 and 3 scored the most: East pays the winner and both gaps, doubled.
+        const SeatScores eastLoses = Settle({0, kLargestScore, kLargestScore, kLargestScore}, kSeat1, kSeat0);
+        ExpectDeltas(eastLoses, {-6 * kLargestScore, 4 * kLargestScore, kLargestScore, kLargestScore});
+
+        for (const SeatScores& deltas : {eastWins, eastLoses}) {
+            EXPECT_EQ(Sum(deltas), 0);
+        }
+    }
 
     TEST(PaymentsTest, TheWorkedPayment) {
         const SeatScores scores = {kWorkedEastScore, kWorkedWinnerScore, kWorkedSeat2Score, kWorkedSeat3Score};

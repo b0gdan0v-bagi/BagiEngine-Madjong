@@ -825,6 +825,9 @@ namespace BECore::Mahjong {
             if (line.find_first_not_of(" \t\r") == StringView::npos) {
                 continue;
             }
+            if (IsJsonNestedDeeperThan(line, kMaxJsonNesting)) {
+                return std::unexpected(Format("line {}: nested deeper than {} levels", lineNumber, kMaxJsonNesting));
+            }
             const std::expected<Json, ControlError> parsed = ParseJson(line);
             if (!parsed) {
                 return std::unexpected(Format("line {}: not JSON: {}", lineNumber, parsed.error().message));

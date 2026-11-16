@@ -422,6 +422,24 @@ namespace BECore::Mahjong::Tests {
         bad[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
         cases.push_back({"bad settings", bad, 0, ReplayProblem::BadSettings});
 
+        // A start beyond the bounds of the rules: the text reads (the reader keeps any int), the resume refuses at the start event.
+        constexpr int kIntMax = std::numeric_limits<int>::max();
+        Vector<MatchLogEvent> hugeScore = WithoutHandsAndEnd(whole);
+        hugeScore[0].settings.startingScore = kIntMax;
+        cases.push_back({"starting score beyond the bound", hugeScore, 0, ReplayProblem::BadSettings});
+        Vector<MatchLogEvent> hugeLimit = WithoutHandsAndEnd(whole);
+        hugeLimit[0].settings.limit = kIntMax;
+        cases.push_back({"limit beyond the bound", hugeLimit, 0, ReplayProblem::BadSettings});
+        Vector<MatchLogEvent> hugePosition = WithoutHandsAndEnd(whole);
+        hugePosition[0].state = MakeSamplePosition();
+        hugePosition[0].state->scores[1] = kIntMax;
+        cases.push_back({"position score beyond the bound", hugePosition, 0, ReplayProblem::BadState});
+        for (const Vector<MatchLogEvent>* huge : {&hugeScore, &hugeLimit, &hugePosition}) {
+            const auto parsed = ParseMatchSaveText(MatchSaveText(*huge));
+            ASSERT_TRUE(parsed.has_value()) << (parsed ? "" : parsed.error().c_str());
+            EXPECT_EQ(*parsed, *huge);
+        }
+
         for (const Case& refused : cases) {
             Busy busy;
             const String before = busy.State();
@@ -930,6 +948,25 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(MatchSaveText(resumed.log.Events()) == text) << where;
             }
         }
+    }
+
+    TEST(MahjongSaveTest, ASessionNestedTooDeepIsRefusedAndANormalOneStillReads) {
+        RoomSession session;
+        session.url = "ws://localhost:8080";
+        session.room = "K7M4Q";
+        session.token = "00112233445566778899aabbccddeeff";
+        const MahjongOnlineSave good = MakeOnlineSave("Ann", session);
+        const auto read = ReadOnline(good);
+        ASSERT_TRUE(read.has_value()) << read.error().c_str();
+        EXPECT_TRUE(read->session.IsValid());
+
+        const size_t deep = 10000;
+        MahjongOnlineSave bomb = good;
+        bomb.session.assign(deep, '[');
+        bomb.session.append(deep, ']');
+        const auto refused = ReadOnline(bomb);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_NE(refused.error().find("nested"), String::npos) << refused.error().c_str();
     }
 
 }  // namespace BECore::Mahjong::Tests

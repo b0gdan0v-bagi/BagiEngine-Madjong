@@ -188,21 +188,26 @@ namespace BECore::Mahjong {
         }
 
         /// The index of the last copy of `tile` in the sorted `concealed` tiles: `AddConcealed` sorts equal tiles together and the tile added
-        /// last, a drawn or a won one, is the last of them.
+        /// last, a drawn or a won one, is the last of them. -1 when the tile is not there: a room's result is data, and a view that
+        /// lacks the winning tile of its winner is read all the same.
         int LastCopyIndex(const Vector<Tile>& concealed, Tile tile) {
             for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
                 if (concealed[static_cast<size_t>(i)] == tile) {
                     return i;
                 }
             }
-            ASSERT(false, "LastCopyIndex: the tile is not in the concealed tiles");
             return -1;
         }
 
         /// The index, in the concealed tiles of `seat`, of the tile it has just drawn; -1 when it drew none.
         int DrawnIndexOf(const HandModel& hand, Seat seat) {
             const Tile drawn = hand.DrawnTile(seat);
-            return drawn.IsValid() ? LastCopyIndex(hand.GetHand(seat).concealed, drawn) : -1;
+            if (!drawn.IsValid()) {
+                return -1;
+            }
+            const int index = LastCopyIndex(hand.GetHand(seat).concealed, drawn);
+            ASSERT(index >= 0, "DrawnIndexOf: the drawn tile of a hand is among its concealed tiles");
+            return index;
         }
 
         /// The entry of the pile that is the last move (a discard nobody has claimed yet); -1 when the last move is something else.

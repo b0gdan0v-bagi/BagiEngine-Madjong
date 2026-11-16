@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Mahjong/Game/HandModel.h>
+#include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/PlayerHand.h>
 #include <Mahjong/Game/Seats.h>
@@ -9,6 +10,14 @@
 #include <Mahjong/MahjongGameControl.h>
 
 namespace BECore::Mahjong {
+
+    /// What a table of the rules can hold, which is what a view may claim (`ReadOnlineView` refuses more, `MakeDisplayState` never
+    /// allocates more): a hand has at most a winning hand's tiles and four sets, the wall and the pile at most the set without bonus
+    /// tiles (a room plays without them), a seat at most all bonus tiles.
+    inline constexpr int kViewMaxConcealed = kWinningHandTiles;
+    inline constexpr int kViewMaxMelds = kSetsInHand;
+    inline constexpr int kViewMaxBonus = kBonusCount;
+    inline constexpr int kViewMaxPile = kKindCount * kCopiesPerTile;
 
     /// One entry of `seats`. The own seat lists its concealed kongs among `melds` (`concealed`), the others only count them.
     struct OnlineSeat {

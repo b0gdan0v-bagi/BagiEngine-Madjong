@@ -4,9 +4,13 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// A room never offers flowers, so the set has no bonus tiles.
-        constexpr int kSetTiles = kKindCount * kCopiesPerTile;
+        /// The set of a room has no bonus tiles (it never offers flowers): `kViewMaxPile` tiles.
         constexpr int kKongTileCount = 4;
+
+        /// A count of a table made by hand, not read (`ReadOnlineView` refuses these), cannot make a copy bigger than the rules' own.
+        int Bounded(int count, int most) {
+            return eastl::clamp(count, 0, most);
+        }
 
         int MeldTileCount(const Meld& meld) {
             return meld.kind == MeldKind::Kong ? kKongTileCount : kTilesPerSet;
@@ -47,7 +51,7 @@ namespace BECore::Mahjong {
                 out.push_back(Normalized(meld));
             }
             if (seat != table.seat) {
-                for (int kong = 0; kong < shown.concealedKongs; ++kong) {
+                for (int kong = 0; kong < Bounded(shown.concealedKongs, kViewMaxMelds); ++kong) {
                     out.push_back(HiddenKong());
                 }
             }
@@ -121,14 +125,14 @@ namespace BECore::Mahjong {
                 if (seat == table.seat) {
                     tiles.concealed.assign(table.hand.begin(), table.hand.end());
                 } else {
-                    tiles.concealed.assign(static_cast<size_t>(eastl::max(shown.concealedCount, 0)), Tile{});
+                    tiles.concealed.assign(static_cast<size_t>(Bounded(shown.concealedCount, kViewMaxConcealed)), Tile{});
                 }
                 tiles.bonus.assign(shown.bonus.begin(), shown.bonus.end());
             }
             MeldsOf(table, seat, tiles.melds);
             tiles.callingDeclared = shown.calling;
-            tiles.discardCount = shown.discardCount;
-            tiles.callingAtDiscardCount = shown.discardCount;
+            tiles.discardCount = Bounded(shown.discardCount, kViewMaxPile);
+            tiles.callingAtDiscardCount = tiles.discardCount;
         }
 
         hand.discards.assign(table.discards.begin(), table.discards.end());
@@ -165,8 +169,8 @@ namespace BECore::Mahjong {
         hand.lastWindow.reset();
         hand.windowSerial = 0;
 
-        const int live = eastl::max(table.wall, 0);
-        const int reserve = eastl::clamp(kSetTiles - TilesOutsideTheWall(out, table) - live - static_cast<int>(kDeadWallTiles), 0, static_cast<int>(kLooseTiles));
+        const int live = Bounded(table.wall, kViewMaxPile);
+        const int reserve = eastl::clamp(kViewMaxPile - TilesOutsideTheWall(out, table) - live - static_cast<int>(kDeadWallTiles), 0, static_cast<int>(kLooseTiles));
         hand.live.assign(static_cast<size_t>(live), Tile{});
         hand.loose.assign(static_cast<size_t>(reserve), Tile{});
         hand.dead.assign(kDeadWallTiles, Tile{});

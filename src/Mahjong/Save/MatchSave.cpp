@@ -207,7 +207,11 @@ namespace BECore::Mahjong {
             values.name = save.name;
         }
         if (!save.session.empty()) {
-            const std::expected<Json, ControlError> parsed = ParseJson(StringView(save.session.c_str(), save.session.size()));
+            const StringView text(save.session.c_str(), save.session.size());
+            if (IsJsonNestedDeeperThan(text, kMaxJsonNesting)) {
+                return std::unexpected(String("the session is nested too deep"));
+            }
+            const std::expected<Json, ControlError> parsed = ParseJson(text);
             if (!parsed) {
                 return std::unexpected(String("the session is not JSON"));
             }

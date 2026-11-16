@@ -129,9 +129,9 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetCount(const Json& object, StringView key, int& out) {
+            bool GetCount(const Json& object, StringView key, int& out, int most = kMaxCount) {
                 int64_t number = 0;
-                if (!GetInt(object, key, 0, kMaxCount, number)) {
+                if (!GetInt(object, key, 0, most, number)) {
                     return false;
                 }
                 out = static_cast<int>(number);
@@ -253,12 +253,16 @@ namespace BECore::Mahjong {
                 return member;
             }
 
-            /// Calls @p read(item) for each element of the list @p key, with the path `key[i]` while it reads.
+            /// Calls @p read(item) for each element of the list @p key, with the path `key[i]` while it reads. A list of more than @p most
+            /// items is refused before any is read: the rules say how many a table can hold.
             template <typename TRead>
-            bool ForEach(const Json& object, StringView key, TRead&& read) {
+            bool ForEach(const Json& object, StringView key, size_t most, TRead&& read) {
                 const Json* list = GetArray(object, key);
                 if (list == nullptr) {
                     return false;
+                }
+                if (list->size() > most) {
+                    return Fail(key, Format("has {} items, at most {}", list->size(), most).c_str());
                 }
                 int index = 0;
                 for (const Json& item : *list) {
@@ -284,9 +288,9 @@ namespace BECore::Mahjong {
                 return read(*member);
             }
 
-            bool GetTiles(const Json& object, StringView key, Vector<Tile>& out) {
+            bool GetTiles(const Json& object, StringView key, size_t most, Vector<Tile>& out) {
                 out.clear();
-                return ForEach(object, key, [&](const Json& item) {
+                return ForEach(object, key, most, [&](const Json& item) {
                     Tile tile;
                     if (!ReadTileText(item, "", tile)) {
                         return false;
@@ -368,7 +372,7 @@ namespace BECore::Mahjong {
 
             bool ReadMelds(const Json& object, StringView key, Vector<Meld>& out) {
                 out.clear();
-                return ForEach(object, key, [&](const Json& item) {
+                return ForEach(object, key, kViewMaxMelds, [&](const Json& item) {
                     Meld meld;
                     if (!ReadMeld(item, meld)) {
                         return false;
@@ -382,9 +386,9 @@ namespace BECore::Mahjong {
                 if (!item.is_object()) {
                     return Fail("", "has to be an object");
                 }
-                return GetWind(item, "wind", seat.wind) && GetScore(item, "score", seat.score) && GetCount(item, "concealedCount", seat.concealedCount) && ReadMelds(item, "melds", seat.melds) &&
-                       GetCount(item, "concealedKongs", seat.concealedKongs) && GetTiles(item, "bonus", seat.bonus) && GetCount(item, "discardCount", seat.discardCount) &&
-                       GetBool(item, "calling", seat.calling);
+                return GetWind(item, "wind", seat.wind) && GetScore(item, "score", seat.score) && GetCount(item, "concealedCount", seat.concealedCount, kViewMaxConcealed) &&
+                       ReadMelds(item, "melds", seat.melds) && GetCount(item, "concealedKongs", seat.concealedKongs, kViewMaxMelds) && GetTiles(item, "bonus", kViewMaxBonus, seat.bonus) &&
+                       GetCount(item, "discardCount", seat.discardCount, kViewMaxPile) && GetBool(item, "calling", seat.calling);
             }
 
             bool ReadTurn(const Json& turn) {
@@ -413,7 +417,7 @@ namespace BECore::Mahjong {
 
             bool ReadDiscards() {
                 _t.discards.clear();
-                return ForEach(_view, "discards", [&](const Json& item) {
+                return ForEach(_view, "discards", kViewMaxPile, [&](const Json& item) {
                     DiscardEntry entry;
                     if (!item.is_object()) {
                         return Fail("", "has to be an object");
@@ -468,7 +472,7 @@ namespace BECore::Mahjong {
                 if (!item.is_object()) {
                     return Fail("", "has to be an object");
                 }
-                return GetTiles(item, "concealed", seat.concealed) && ReadMelds(item, "melds", seat.melds) && GetTiles(item, "bonus", seat.bonus);
+                return GetTiles(item, "concealed", kViewMaxConcealed, seat.concealed) && ReadMelds(item, "melds", seat.melds) && GetTiles(item, "bonus", kViewMaxBonus, seat.bonus);
             }
 
             bool ReadResult(const Json& json, OnlineResult& result) {
@@ -501,7 +505,46 @@ namespace BECore::Mahjong {
                     }
                     ++index;
                 }
-                return GetSeatScores(json, "scores", result.scores) && GetSeatScores(json, "deltas", result.deltas);
+                return GetSeatScores(json, "scores", result.scores) && GetSeatScores(json, "deltas", result.deltas) && CheckWinningTile(result);
+            }
+
+            /// A win on a discard put the tile into the winner's hand (`HandModel::ResolveClaims`); a result without it is not one a
+            /// server sends, and the table would look for a tile that is not there.
+            bool CheckWinningTile(const OnlineResult& result) {
+                if (result.kind != ResultKind::Win || result.source != WinSource::Discard) {
+                    return true;
+                }
+                if (!IsSeat(result.winner)) {
+                    return Fail("winner", "is null in a win on a discard");
+                }
+                const Vector<Tile>& held = result.seats[static_cast<size_t>(result.winner)].concealed;
+                if (eastl::find(held.begin(), held.end(), result.winningTile) == held.end()) {
+                    return Fail("winningTile", "is not among the concealed tiles of the winner");
+                }
+                return true;
+            }
+
+            /// The seat that acts is named whenever a hand is going on (`TableStateToJson` writes null only in a finished turn).
+            bool CheckCurrentSeat() {
+                const bool going = _t.phase == SessionPhase::Playing && _t.turn.phase != Phase::Finished;
+                if (going && !IsSeat(_t.turn.current)) {
+                    Scope scope(*this, "turn");
+                    return Fail("current", "is null while a hand is going on");
+                }
+                return true;
+            }
+
+            bool ReadHandCounts() {
+                if (!GetCount(_view, "handsPlayed", _t.handsPlayed, kFullMatchHands) || !GetCount(_view, "handsTotal", _t.handsTotal, kFullMatchHands)) {
+                    return false;
+                }
+                if (_t.handsTotal != kShortMatchHands && _t.handsTotal != kFullMatchHands) {
+                    return Fail("handsTotal", Format("is {}, a match has {} or {} hands", _t.handsTotal, kShortMatchHands, kFullMatchHands).c_str());
+                }
+                if (_t.handsPlayed > _t.handsTotal) {
+                    return Fail("handsPlayed", Format("is {}, more than the {} hands of the match", _t.handsPlayed, _t.handsTotal).c_str());
+                }
+                return true;
             }
 
             /// The room's setting; missing or not a boolean is false, never a read error (additive key: `src/Mahjong/Online/CLAUDE.md`).
@@ -514,10 +557,9 @@ namespace BECore::Mahjong {
                 int64_t number = 0;
                 ReadHintsAllowed();
                 const bool good = GetNamed(_view, "phase", kSessionPhases, _t.phase) && GetSeat(_view, "seat", _t.seat, false) && GetWind(_view, "seatWind", _t.seatWind) &&
-                                  GetWind(_view, "roundWind", _t.roundWind) && GetSeat(_view, "east", _t.east, false) && GetTiles(_view, "hand", _t.hand) &&
-                                  InObject(_view, "turn", [&](const Json& turn) { return ReadTurn(turn); }) && ReadSeats() && ReadDiscards() && GetCount(_view, "wall", _t.wall) &&
-                                  GetCount(_view, "handsPlayed", _t.handsPlayed) && GetCount(_view, "handsTotal", _t.handsTotal) &&
-                                  GetInt(_view, "version", 0, std::numeric_limits<int64_t>::max(), number) && ReadReady() && ReadActions();
+                                  GetWind(_view, "roundWind", _t.roundWind) && GetSeat(_view, "east", _t.east, false) && GetTiles(_view, "hand", kViewMaxConcealed, _t.hand) &&
+                                  InObject(_view, "turn", [&](const Json& turn) { return ReadTurn(turn); }) && ReadSeats() && ReadDiscards() && GetCount(_view, "wall", _t.wall, kViewMaxPile) &&
+                                  ReadHandCounts() && CheckCurrentSeat() && GetInt(_view, "version", 0, std::numeric_limits<int64_t>::max(), number) && ReadReady() && ReadActions();
                 if (!good) {
                     return;
                 }

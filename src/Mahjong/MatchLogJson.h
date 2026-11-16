@@ -81,7 +81,13 @@ namespace BECore::Mahjong {
     /// The event of one parsed line, or the error text naming the member that is wrong.
     [[nodiscard]] std::expected<MatchLogEvent, String> EventFromJson(const Json& json);
 
-    /// A whole log file: lines of JSON, blank lines skipped. The error names the line number (counted from 1) and what is wrong with it.
+    /// The deepest nesting of arrays and objects a log line or a saved session may have (`IsJsonNestedDeeperThan`, checked before
+    /// `ParseJson`: copying a value recurses once per level and a file is input from outside). A line of the format nests about six
+    /// deep, so this is far above any real one and far below what could exhaust the stack.
+    inline constexpr size_t kMaxJsonNesting = 32;
+
+    /// A whole log file: lines of JSON, blank lines skipped. The error names the line number (counted from 1) and what is wrong with it,
+    /// a line nested deeper than `kMaxJsonNesting` included.
     [[nodiscard]] std::expected<Vector<MatchLogEvent>, String> ParseMatchLog(StringView lines);
 
 }  // namespace BECore::Mahjong

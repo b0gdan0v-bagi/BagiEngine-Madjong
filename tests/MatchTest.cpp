@@ -16,6 +16,12 @@ namespace BECore::Mahjong::Tests {
         constexpr int kEastTilesInHand = 14;
         constexpr int kOtherTilesInHand = 13;
         constexpr uint32_t kSeed = 7;
+        // The bounds written out, not taken from the header: a change of one is a decision, so it fails here.
+        constexpr int kBoundLimit = 1'000'000;
+        constexpr int kBoundScore = 100'000'000;
+        constexpr int kBoundHands = 16;
+        // What the worst hand moves at the largest limit: East wins and takes the limit doubled from each of the three others.
+        constexpr int kWorstHandChange = 6 * kBoundLimit;
 
         // The change of a made-up hand won by a seat other than East: it sums to zero, like every real one.
         constexpr SeatScores kTransfer = {-30, 90, -30, -30};
@@ -195,6 +201,132 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(running.Scores(), scores) << hands;
             EXPECT_EQ(Snapshot(running.Hand()), before) << hands;
         }
+    }
+
+    TEST(MatchTest, TheBoundsOfAPlayableMatchAreExactlyTheDocumentedOnes) {
+        const auto playable = [](auto change) {
+            MahjongSettings settings;
+            change(settings);
+            return IsPlayable(settings);
+        };
+
+        EXPECT_TRUE(IsPlayable(MahjongSettings{}));
+        EXPECT_TRUE(playable([](MahjongSettings& s) { s.limit = 0; }));
+        EXPECT_TRUE(playable([](MahjongSettings& s) { s.limit = kBoundLimit; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.limit = kBoundLimit + 1; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.limit = -1; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.limit = std::numeric_limits<int>::max(); }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.limit = std::numeric_limits<int>::min(); }));
+        EXPECT_TRUE(playable([](MahjongSettings& s) { s.startingScore = kBoundScore; }));
+        EXPECT_TRUE(playable([](MahjongSettings& s) { s.startingScore = -kBoundScore; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.startingScore = kBoundScore + 1; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.startingScore = -kBoundScore - 1; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.startingScore = std::numeric_limits<int>::max(); }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.startingScore = std::numeric_limits<int>::min(); }));
+        EXPECT_TRUE(playable([](MahjongSettings& s) { s.handsPerMatch = kBoundHands; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.handsPerMatch = kBoundHands + kRoundsPerMatch; }));
+        EXPECT_FALSE(playable([](MahjongSettings& s) { s.handsPerMatch = std::numeric_limits<int>::max() - 3; }));
+    }
+
+    TEST(MatchTest, ASettingBeyondItsBoundIsRefusedByBothStartsAndChangesNothing) {
+        const FixedStart position = PositionAt(1, 2);
+        const Vector<MahjongSettings> refused = {
+            [] {
+                MahjongSettings s;
+                s.limit = kBoundLimit + 1;
+                return s;
+            }(),
+            [] {
+                MahjongSettings s;
+                s.limit = std::numeric_limits<int>::max();
+                return s;
+            }(),
+            [] {
+                MahjongSettings s;
+                s.limit = -1;
+                return s;
+            }(),
+            [] {
+                MahjongSettings s;
+                s.startingScore = kBoundScore + 1;
+                return s;
+            }(),
+            [] {
+                MahjongSettings s;
+                s.startingScore = std::numeric_limits<int>::min();
+                return s;
+            }(),
+            Settings(std::numeric_limits<int>::max() - 3),
+        };
+
+        Match running = StartedMatch();
+        ASSERT_TRUE(running.ApplySettlement(MadeUp(running, ResultKind::Win, NextSeat(running.East()), kTransfer)).has_value());
+        const String before = Shown(running);
+        for (const MahjongSettings& settings : refused) {
+            Match fresh;
+            EXPECT_EQ(ErrorOf(fresh.Start(settings, kSeed)), MatchError::BadSettings);
+            EXPECT_EQ(fresh.GetPhase(), MatchPhase::NotStarted);
+            EXPECT_EQ(ErrorOf(fresh.Start(settings, kSeed, position)), MatchError::BadSettings);
+            EXPECT_EQ(fresh.GetPhase(), MatchPhase::NotStarted);
+
+            EXPECT_EQ(ErrorOf(running.Start(settings, kSeed + 1)), MatchError::BadSettings);
+            EXPECT_EQ(Shown(running), before);
+            EXPECT_EQ(ErrorOf(running.Start(settings, kSeed + 1, position)), MatchError::BadSettings);
+            EXPECT_EQ(Shown(running), before);
+        }
+    }
+
+    TEST(MatchTest, TheSettingsAtTheirBoundsStartAMatch) {
+        MahjongSettings settings;
+        settings.limit = kBoundLimit;
+        settings.startingScore = -kBoundScore;
+        const Match low = StartedMatch(settings);
+        EXPECT_EQ(low.Scores(), (SeatScores{-kBoundScore, -kBoundScore, -kBoundScore, -kBoundScore}));
+
+        settings.startingScore = kBoundScore;
+        Match high;
+        EXPECT_TRUE(high.Start(settings, kSeed, PositionAt(1)).has_value());
+    }
+
+    TEST(MatchTest, AStartFromAPositionRefusesASeatScoreBeyondTheBoundAndTakesOneAtIt) {
+        const Vector<int> beyond = {kBoundScore + 1, -kBoundScore - 1, std::numeric_limits<int>::max(), std::numeric_limits<int>::min()};
+        Match running = StartedMatch();
+        const String before = Shown(running);
+        for (const int value : beyond) {
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                FixedStart state = PositionAt(1, 2);
+                state.scores[seat] = value;
+                EXPECT_EQ(ErrorOf(running.Start(MahjongSettings{}, kSeed, state)), MatchError::BadDeal) << value << " seat " << seat;
+                EXPECT_EQ(Shown(running), before);
+            }
+        }
+
+        FixedStart atTheBound = PositionAt(1, 2);
+        atTheBound.scores = {kBoundScore, -kBoundScore, kBoundScore, -kBoundScore};
+        ASSERT_TRUE(running.Start(MahjongSettings{}, kSeed, atTheBound).has_value());
+        EXPECT_EQ(running.Scores(), atTheBound.scores);
+    }
+
+    TEST(MatchTest, AMatchFromTheLargestScoresPlaysTheWorstHandsToTheEndInsideAnInt) {
+        MahjongSettings settings;
+        settings.limit = kBoundLimit;
+        settings.startingScore = kBoundScore;
+        Match match = StartedMatch(settings);
+        // East wins every hand (and deals again) with the limit, the others score nothing: three doubled payments in, one out of each.
+        const Seat east = match.East();
+        SeatScores scores{};
+        scores[east] = kBoundLimit;
+        const SeatScores perHand = Settle(scores, east, east);
+        ASSERT_EQ(perHand[east], kWorstHandChange);
+
+        for (int hand = 0; hand < kBoundHands; ++hand) {
+            ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, east, perHand)).has_value()) << hand;
+        }
+
+        EXPECT_EQ(match.GetPhase(), MatchPhase::Finished);
+        EXPECT_EQ(Sum(match.Scores()), kSeatCount * kBoundScore);
+        EXPECT_EQ(match.Scores()[east], kBoundScore + kBoundHands * kWorstHandChange);
+        EXPECT_EQ(match.Scores()[NextSeat(east)], kBoundScore - kBoundHands * 2 * kBoundLimit);
     }
 
     TEST(MatchTest, StartingAgainBeginsANewMatch) {

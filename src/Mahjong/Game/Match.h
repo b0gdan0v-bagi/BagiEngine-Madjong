@@ -41,7 +41,8 @@ namespace BECore::Mahjong {
 
     [[nodiscard]] bool IsMatchOver(int handsPlayed, const MahjongSettings& settings) noexcept;
 
-    /// `handsPerMatch` a positive multiple of `kRoundsPerMatch`.
+    /// `handsPerMatch` a positive multiple of `kRoundsPerMatch` up to `kMaxHandsPerMatch`, `limit` in `0..kMaxLimit` and `startingScore` in
+    /// `+-kMaxScore` (`MahjongSettings.h`). The one place of these bounds: every start, from a request, a save or a log, goes through it.
     [[nodiscard]] bool IsPlayable(const MahjongSettings& settings) noexcept;
 
     /// Where a match stands: not started, a hand is in progress (`Hand()` may already be `Finished`, waiting for `EndHand`), or over.
@@ -49,11 +50,11 @@ namespace BECore::Mahjong {
 
     /// Why the match refused something. A refusal changes nothing.
     CORE_ENUM(MatchError, uint8_t,
-              BadSettings,      // `IsPlayable` is false
+              BadSettings,      // `IsPlayable` is false (the hands, the limit or the starting score is outside its bound)
               NotInHand,        // the match is not started or is over: there is no hand to end
               HandNotFinished,  // `EndHand` while the hand in progress has no result yet
               HandRefused,      // the next hand could not begin (cannot happen with winds made by `MakeSeatWinds`)
-              BadDeal           // `Start` from a `FixedStart`: the deal, `handsPlayed` or the first hand is refused
+              BadDeal           // `Start` from a `FixedStart`: the deal, `handsPlayed`, a seat's score (beyond `+-kMaxScore`) or the first hand is refused
     )
 
     using MatchStatus = std::expected<void, MatchError>;
@@ -79,7 +80,7 @@ namespace BECore::Mahjong {
          *
          * `seed` seeds the match's own rng, which the **next** hands use (`MakeWall`), so one position and one seed are one match.
          * `BadSettings` unless `IsPlayable(settings)`; `BadDeal` for a deal `TryBuildFixedWall` refuses, `handsPlayed` outside
-         * `0..handsPerMatch - 1` or a hand `Begin` refuses. A refusal changes nothing.
+         * `0..handsPerMatch - 1`, a score outside `+-kMaxScore` or a hand `Begin` refuses. A refusal changes nothing.
          */
         MatchStatus Start(const MahjongSettings& settings, uint32_t seed, const FixedStart& state);
 
