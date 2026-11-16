@@ -803,6 +803,30 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST_F(MatchLogJsonTest, TheReaderKeepsAnyIntAndTheBoundIsTheRulesNotTheReaders) {
+        constexpr int kIntMax = std::numeric_limits<int>::max();
+        constexpr int kIntMin = std::numeric_limits<int>::min();
+        MatchLogEvent start = StartFrom(MakeSamplePosition(2, 5));  // the session refuses what the rules refuse: the event is edited
+        ASSERT_TRUE(start.state.has_value());
+        const SeatScores huge = {kIntMax, kIntMin, kMaxScore + 1, 0};
+        start.state->scores = huge;
+        start.settings.limit = kIntMax;
+        start.settings.startingScore = kIntMin;
+
+        const auto back = EventFromJson(EventToJson(start));
+
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(*back, start);
+        EXPECT_EQ(back->settings.limit, kIntMax);
+        EXPECT_EQ(back->settings.startingScore, kIntMin);
+        ASSERT_TRUE(back->state.has_value());
+        EXPECT_EQ(back->state->scores, huge);
+        Match match;
+        const ReplayStatus replayed = ReplayMatchLog(Vector<MatchLogEvent>{*back}, match);
+        ASSERT_FALSE(replayed.has_value());
+        EXPECT_EQ(replayed.error().problem, ReplayProblem::BadSettings) << "the replay is what refuses it";
+    }
+
     TEST_F(MatchLogJsonTest, AStartFromAPositionWithFlowersKeepsTheBonusTiles) {
         FixedWallSpec spec;
         spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";

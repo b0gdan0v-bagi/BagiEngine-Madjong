@@ -673,6 +673,26 @@ namespace BECore::Mahjong::Tests {
             WriteMatch(Vector<MatchLogEvent>(good.begin() + 1, good.end()));
             ExpectNotOffered("a first line that is not a start");
         }
+        constexpr int kIntMax = std::numeric_limits<int>::max();
+        {
+            Vector<MatchLogEvent> huge = good;
+            huge[0].settings.startingScore = kIntMax;
+            WriteMatch(huge);
+            ExpectNotOffered("a starting score beyond the bound");
+        }
+        {
+            Vector<MatchLogEvent> huge = good;
+            huge[0].settings.limit = kIntMax;
+            WriteMatch(huge);
+            ExpectNotOffered("a limit beyond the bound");
+        }
+        {
+            Vector<MatchLogEvent> huge = good;
+            huge[0].state = MakeSamplePosition();
+            huge[0].state->scores[0] = kIntMax;
+            WriteMatch(huge);
+            ExpectNotOffered("a score of the position beyond the bound");
+        }
     }
 
     TEST_F(MahjongSaveGameTest, AFinishedMatchInTheSlotIsNotOffered) {

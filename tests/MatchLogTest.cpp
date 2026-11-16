@@ -461,6 +461,46 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::BadSettings);
     }
 
+    TEST(MatchLogTest, AStartBeyondTheBoundsIsRefusedAtTheStartEventAndOneAtTheBoundsIsNot) {
+        const PlayedMatch played = Play(kSeed);
+        constexpr int kIntMax = std::numeric_limits<int>::max();
+        constexpr int kIntMin = std::numeric_limits<int>::min();
+        const auto refusedAtStart = [&played](auto change, ReplayProblem expected) {
+            Vector<MatchLogEvent> log = played.events;
+            change(log[0]);
+            Match match;
+            const ReplayStatus status = ReplayMatchLog(log, match);
+            ASSERT_FALSE(status.has_value());
+            EXPECT_EQ(status.error().index, 0u);
+            EXPECT_EQ(status.error().problem, expected);
+            EXPECT_EQ(match.GetPhase(), MatchPhase::NotStarted);
+        };
+
+        for (const int value : {kIntMax, kIntMin, kMaxScore + 1, -kMaxScore - 1}) {
+            refusedAtStart([value](MatchLogEvent& start) { start.settings.startingScore = value; }, ReplayProblem::BadSettings);
+        }
+        for (const int value : {kIntMax, kMaxLimit + 1, -1}) {
+            refusedAtStart([value](MatchLogEvent& start) { start.settings.limit = value; }, ReplayProblem::BadSettings);
+        }
+        for (const int value : {kIntMax, kIntMin, kMaxScore + 1, -kMaxScore - 1}) {
+            refusedAtStart(
+                [value](MatchLogEvent& start) {
+                    start.state = MakeSamplePosition();
+                    start.state->scores[3] = value;
+                },
+                ReplayProblem::BadState);
+        }
+
+        // At the bounds the start is taken; this log was played at other settings, so the replay stops later, at an event that disagrees.
+        Vector<MatchLogEvent> atTheBounds = played.events;
+        atTheBounds[0].settings.startingScore = kMaxScore;
+        atTheBounds[0].settings.limit = kMaxLimit;
+        Match match;
+        const ReplayStatus status = ReplayMatchLog(atTheBounds, match);
+        ASSERT_FALSE(status.has_value());
+        EXPECT_GT(status.error().index, 0u);
+    }
+
     TEST(MatchLogTest, ADifferentSeedGivesADifferentLog) {
         const PlayedMatch a = Play(kSeed);
         const PlayedMatch b = Play(kSeed + 1);

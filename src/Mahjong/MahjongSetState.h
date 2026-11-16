@@ -11,11 +11,6 @@ namespace BECore::Mahjong {
 
     class MahjongGame;
 
-    /// The most a `settings.limit` of a `set_state` may name, and the largest magnitude of a score or `startingScore`: far above any
-    /// play, small enough that no payment of a hand can overflow an `int`.
-    inline constexpr int kMaxSetStateLimit = 1'000'000;
-    inline constexpr int kMaxSetStateScore = 100'000'000;
-
     /// What a `set_state` that leaves a member out takes: the game's own choices and the seed of the last `reset`.
     struct SetStateDefaults {
         SeatSetup seats = kDefaultSeatSetup;

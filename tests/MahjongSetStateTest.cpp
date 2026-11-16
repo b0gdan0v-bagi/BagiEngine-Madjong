@@ -1,4 +1,5 @@
 #include <Common/EngineEnvironment.h>
+#include <Mahjong/MahjongGame.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/MahjongSetState.h>
 #include <Mahjong/MatchLogJson.h>
@@ -37,6 +38,15 @@ namespace BECore::Mahjong::Tests {
             }
             if (events != nullptr) {
                 *events = log.Events();
+            }
+            return text;
+        }
+
+        String TextOf(const Vector<MatchLogEvent>& events) {
+            String text;
+            for (const MatchLogEvent& event : events) {
+                text += DumpJson(EventToJson(event));
+                text += '\n';
             }
             return text;
         }
@@ -259,7 +269,7 @@ namespace BECore::Mahjong::Tests {
         ExpectRefused(state, "scores");
         state["scores"] = Json::array({1, 2, 3, "4"});
         ExpectRefused(state, "scores");
-        state["scores"] = Json::array({1, 2, 3, kMaxSetStateScore + 1});
+        state["scores"] = Json::array({1, 2, 3, kMaxScore + 1});
         ExpectRefused(state, "scores");
         state["scores"] = 100;
         ExpectRefused(state, "scores");
@@ -405,6 +415,70 @@ namespace BECore::Mahjong::Tests {
         levels["level"] = 3;
         levels["levels"] = Json::array({1, 2, 3, 4});
         ExpectRefused(levels, "together");
+    }
+
+    // ----- the bounds of the rules reach every form -----
+
+    TEST_F(MahjongSetStateTest, TheDealFormRefusesTheValuesBeyondTheBoundsAndTakesThoseAtThem) {
+        Json state = Base();
+        state["settings"] = Json::parse(R"({"limit": 1000000, "startingScore": -100000000})");
+        EXPECT_TRUE(Parse(state).has_value());
+        state["settings"] = Json::parse(R"({"limit": 1000001})");
+        ExpectRefused(state, "settings.limit");
+        state["settings"] = Json::parse(R"({"limit": 2147483647})");
+        ExpectRefused(state, "settings.limit");
+        state["settings"] = Json::parse(R"({"startingScore": 100000001})");
+        ExpectRefused(state, "settings.startingScore");
+        state["settings"] = Json::parse(R"({"startingScore": -2147483648})");
+        ExpectRefused(state, "settings.startingScore");
+        state["settings"] = Json::object();
+        state["scores"] = Json::array({100000000, -100000000, 0, 1});
+        EXPECT_TRUE(Parse(state).has_value());
+        state["scores"] = Json::array({2147483647, 0, 0, 0});
+        ExpectRefused(state, "scores");
+    }
+
+    TEST_F(MahjongSetStateTest, ALogWithAValueBeyondTheBoundsIsRefusedAndTheGameKeepsItsMatch) {
+        IntrusivePtr<MahjongGame> game = New<MahjongGame>();
+        const auto control = game->AsControllable();
+        ASSERT_TRUE(control->Reset(Json::parse(R"({"seed": 3, "seats": "PCCC"})")).has_value());
+        const Json before = *control->GetState();
+        const uint64_t version = control->GetStateVersion();
+        const uint64_t starts = game->GetLocalSession().StartCount();
+        const MahjongSettings settings = game->GetSettings();
+
+        Vector<MatchLogEvent> played;
+        LogText(&played);
+        constexpr int kIntMax = std::numeric_limits<int>::max();
+        const auto changed = [&played](auto change) {
+            Vector<MatchLogEvent> events = played;
+            change(events.front());
+            Json request = Json::object();
+            const String text = TextOf(events);
+            request["log"] = MakeJsonString(StringView(text.c_str(), text.size()));
+            return request;
+        };
+        const Vector<Json> requests = {
+            changed([](MatchLogEvent& start) { start.settings.startingScore = kIntMax; }),
+            changed([](MatchLogEvent& start) { start.settings.startingScore = std::numeric_limits<int>::min(); }),
+            changed([](MatchLogEvent& start) { start.settings.limit = kIntMax; }),
+            changed([](MatchLogEvent& start) { start.settings.limit = kMaxLimit + 1; }),
+            changed([](MatchLogEvent& start) { start.settings.limit = -1; }),
+            changed([](MatchLogEvent& start) {
+                start.state = MakeSamplePosition();
+                start.state->scores[2] = kIntMax;
+            }),
+        };
+        for (const Json& request : requests) {
+            const auto set = control->SetState(request);
+            ASSERT_FALSE(set.has_value()) << DumpJson(request).c_str();
+            EXPECT_EQ(String(set.error().code.c_str(), set.error().code.size()), kInvalidParams);
+            EXPECT_EQ(*control->GetState(), before);
+            EXPECT_EQ(control->GetStateVersion(), version);
+            EXPECT_EQ(game->GetLocalSession().StartCount(), starts);
+            EXPECT_EQ(game->GetSettings().limit, settings.limit);
+            EXPECT_EQ(game->GetSettings().startingScore, settings.startingScore);
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests

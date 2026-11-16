@@ -126,14 +126,14 @@ namespace BECore::Mahjong {
                 settings.replayDrawnHand = *replay;
             }
             if (Has(*member, "limit")) {
-                const auto limit = ReadInt(*member, "limit", "settings.limit", 0, kMaxSetStateLimit);
+                const auto limit = ReadInt(*member, "limit", "settings.limit", 0, kMaxLimit);
                 if (!limit) {
                     return std::unexpected(limit.error());
                 }
                 settings.limit = static_cast<int>(*limit);
             }
             if (Has(*member, "startingScore")) {
-                const auto starting = ReadInt(*member, "startingScore", "settings.startingScore", -kMaxSetStateScore, kMaxSetStateScore);
+                const auto starting = ReadInt(*member, "startingScore", "settings.startingScore", -kMaxScore, kMaxScore);
                 if (!starting) {
                     return std::unexpected(starting.error());
                 }
@@ -159,8 +159,8 @@ namespace BECore::Mahjong {
             size_t seat = 0;
             for (const Json& item : *member) {
                 const Optional<int64_t> value = IntOf(item);
-                if (!value || *value < -kMaxSetStateScore || *value > kMaxSetStateScore) {
-                    return InvalidParams(Format("'scores' has to hold integers from {} to {}", -kMaxSetStateScore, kMaxSetStateScore));
+                if (!value || *value < -kMaxScore || *value > kMaxScore) {
+                    return InvalidParams(Format("'scores' has to hold integers from {} to {}", -kMaxScore, kMaxScore));
                 }
                 scores[seat++] = static_cast<int>(*value);
             }
