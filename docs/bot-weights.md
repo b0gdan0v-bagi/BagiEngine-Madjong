@@ -277,6 +277,53 @@ minutes each**; it gives no verdict and plays no judged range (stage 4 does).
   on a mean that plays like Normal and 8 on one that does not: the probe's rows, which are read only for the cost). Nothing here is
   expected to be a result; the record of the run is "The training (stage 3)" after it.
 
+### The training (stage 3; not a result)
+
+Run 2026-11-16 with the command of the budget above, the log `~/.claude/plans/mahjong-tune/train3.jsonl` and the outputs
+`train3-1.out`, `-2`, `-3` next to it (outside the repository). Machine: the Release arena, Apple M4 Pro, 14 logical cores, `--jobs 0`,
+**not a quiet one**: load average (1 minute) 51.7 before the first command, 19.1 before the second, 43.6 before the third, other
+workers of the todo loop; noted, not corrected.
+
+- **Command 1**: 434.4 s wall (the tool's generations: 35.2, 116.6, 131.1, 73.4 and 76.2 s), generations 0 to 4, stopped by
+  `--max-seconds` before generation 5 (exit 0).
+- **Command 2** (`--resume`): 389.8 s, generations 5 to 9 (60.8, 70.8, 69.3, 82.4 and 106.5 s), the log reached `G = 10` (exit 0).
+- **Command 3** (`--resume`): 0.05 s; the log held 10 of 10 generations and the tool did nothing, as the plan said it would.
+- **In all**: 824 s of wall time (the sum of the generations 822.3 s), 10 generations, **158000 hands** (10 x 15600 plus the start
+  monitoring 2000), **0 tie generations**. The budget's `G` was reached; the budget text is not edited. The generations were faster than the probe's 132 s
+  from the fourth on (60 to 107 s), because the load fell; the budget's guess of three commands was two.
+
+The curve: the new mean of each generation against three Normal seats on the exploration range `[4000, 4250)` (1000 hands), paired
+points a hand and wins % with the half-widths of the log; `sig` is the log's flag (points, wins). The start (Normal's weights) is
+exactly 0 and 25.0 %.
+
+| g | points a hand | wins % | sig | mean: wShanten wAcceptance wKeep wSafe wClaimRank wClaimValue wClaimMargin wClaimWall wValueDiscard wValueClaim |
+|---|---|---|---|---|
+| 0 | +11.54 +- 7.94 | +1.20 +- 2.13 | yes, no | 5275 14 1 1 1 5199 2267 0 3 1 |
+| 1 | +11.36 +- 8.01 | +0.70 +- 2.12 | yes, no | 5655 13 1 1 1 4737 2162 0 8 1 |
+| 2 | +10.84 +- 7.99 | +0.60 +- 2.10 | yes, no | 6969 12 1 1 1 5316 2135 0 6 1 |
+| 3 | +11.98 +- 8.09 | +0.80 +- 2.09 | yes, no | 7314 11 1 1 1 5055 1900 0 4 2 |
+| 4 | +11.55 +- 8.03 | +0.60 +- 2.06 | yes, no | 7917 10 1 1 1 5233 1682 0 4 2 |
+| 5 | +11.27 +- 8.06 | +0.40 +- 2.08 | yes, no | 7705 9 1 1 1 4555 1609 0 4 2 |
+| 6 | +11.25 +- 8.06 | +0.40 +- 2.08 | yes, no | 7836 9 1 1 0 5051 1681 0 4 2 |
+| 7 | +11.25 +- 8.06 | +0.40 +- 2.08 | yes, no | 8144 9 1 1 0 5623 1574 0 4 2 |
+| 8 | +11.52 +- 8.04 | +0.50 +- 2.07 | yes, no | 7927 8 1 1 0 5713 1427 0 4 2 |
+| 9 | +11.67 +- 8.04 | +0.60 +- 2.08 | yes, no | 7698 8 1 1 0 6229 1358 0 4 2 |
+
+The points interval excludes 0 in every row (the log's flag, 1.35 to 1.48 half-widths from 0); the wins interval includes 0 in every row.
+
+**The final weights** (the last generation's `newMean`, what stage 4 judges by the rule, not a chosen generation):
+`wShanten` 7698, `wAcceptance` 8, `wKeep` 1, `wSafe` 1, `wClaimRank` 0, `wClaimValue` 6229, `wClaimMargin` 1358, `wClaimWall` 0,
+`wValueDiscard` 4, `wValueClaim` 2 (the ten weights of `WEIGHTS`). **As a record only**: the best monitored mean so far on the
+exploration range is generation 3 (+11.98 points a hand); nothing is chosen on that range.
+
+**Reading.** The mean left Normal's plateau at once: the first mean of generation 0 is already +11.5 points a hand (half-width about 8,
+paired, 1000 hands), and the row stays between +10.8 and +12.0 for all ten generations, with wins within 0.4 to 1.2 points of 25 %.
+That is flat, not rising: the differences between the rows (about 1 point) are far inside the half-width (about 8). The weights moved
+steadily (`wShanten` 4400 to 7698, `wAcceptance` 16 to 8, `wClaimMargin` 2178 to 1358, from the start's values) and both value
+weights rose above 0 (`wValueDiscard` 0 to 4, `wValueClaim` 0 to 2), while the points row did not follow them. No tie generation
+happened, so the tie rule was not used. The rows are one 1000-hand range and nothing is chosen on it: **this is not a result**, the
+judged run (stage 4) is.
+
 ## The verdict rule (fixed before any run)
 
 As the "Levels" rule of `docs/bot-search.md`. The weights are **stronger than Normal** only when, against three Normal seats on
@@ -355,5 +402,5 @@ The generation of the tuner is measured again in the probe of the budget (stage 
 
 ## Not done by this stage
 
-The training with the two value weights, the judged run, any named constant and any change of a level (stages 3 and 4). `judge`,
-the verdict of the weights against the decision and confirmation ranges, does not exist yet.
+The judged run, any named constant and any change of a level (stage 4). `judge`, the verdict of the final weights above against
+the decision and confirmation ranges, does not exist yet; `kTunedProfile` and the arena player `tuned` are not added.
