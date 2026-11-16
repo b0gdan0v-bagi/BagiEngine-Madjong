@@ -27,6 +27,9 @@ namespace BECore::Mahjong::Tests {
         constexpr int kSearchTestCandidates = 3;
         /// The depth of the own-draws seat's match.
         constexpr int kOwnDrawsTestDepth = 2;
+        /// The weighted seat's match: the seed of the weight sets and how many random ones are played besides the default, all zeros and all largest.
+        constexpr uint32_t kWeightsSeed = 31;
+        constexpr int kRandomWeightSets = 3;
 
         struct PlayedMatch {
             Vector<HandSettlement> history;
@@ -193,8 +196,9 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// One seat plays `valued` among three Normal seats to the end of a short match, every action legal.
-        void PlayOwnDrawsMatch(const LevelProfile& valued, const char* name) {
+        /// One seat plays `valued` among three Normal seats to the end of a short match, every action legal. `scores` gets the final scores
+        /// when asked for, so a caller can play the match again and compare.
+        void PlayOwnDrawsMatch(const LevelProfile& valued, const char* name, SeatScores* scores = nullptr) {
             MahjongSettings settings;
             settings.handsPerMatch = kSearchMatchHands;
             const String where = Format("{} (seed {})", name, kSearchMatchSeed);
@@ -219,6 +223,38 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NO_FATAL_FAILURE(audit.AtEnd(match));
             EXPECT_EQ(match.HandsPlayed(), kSearchMatchHands) << where;
             EXPECT_GT(valuedSteps, 0) << "the own-draws seat never acted";
+            if (scores != nullptr) {
+                *scores = match.Scores();
+            }
+        }
+
+        /// A weighted profile with all eight weights drawn from the whole lattice `0..kWeightMax`.
+        LevelProfile RandomWeights(MahjongRng& rng) {
+            auto weight = [&rng] { return static_cast<int>(rng.Below(kWeightMax + 1)); };
+            LevelProfile profile = kNormalProfile;
+            profile.weighted = true;
+            profile.wShanten = weight();
+            profile.wAcceptance = weight();
+            profile.wKeep = weight();
+            profile.wSafe = weight();
+            profile.wClaimRank = weight();
+            profile.wClaimValue = weight();
+            profile.wClaimMargin = weight();
+            profile.wClaimWall = weight();
+            return profile;
+        }
+
+        LevelProfile Weighted(LevelProfile profile) {
+            profile.weighted = true;
+            return profile;
+        }
+
+        LevelProfile WeightedAt(int weight) {
+            LevelProfile profile = kNormalProfile;
+            profile.weighted = true;
+            profile.wShanten = profile.wAcceptance = profile.wKeep = profile.wSafe = weight;
+            profile.wClaimRank = profile.wClaimValue = profile.wClaimMargin = profile.wClaimWall = weight;
+            return profile;
         }
 
     }  // namespace
@@ -248,6 +284,25 @@ namespace BECore::Mahjong::Tests {
         LevelProfile valued = kNormalProfile;
         valued.ownDrawsDeclareDepth = kOwnDrawsTestDepth;
         PlayOwnDrawsMatch(valued, "own-draws declaration match");
+    }
+
+    TEST(ComputerMatchTest, OneWeightedSeatAmongThreeNormalSeatsPlaysLegallyForAnyWeightsAndTheSameMatchTwice) {
+        MahjongRng weights(kWeightsSeed);
+        Vector<LevelProfile> profiles;
+        profiles.push_back(Weighted(kNormalProfile));
+        profiles.push_back(WeightedAt(0));
+        profiles.push_back(WeightedAt(kWeightMax));
+        for (int i = 0; i < kRandomWeightSets; ++i) {
+            profiles.push_back(RandomWeights(weights));
+        }
+        for (size_t index = 0; index < profiles.size(); ++index) {
+            const String name = Format("weighted match {}", index);
+            SeatScores first{};
+            SeatScores again{};
+            ASSERT_NO_FATAL_FAILURE(PlayOwnDrawsMatch(profiles[index], name.c_str(), &first));
+            ASSERT_NO_FATAL_FAILURE(PlayOwnDrawsMatch(profiles[index], name.c_str(), &again));
+            EXPECT_EQ(first, again) << name;
+        }
     }
 
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {
