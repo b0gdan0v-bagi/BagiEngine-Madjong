@@ -4,7 +4,7 @@
 #include <tests/ArenaLogTestSupport.h>
 #include <thread>
 
-/// Takes about 6 s in Debug: three seeds, 4 s of it the one seed of a search focus player at `--jobs` 1 and 3.
+/// Takes about 16 s in Debug: three seeds, 4 s of it the one seed of a search focus player at `--jobs` 1 and 3.
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -289,6 +289,59 @@ namespace BECore::Mahjong::Arena {
         ArenaCliOutput quiet;
         EXPECT_EQ(RunProgram(FewSeeds(), quiet), kExitOk);
         EXPECT_FALSE(Contains(quiet.out, "us per decision"));
+    }
+
+    TEST(ArenaCliTest, TheJsonOptionIsReadAndRefusedWithTheOptionsThatPrintOtherThings) {
+        EXPECT_FALSE(ArgsOf({}).json);
+        EXPECT_TRUE(ArgsOf({"--json"}).json);
+        EXPECT_TRUE(ArgsOf({"--focus", "normal,easy", "--json", "--seeds", "2"}).json);
+        for (const StringView other : {"--check", "--table-stats", "--time"}) {
+            const String error = ErrorOf({"--json", other});
+            EXPECT_NE(error.find(String("--json cannot be used with ") + String(other)), String::npos) << error;
+            EXPECT_FALSE(Parse({other, "--json"}).has_value()) << ToStd(other);
+        }
+        EXPECT_NE(ErrorOf({"--json", "--logs", "x"}).find("--json cannot be used with --logs"), String::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--json"}).find("--json cannot be used with --logs"), String::npos);
+        EXPECT_NE(ErrorOf({"--json", "--differences", "2"}).find("--json cannot be used with --differences"), String::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--check", "--json"}).find("--json cannot be used with"), String::npos);
+        ArenaCliOutput output;
+        EXPECT_EQ(RunProgram({"--json", "--time"}, output), kExitBadArguments);
+        EXPECT_TRUE(output.out.empty());
+        EXPECT_TRUE(Contains(output.err, "--json cannot be used with --time")) << output.err.c_str();
+        EXPECT_TRUE(Contains(ArenaUsage(), "--json"));
+    }
+
+    TEST(ArenaCliTest, JsonPrintsTheDocumentOfTheSameRunAndTheTextStaysWithoutIt) {
+        const Args players{"--focus", "normal,easy", "--others", "normal"};
+        Args jsonArgs = FewSeeds();
+        jsonArgs.insert(jsonArgs.end(), players.begin(), players.end());
+        const ArenaArgs parsed = ArgsOf(jsonArgs);
+        const std::expected<ArenaResult, String> result = RunArena(parsed.config);
+        ASSERT_TRUE(result.has_value());
+
+        jsonArgs.push_back("--json");
+        ArenaCliOutput json;
+        EXPECT_EQ(RunProgram(jsonArgs, json), kExitOk);
+        EXPECT_TRUE(json.err.empty());
+        EXPECT_EQ(json.out, FormatArenaReportJson(*result) + "\n");
+        EXPECT_EQ(std::count(json.out.begin(), json.out.end(), '\n'), 1);
+        EXPECT_TRUE(ParseJson(StringView(json.out.data(), json.out.size() - 1)).has_value());
+
+        Args textArgs = FewSeeds();
+        textArgs.insert(textArgs.end(), players.begin(), players.end());
+        ArenaCliOutput text;
+        EXPECT_EQ(RunProgram(textArgs, text), kExitOk);
+        EXPECT_EQ(text.out, FormatArenaReport(*result));
+    }
+
+    TEST(ArenaCliTest, TheThreadsDoNotChangeTheJsonBytes) {
+        ArenaCliOutput single;
+        EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--json", "--jobs", "1"}), single), kExitOk);
+        EXPECT_FALSE(single.out.empty());
+        ArenaCliOutput threaded;
+        EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--json", "--jobs", "3"}), threaded), kExitOk);
+        EXPECT_EQ(threaded.out, single.out);
+        EXPECT_TRUE(threaded.err.empty());
     }
 
     TEST(ArenaCliTest, TheLogOptionsAreRead) {

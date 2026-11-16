@@ -18,6 +18,7 @@ namespace BECore::Mahjong::Arena {
         constexpr StringView kCheckOption = "--check";
         constexpr StringView kDifferencesOption = "--differences";
         constexpr StringView kTableStatsOption = "--table-stats";
+        constexpr StringView kJsonOption = "--json";
         constexpr StringView kHelpOption = "--help";
 
         constexpr char kListSeparator = ',';
@@ -90,6 +91,10 @@ namespace BECore::Mahjong::Arena {
             return Format("{} cannot be used with {}: {}", option, kLogsOption, why);
         }
 
+        String NotWithJson(StringView option, StringView why) {
+            return Format("{} cannot be used with {}: {}", kJsonOption, option, why);
+        }
+
     }  // namespace
 
     String ArenaUsage() {
@@ -119,6 +124,8 @@ namespace BECore::Mahjong::Arena {
                       "  {tableStats}    instead of the table of players: plays the seeds once with four normal seats and prints the table statistics\n"
                       "                  (the chance that another seat wins in a round, the mean scores, how hands are won); with {first}, {seeds}, {jobs}; not with\n"
                       "                  {focus}, {others}, {time} or {logs}\n"
+                      "  {json}          print the report as one JSON document (the numbers of the text, more digits; the schema is in ArenaReportJson.h)\n"
+                      "                  instead of the text; not with {logs}, {check}, {differences}, {tableStats} or {time}\n"
                       "  {help}          this text\n"
                       "\n"
                       "exit code: {ok} done, {refused} an action was refused by the rules (a defect; the seed and the seat are printed) or the path of {logs} cannot be read,\n"
@@ -129,8 +136,8 @@ namespace BECore::Mahjong::Arena {
                       FormatArg("levels", Format("1..{}, easy = 1, normal = {}", kMaxLevel, LevelNumber(ComputerLevel::Normal)).c_str()), FormatArg("focus", kFocusOption),
                       FormatArg("others", kOthersOption), FormatArg("first", kFirstOption), FormatArg("seeds", kSeedsOption), FormatArg("jobs", kJobsOption), FormatArg("maxJobs", kMaxJobs),
                       FormatArg("jobsDefault", kDefaultJobs), FormatArg("time", kTimeOption), FormatArg("logs", kLogsOption), FormatArg("check", kCheckOption),
-                      FormatArg("differences", kDifferencesOption), FormatArg("differencesDefault", kDefaultDifferences), FormatArg("tableStats", kTableStatsOption), FormatArg("help", kHelpOption),
-                      FormatArg("focusDefault", kDefaultFocusSpec), FormatArg("othersDefault", kDefaultOthersSpec), FormatArg("firstDefault", kDefaultFirstSeed),
+                      FormatArg("differences", kDifferencesOption), FormatArg("differencesDefault", kDefaultDifferences), FormatArg("tableStats", kTableStatsOption), FormatArg("json", kJsonOption),
+                      FormatArg("help", kHelpOption), FormatArg("focusDefault", kDefaultFocusSpec), FormatArg("othersDefault", kDefaultOthersSpec), FormatArg("firstDefault", kDefaultFirstSeed),
                       FormatArg("seedsDefault", kDefaultSeedCount), FormatArg("ok", kExitOk), FormatArg("refused", kExitRefusedAction), FormatArg("bad", kExitBadArguments));
     }
 
@@ -164,6 +171,10 @@ namespace BECore::Mahjong::Arena {
             }
             if (option == kCheckOption) {
                 parsed.check = true;
+                continue;
+            }
+            if (option == kJsonOption) {
+                parsed.json = true;
                 continue;
             }
             const bool takesValue =
@@ -222,6 +233,23 @@ namespace BECore::Mahjong::Arena {
                     return std::unexpected(count.error());
                 }
                 parsed.config.count = *count;
+            }
+        }
+        if (parsed.json) {
+            if (parsed.logMode) {
+                return std::unexpected(NotWithJson(kLogsOption, "the logs are summarised as text"));
+            }
+            if (parsed.check) {
+                return std::unexpected(NotWithJson(kCheckOption, "it prints one line per log file"));
+            }
+            if (gaveDifferences) {
+                return std::unexpected(NotWithJson(kDifferencesOption, "it lists the differences of the log mode"));
+            }
+            if (parsed.tableStats) {
+                return std::unexpected(NotWithJson(kTableStatsOption, "its statistics are text only"));
+            }
+            if (timeGiven) {
+                return std::unexpected(NotWithJson(kTimeOption, "the time of a decision is not deterministic and not in the document"));
             }
         }
         if (parsed.tableStats && (playersGiven || timeGiven)) {
@@ -308,7 +336,12 @@ namespace BECore::Mahjong::Arena {
             output.err = Format("error: {}\n", result.error().c_str());
             return kExitRefusedAction;
         }
-        output.out = FormatArenaReport(*result);
+        if (parsed->json) {
+            output.out = FormatArenaReportJson(*result);
+            output.out.push_back('\n');
+        } else {
+            output.out = FormatArenaReport(*result);
+        }
         return kExitOk;
     }
 

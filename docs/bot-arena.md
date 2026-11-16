@@ -31,7 +31,7 @@ build/macos-release/bin/BagiMahjongArena --help
 
 Each preset builds into its own `build/<preset>/bin/`, so the Release arena and the Debug `MahjongTests` live side by side. Run the arena in Release: a Debug
 build is much slower. The program is not part of `ctest`; the library it is made of (`src/Mahjong/Arena/`) is tested by
-`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
+`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaReportJsonTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
 
 Commands (`A` is `build/macos-release/bin/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
 
@@ -42,11 +42,12 @@ A --focus normal,easy --others random --seeds 1000                 # several pla
 A --focus normal,normal:skipClaimPercent=20 --others normal        # a profile with knobs against the plain Normal
 A --focus normal --seeds 100 --time                                # add the time per decision
 A --focus normal,normal:searchWorlds=8 --others normal --seeds 1000 --jobs 0   # all the cores, the same bytes as --jobs 1
+A --focus normal,normal:weighted=1 --others normal --seeds 20 --json   # the report as one JSON document
 A --table-stats --first 4000 --seeds 1000 --jobs 14                # the table constants of the own-draws value (below)
 ```
 
 Options: `--focus LIST` (default `normal`), `--others SPEC` (default `random`), `--first N` (default 4000), `--seeds COUNT` (default 250: 1000
-hands per focus player), `--jobs N` (default 1; see below), `--time`, `--table-stats`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
+hands per focus player), `--jobs N` (default 1; see below), `--time`, `--json`, `--table-stats`, `--help`. `--json` prints the report as one JSON document and a newline instead of the text (the numbers of the text with six decimals; the schema is in `ArenaReportJson.h`; not with `--time`, `--logs`, `--check`, `--differences`, `--table-stats`). Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
 printed), 2 is a bad argument (printed with the usage).
 
 **Threads.** `--jobs N` is N threads in all (1 to 256; `--jobs 0` is one thread per core, the hardware concurrency). The seeds come first: a seed is played whole by

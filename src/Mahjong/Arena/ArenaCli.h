@@ -3,6 +3,7 @@
 #include <Mahjong/Arena/ArenaLogs.h>
 #include <Mahjong/Arena/ArenaLogsReport.h>
 #include <Mahjong/Arena/ArenaReport.h>
+#include <Mahjong/Arena/ArenaReportJson.h>
 #include <Mahjong/Arena/ArenaTable.h>
 
 namespace BECore::Mahjong::Arena {
@@ -30,6 +31,8 @@ namespace BECore::Mahjong::Arena {
         int differences = kDefaultDifferences;
         /// Plays four Normal seats over `config.first` / `count` / `jobs`; `config` holds the defaults of its other fields.
         bool tableStats = false;
+        /// The report of the played seeds as the JSON document of `ArenaReportJson.h`, not the text.
+        bool json = false;
     };
 
     /// The options of `--help`; `docs/bot-arena.md` has the same with examples.
@@ -39,7 +42,8 @@ namespace BECore::Mahjong::Arena {
      * @brief Reads the arguments (without the name of the program).
      *
      * The options are `ArenaUsage()` and `docs/bot-arena.md`. `--help` wins over everything after it. `--table-stats` (the constants of
-     * the own-draws value, `docs/own-draws-ev.md`) refuses `--focus`, `--others`, `--time` and `--logs`; the log mode (`--logs`)
+     * the own-draws value, `docs/own-draws-ev.md`) refuses `--focus`, `--others`, `--time` and `--logs`; `--json` (the report of the
+     * played seeds as a document) refuses `--logs`, `--check`, `--differences`, `--table-stats` and `--time`; the log mode (`--logs`)
      * refuses the options that play seeds and a `random` in `--focus` (the bots the people are compared with), and `--jobs` then
      * plays whole matches. A bad argument is an error text that names it.
      */
@@ -54,7 +58,7 @@ namespace BECore::Mahjong::Arena {
     /**
      * @brief The whole program: parses `args`, plays, formats and returns the exit code.
      *
-     * The report and `--help` go to `out`; an error (bad arguments with the usage, a refused action) goes to `err` with its exit code
+     * The report (with `--json` the document and a newline) and `--help` go to `out`; an error (bad arguments with the usage, a refused action) goes to `err` with its exit code
      * constant. The same arguments give the same bytes, `--time` apart.
      */
     [[nodiscard]] int RunArenaCli(Span<const StringView> args, ArenaCliOutput& output);
