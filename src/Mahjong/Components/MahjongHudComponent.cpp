@@ -1,5 +1,6 @@
 #include "MahjongHudComponent.h"
 
+#include <BECore/Config/ConfigManager.h>
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
@@ -15,6 +16,7 @@
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/CenterPanel.h>
+#include <Mahjong/Table/HudFacts.h>
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
 #include <Mahjong/Table/ScoreText.h>
@@ -48,6 +50,8 @@ namespace BECore::Mahjong {
         constexpr StringView kRulesNextAction = "MahjongRulesNext";
         constexpr StringView kRulesBackAction = "MahjongRulesBack";
         constexpr StringView kRulesCloseAction = "MahjongRulesClose";
+        constexpr StringView kHudValuesName = "MahjongHudValues";
+        constexpr LevelIndex kViewLevel = 0;
 
         /// "RulesLine3": the element or variable `base` of number `index`.
         PoolString NumberedName(const char* base, int index) {
@@ -114,6 +118,35 @@ namespace BECore::Mahjong {
         SubscribeInScene<InputEvents::ActionEvent, &MahjongHudComponent::OnAction>(this);
         SubscribeInScene<SDLEvents::KeyDownEvent, &MahjongHudComponent::OnKeyDown>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongHudComponent::OnUpdate>(this);
+        ConfigManager& configs = CoreManager::GetConfigManager();
+        const PoolString name = PoolString::Intern(kHudValuesName);
+        if (configs.HasConfig(name)) {
+            OfferHudValues(configs.GetConfig(name).GetPugiNode());
+        }
+    }
+
+    bool MahjongHudComponent::OfferHudValues(const pugi::xml_node& root) {
+        HudValuesParse parse = ParseHudValues(root, kHudValuesName);
+        // The context holds `_facts` at its level 0, so the document may declare nothing else
+        const ContextDecl& declaration = parse.values.context;
+        if (parse.Ok() && (declaration.Size() != 1 || declaration.Levels()[kViewLevel].type->Hash() != HudFacts::GetStaticTypeMeta().typeHash)) {
+            parse.errors.push_back(Format("Config '{}': context: the HUD's data declares exactly one level, of the type HudFacts", kHudValuesName));
+        }
+        _valuesKeyRead = false;
+        if (!parse.Ok()) {
+            for (const String& error : parse.errors) {
+                LOG_ERROR(Format("MahjongHudComponent: the HUD's data is refused, MoveLine and MatchOver stay hidden: {}", error));
+            }
+            _values = HudValues{};
+            _context = Context();
+            _valuesMask = 0;
+            return false;
+        }
+        _values = std::move(parse.values);
+        _context = Context(_values.context);
+        _context.Set(kViewLevel, _facts, &_factsVersion);
+        _valuesMask = ValueDependencies().Add(_values.moveLineShown).Add(_values.matchOverShown).Mask();
+        return true;
     }
 
     void MahjongHudComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& /*event*/) {
@@ -172,6 +205,7 @@ namespace BECore::Mahjong {
         PublishOptions(game);
         PublishEndScreens(game);
         PublishRules(game);
+        ApplyValues();
     }
 
     void MahjongHudComponent::PublishNumbers(const MahjongGame* game) {
@@ -181,7 +215,7 @@ namespace BECore::Mahjong {
             _numbersOf = nullptr;
             _numbersPublished = false;
             _roomLineSeen = false;
-            ShowMoveLine(false);
+            SetFacts(HudFacts{});
             return;
         }
         const TableSession& session = game->GetSession();
@@ -204,12 +238,13 @@ namespace BECore::Mahjong {
         } else {
             _roomLineSeen = false;
         }
+        const bool roomLineUp = !lastMove.empty();
         if (lastMove.empty() && session.GetPhase() == SessionPhase::Playing && !hand.Moves().empty()) {
             const HandMove& move = hand.Moves().back();
             lastMove = MoveText(strings, move, hand.SeatWind(move.seat));
         }
         vars.Set("lastMove"_intern, StringView(lastMove));
-        ShowMoveLine(!lastMove.empty());
+        SetFacts(MakeHudFacts(match, session, roomLineUp));
 
         const auto plates = MakeSeatPlates(strings, session, match);
         const CenterPanelText panel = MakeCenterPanel(strings, session, match);
@@ -223,10 +258,36 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHudComponent::SetFacts(const HudFacts& facts) {
+        if (facts != _facts) {
+            _facts = facts;
+            ++_factsVersion;
+        }
+    }
+
+    void MahjongHudComponent::ApplyValues() {
+        const uint64_t key = _context.VersionKey(_valuesMask);
+        if (_valuesKeyRead && key == _valuesKey) {
+            return;
+        }
+        _valuesKey = key;
+        _valuesKeyRead = true;
+        ++_valueReads;
+        ShowMoveLine(_values.moveLineShown.Get(_context));
+        ShowMatchOver(_values.matchOverShown.Get(_context));
+    }
+
     void MahjongHudComponent::ShowMoveLine(bool show) {
         if (show != _moveLineShown) {
             _moveLineShown = show;
             UICanvasComponent::SetElementVisibleByName(GetScene(), "MoveLine"_intern, show);
+        }
+    }
+
+    void MahjongHudComponent::ShowMatchOver(bool show) {
+        if (show != _matchOverShown) {
+            _matchOverShown = show;
+            UICanvasComponent::SetVisibleByName(GetScene(), "MatchOver"_intern, show);
         }
     }
 
@@ -541,9 +602,10 @@ namespace BECore::Mahjong {
             _handOverShown = handOverShown;
             ShowHandOver(handOverShown);
         }
-        if (matchOver != _matchOverShown) {
-            _matchOverShown = matchOver;
-            UICanvasComponent::SetVisibleByName(GetScene(), "MatchOver"_intern, matchOver);
+        if (matchOver != _facts.matchOver) {
+            HudFacts facts = _facts;
+            facts.matchOver = matchOver;
+            SetFacts(facts);
         }
     }
 

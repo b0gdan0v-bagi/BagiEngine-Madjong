@@ -18,7 +18,7 @@
     <component type="MahjongHudComponent" />
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <!-- The last move in words (lastMove), shown by the component exactly while it has a text -->
+        <!-- The last move in words (lastMove). It is shown by the value `moveLineShown` of config/MahjongHudValues.xml (a read of the table's HudFacts), not by a rule of the component -->
         <element type="UIStack" name="MoveLine" region="table.moveLine" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="@hudPanel" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@hudPanelDeep" highlight="@highlight">
           <children>
             <element type="UIElement" name="MoveText" flex="1" fontSize="18">

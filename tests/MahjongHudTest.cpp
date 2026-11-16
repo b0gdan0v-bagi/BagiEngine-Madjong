@@ -1,5 +1,6 @@
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIDropdown.h>
+#include <Common/LogRecorder.h>
 #include <Common/Printers.h>
 #include <Common/TempPath.h>
 #include <Events/SceneEvents.h>
@@ -1002,6 +1003,107 @@ namespace BECore::Mahjong::Tests {
             const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hud"), kButtonAir);  // in the portrait view too: the plate is narrower there
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
+    }
+
+    // ----- the move line as data (`config/MahjongHudValues.xml`) -----
+
+    TEST_F(MahjongHudTest, TheMoveLineFollowsTheFactsOfTheTableThroughAHandAndANewHand) {
+        Draw();
+        EXPECT_FALSE(MoveLineShown()) << "no match yet";
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        EXPECT_FALSE(MoveLineShown()) << "no move yet";
+        int steps = 0;
+        while (_game->GetSession().GetPhase() == SessionPhase::Playing && _game->GetSession().StepComputer().has_value()) {
+            Draw();
+            ++steps;
+            const bool playing = _game->GetSession().GetPhase() == SessionPhase::Playing;
+            EXPECT_EQ(MoveLineShown(), playing && !Hand().Moves().empty()) << "step " << steps;
+            EXPECT_EQ(MoveLineShown(), !Var("lastMove").empty()) << "the plate shows exactly while it has a text, step " << steps;
+        }
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        EXPECT_FALSE(MoveLineShown());
+        ASSERT_TRUE(_game->GetSession().NextHand().has_value());
+        Draw();
+        EXPECT_FALSE(MoveLineShown()) << "a new hand has no move yet";
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        EXPECT_TRUE(MoveLineShown());
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Draw();
+        EXPECT_TRUE(MoveLineShown()) << "the language switch rewords the line and keeps the plate";
+        EXPECT_EQ(MoveLineShown(), !Var("lastMove").empty());
+    }
+
+    TEST_F(MahjongHudTest, ASteadyFrameReadsNoValueAndMovesNeitherTheVariablesNorTheFacts) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        ASSERT_TRUE(MoveLineShown());
+        const uint64_t reads = Hud()->ValueReadCount();
+        const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        Draw();
+        EXPECT_EQ(Hud()->ValueReadCount(), reads) << "a frame where nothing moved reads no value";
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion);
+
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        EXPECT_EQ(Hud()->ValueReadCount(), reads) << "a second move leaves the fact true: the values are not read again";
+        EXPECT_TRUE(MoveLineShown());
+    }
+
+    TEST_F(MahjongHudTest, ARefusedValuesFileHidesBothElementsAndLogsOneLinePerErrorNamingFileFieldAndPath) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        ASSERT_TRUE(MoveLineShown());
+
+        pugi::xml_document bad;
+        ASSERT_TRUE(bad.load_string(R"(<MahjongHudValues><context view="HudFacts"/><moveLineShown from="view.hasLastMov"/><matchOverShown from="seat.matchOver"/></MahjongHudValues>)"));
+        const HudValuesParse expected = ParseHudValues(bad.document_element(), kShippedHudValuesName);
+        ASSERT_EQ(expected.errors.size(), 2u);
+        LogEvent::Flush();  // a line another test logged is not this recorder's
+        BECore::Tests::LogRecorder recorder;
+        EXPECT_FALSE(Hud()->OfferHudValues(bad.document_element()));
+        LogEvent::Flush();
+        EXPECT_EQ(recorder.Count(LogLevel::Error, {"MahjongHudComponent", "MahjongHudValues"}), expected.errors.size());
+        EXPECT_NE(recorder.Find(LogLevel::Error, {"moveLineShown", "view.hasLastMov"}), nullptr);
+        EXPECT_NE(recorder.Find(LogLevel::Error, {"matchOverShown", "seat.matchOver"}), nullptr);
+
+        Draw();
+        EXPECT_FALSE(MoveLineShown()) << "a file with an error is never half used";
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        EXPECT_FALSE(MoveLineShown());
+        LogEvent::Flush();
+        EXPECT_EQ(recorder.Count(LogLevel::Error, {"MahjongHudComponent"}), expected.errors.size()) << "the frames log nothing more";
+
+        pugi::xml_document shipped;
+        ASSERT_TRUE(LoadShippedHudValuesDocument(shipped));
+        EXPECT_TRUE(Hud()->OfferHudValues(shipped.document_element()));
+        Draw();
+        EXPECT_TRUE(MoveLineShown()) << "the good file takes over again";
+        LogEvent::Flush();
+        EXPECT_EQ(recorder.Count(LogLevel::Error, {"MahjongHudComponent"}), expected.errors.size());
+    }
+
+    TEST_F(MahjongHudTest, ADocumentThatDeclaresAnotherContextIsRefusedAndTheShippedOneGivesNoError) {
+        pugi::xml_document other;
+        ASSERT_TRUE(other.load_string(R"(<MahjongHudValues><context view="HudFacts" extra="HudFacts"/></MahjongHudValues>)"));
+        LogEvent::Flush();
+        BECore::Tests::LogRecorder recorder;
+        EXPECT_FALSE(Hud()->OfferHudValues(other.document_element()));
+        LogEvent::Flush();
+        EXPECT_EQ(recorder.Count(LogLevel::Error, {"MahjongHudValues", "context"}), 1u);
+
+        pugi::xml_document shipped;
+        ASSERT_TRUE(LoadShippedHudValuesDocument(shipped));
+        EXPECT_TRUE(Hud()->OfferHudValues(shipped.document_element()));
+        LogEvent::Flush();
+        EXPECT_EQ(recorder.Count(LogLevel::Error, {"MahjongHudComponent"}), 1u) << "the shipped file adds no error line";
     }
 
     // ----- the name of the selected tile -----
