@@ -273,7 +273,7 @@ def read_document_cells(document: dict) -> None:
     """Reads every cell the tuner uses later, so a missing one is a `KeyError` here (a `TuneError` of `run_arena`), not a crash mid-record."""
     document["handsPerFocus"]
     for index, entry in enumerate(document["focus"]):
-        entry["pointsPerHand"]["mean"], entry["winPercent"]["mean"]
+        entry["pointsPerHand"]["mean"], entry["pointsPerHand"]["half"], entry["winPercent"]["mean"], entry["winPercent"]["half"]
         if index > 0:
             for metric in ("pointsPerHand", "winPercent"):
                 cell = entry["paired"][metric]
@@ -482,6 +482,182 @@ def train(options: TrainOptions, clock: Callable[[], float] = time.monotonic, ou
               f"{notes}, {record['wallSeconds']:.1f} s", file=out)
     print(f"{options.generations} generations in {log}", file=out)
     return EXIT_DONE
+
+
+# ----- judge: the weights, the pooled numbers, the three judgements, the ledger -----
+
+JUDGED_FIRSTS = tuple(first for first, _ in JUDGED_RANGES)
+JUDGED_SEEDS = JUDGED_RANGES[0][1] - JUDGED_RANGES[0][0]  # both ranges are this long (a test holds it)
+TRAINING_GENERATIONS = 10  # `G` of the training that `judge` reads (docs/bot-weights.md, "The training (stage 3)"): the header of a log does not hold it
+JUDGEMENT_A, JUDGEMENT_B, JUDGEMENT_C = "A", "B", "C"
+JUDGEMENTS = (JUDGEMENT_A, JUDGEMENT_B, JUDGEMENT_C)
+WINS_SEAT_PERCENT = 25.0  # the share of wins of one seat of four
+
+
+def weights_of_finished_log(path: Path, generations: int = TRAINING_GENERATIONS) -> Weights:
+    """The `newMean` of the last generation of a finished `train` log: the end of the run, never the best generation by a monitored number.
+
+    Refused (`TuneRefused`) when the log is not a `train` log or holds other than `generations` generations (an unfinished or a longer one)."""
+    try:
+        header, records = read_log(path)
+    except OSError as error:
+        raise TuneError(f"cannot read the log {path}: {error}") from error
+    if header.get("weightNames") != [weight.name for weight in WEIGHTS] or "trainFirst" not in header:
+        raise TuneRefused(f"{path} is not the header of a train log of these weights")
+    if len(records) != generations:
+        raise TuneRefused(f"{path} holds {len(records)} generations, a finished training holds {generations} (--generations): "
+                          "the weights are the last generation's of a finished run")
+    try:
+        return weights_from_dict(records[-1]["newMean"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise TuneError(f"{path}: the last generation has no readable newMean ({error!r})") from error
+
+
+def weights_from_option(text: str) -> Weights:
+    """`name=value,...`: every name of `WEIGHTS` once, each a whole number in `0 .. maximum`; anything else is refused, never filled in."""
+    named = {}
+    for part in text.split(","):
+        name, separator, value = part.partition("=")
+        if not separator or name not in {weight.name for weight in WEIGHTS}:
+            raise TuneRefused(f"--weights: {part!r} is not name=value of a weight ({', '.join(weight.name for weight in WEIGHTS)})")
+        if name in named:
+            raise TuneRefused(f"--weights: {name} is given twice")
+        try:
+            named[name] = int(value)
+        except ValueError:
+            raise TuneRefused(f"--weights: {part!r} is not a whole number") from None
+    missing = [weight.name for weight in WEIGHTS if weight.name not in named]
+    if missing:
+        raise TuneRefused(f"--weights lacks {', '.join(missing)}")
+    for weight in WEIGHTS:
+        if not 0 <= named[weight.name] <= weight.maximum:
+            raise TuneRefused(f"--weights: {weight.name}={named[weight.name]} is outside 0 .. {weight.maximum}")
+    return weights_from_dict(named)
+
+
+def stored_call(judgement: str, document: dict, seconds: float) -> dict:
+    """What `judge` keeps of one arena call: the numbers it reads, not the text. A and C: the paired rows of the tuned seat (the second focus
+    player); B: Normal's own rows (the only focus player), which are what the seats-turned judgement reads."""
+    if judgement == JUDGEMENT_B:
+        entry = document["focus"][0]
+        points, wins = interval_of(entry["pointsPerHand"]), interval_of(entry["winPercent"])
+    else:
+        paired = document["focus"][1]["paired"]
+        points, wins = paired_of(paired["pointsPerHand"]), paired_of(paired["winPercent"])
+    return {"hands": hands_of(document), "points": points, "wallSeconds": round(seconds, 3), "wins": wins}
+
+
+def pool(first: dict, second: dict) -> dict:
+    """The pooled row of two ranges: the mean of the means, the half-width `sqrt(h1^2 + h2^2) / 2`."""
+    return {"half": math.sqrt(first["half"] ** 2 + second["half"] ** 2) / 2, "mean": (first["mean"] + second["mean"]) / 2}
+
+
+@dataclass(frozen=True)
+class Judgement:
+    name: str
+    passed: bool
+    failures: tuple  # why it failed, one text each
+    pooled: dict  # "points" and "wins": the pooled rows the decision was made of
+
+
+def pooled_rows(calls: Sequence[dict]) -> dict:
+    return {metric: pool(calls[0][metric], calls[1][metric]) for metric in ("points", "wins")}
+
+
+def judge_a(calls: Sequence[dict]) -> Judgement:
+    """Against Normal: on each range the paired points and wins are significant and above 0, and so are the pooled means."""
+    failures = []
+    for (first, _), call in zip(JUDGED_RANGES, calls):
+        for metric in ("points", "wins"):
+            cell = call[metric]
+            if not cell["significant"]:
+                failures.append(f"{metric} on {first} are not significant ({signed(cell)})")
+            if not cell["mean"] > 0:
+                failures.append(f"{metric} on {first} are not above 0 ({signed(cell)})")
+    pooled = pooled_rows(calls)
+    for metric, row in pooled.items():
+        if not row["mean"] > 0:
+            failures.append(f"the pooled {metric} are not above 0 ({signed(row)})")
+    return Judgement(JUDGEMENT_A, not failures, tuple(failures), pooled)
+
+
+def judge_b(calls: Sequence[dict]) -> Judgement:
+    """Seats turned: Normal at three tuned seats is not significantly above 0 points a hand and not above 25 % of the wins, pooled."""
+    pooled = pooled_rows(calls)
+    failures = []
+    for metric, limit in (("points", 0.0), ("wins", WINS_SEAT_PERCENT)):
+        row = pooled[metric]
+        if row["mean"] - row["half"] > limit:
+            failures.append(f"Normal's pooled {metric} are significantly above {limit:g} ({signed(row)})")
+    return Judgement(JUDGEMENT_B, not failures, tuple(failures), pooled)
+
+
+def judge_c(calls: Sequence[dict]) -> Judgement:
+    """Against random seats: the pooled paired points and wins are not significantly below 0."""
+    pooled = pooled_rows(calls)
+    failures = [f"the pooled {metric} are significantly below 0 ({signed(row)})" for metric, row in pooled.items() if row["mean"] + row["half"] < 0]
+    return Judgement(JUDGEMENT_C, not failures, tuple(failures), pooled)
+
+
+def verdict(judgements: Sequence[Judgement]) -> tuple:
+    """`(stronger, text)`: stronger than Normal only when A, B and C all pass; else the failed ones are named."""
+    failed = [judgement.name for judgement in judgements if not judgement.passed]
+    if not failed:
+        return True, "stronger than Normal"
+    return False, f"not stronger than Normal ({', '.join(failed)} failed)"
+
+
+LEDGER_FORMAT = "bagi-mahjong-judged-ledger"
+LEDGER_VERSION = 1
+DEFAULT_LEDGER = DEFAULT_LOG.parent / "judged.json"
+
+
+def ledger_key(spec: str, judgement: str, first: int, seeds: int) -> str:
+    return f"{spec}|{judgement}|{first}|{seeds}"
+
+
+def empty_ledger() -> dict:
+    return {"entries": {}, "format": LEDGER_FORMAT, "version": LEDGER_VERSION}
+
+
+def read_ledger(path: Path) -> dict:
+    """The ledger at `path`, empty when there is none. Only the file itself is read: a half-written temp file next to it is never the ledger."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return empty_ledger()
+    except OSError as error:
+        raise TuneError(f"cannot read the ledger {path}: {error}") from error
+    try:
+        ledger = json.loads(text)
+        found = (ledger["format"], ledger["version"])
+        entries = ledger["entries"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise TuneError(f"the ledger {path} is not readable ({error!r})") from error
+    if found != (LEDGER_FORMAT, LEDGER_VERSION):
+        raise TuneRefused(f"the ledger {path} is of format {found[0]!r} version {found[1]!r}, this tool reads {LEDGER_FORMAT!r} version {LEDGER_VERSION}")
+    if not isinstance(entries, dict):
+        raise TuneError(f"the ledger {path} has no table of entries")
+    return ledger
+
+
+def with_entry(ledger: dict, key: str, entry: dict) -> dict:
+    """The ledger with one more entry; a call that is in it is never replaced (a call is played once)."""
+    if key in ledger["entries"]:
+        raise TuneError(f"the ledger already holds {key}: a judged call is never played or stored twice")
+    return {**ledger, "entries": {**ledger["entries"], key: entry}}
+
+
+def write_ledger(path: Path, ledger: dict) -> None:
+    """Whole file to a temp file beside it, then a rename: a kill leaves the old ledger or the new one, never half of one."""
+    check_log_path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(path.name + ".tmp")
+    with open(temp, "w", encoding="utf-8") as stream:
+        stream.write(json.dumps(ledger, sort_keys=True, indent=1) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temp, path)
 
 
 # ----- the command line -----

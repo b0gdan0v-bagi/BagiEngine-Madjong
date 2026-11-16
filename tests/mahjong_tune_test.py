@@ -394,6 +394,274 @@ class GuardTest(unittest.TestCase):
         self.assertEqual(tune.DEFAULT_LOG.parent, Path.home() / ".claude" / "plans" / "mahjong-tune")
 
 
+def paired_call(points, wins) -> dict:
+    """A stored call of A or C: each argument is `(mean, half)` or `(mean, half, significant)`; significant is `mean` outside the interval otherwise."""
+    def row(values):
+        mean, half = values[:2]
+        return {"half": half, "mean": mean, "significant": values[2] if len(values) > 2 else abs(mean) > half}
+    return {"hands": 4000, "points": row(points), "wallSeconds": 1.5, "wins": row(wins)}
+
+
+def own_call(points, wins) -> dict:
+    """A stored call of B: Normal's own rows, `(mean, half)`."""
+    return {"hands": 1000, "points": {"half": points[1], "mean": points[0]}, "wallSeconds": 1.5, "wins": {"half": wins[1], "mean": wins[0]}}
+
+
+def finished_log(folder: Path, generations: int = tune.TRAINING_GENERATIONS, name: str = "train.jsonl") -> Path:
+    """A `train` log of toy numbers: the new mean of generation g has `wShanten` 5000 + g, and the best monitored row is the first one."""
+    path = folder / name
+    header = {"candidates": 4, "exploreFirst": 4000, "kind": "header", "monitorSeeds": 10, "seed": 1, "seeds": 10,
+              "startWeights": tune.weights_dict(tune.start_weights()), "trainFirst": 200000, "weightNames": [weight.name for weight in tune.WEIGHTS]}
+    lines = [tune.log_line(header)]
+    for generation in range(generations):
+        new_mean = tune.weights_dict(tuple(5000 + generation if weight.name == "wShanten" else weight.start for weight in tune.WEIGHTS))
+        monitor = {"pairedPoints": {"half": 1.0, "mean": 9.0 - generation, "significant": True}}
+        lines.append(tune.log_line({"generation": generation, "kind": "generation", "monitor": monitor, "newMean": new_mean}))
+    path.write_text("".join(lines), encoding="utf-8")
+    return path
+
+
+class PoolTest(unittest.TestCase):
+    def test_the_pool_is_the_mean_of_the_means_and_the_root_of_the_squares_over_two(self) -> None:
+        pooled = tune.pool({"half": 3.0, "mean": 2.0}, {"half": 4.0, "mean": 3.0})
+        self.assertEqual((pooled["mean"], pooled["half"]), (2.5, 2.5))
+        negative = tune.pool({"half": 0.0, "mean": -4.0}, {"half": 0.0, "mean": 2.0})
+        self.assertEqual((negative["mean"], negative["half"]), (-1.0, 0.0))
+
+    def test_the_ranges_are_two_of_one_length(self) -> None:
+        self.assertEqual(tune.JUDGED_FIRSTS, (100000, 130000))
+        self.assertEqual(tune.JUDGED_SEEDS, 1000)
+        self.assertEqual(tune.JUDGED_RANGES[1][1] - tune.JUDGED_RANGES[1][0], tune.JUDGED_SEEDS)
+
+
+class JudgementTest(unittest.TestCase):
+    GOOD = (paired_call((3.0, 1.0), (2.0, 1.0)), paired_call((4.0, 1.0), (3.0, 1.0)))
+
+    def a(self, first, second):
+        return tune.judge_a((first, second))
+
+    def test_a_passes_when_both_ranges_are_significant_and_positive(self) -> None:
+        judgement = self.a(*self.GOOD)
+        self.assertTrue(judgement.passed)
+        self.assertEqual(judgement.failures, ())
+        self.assertEqual(judgement.pooled["points"]["mean"], 3.5)
+        self.assertEqual(judgement.pooled["wins"]["mean"], 2.5)
+
+    def test_a_fails_alone_on_a_range_that_is_not_significant(self) -> None:
+        for metric in ("points", "wins"):
+            for index in (0, 1):
+                calls = [dict(call) for call in self.GOOD]
+                calls[index] = {**calls[index], metric: {"half": 1.0, "mean": 3.0, "significant": False}}
+                judgement = self.a(*calls)
+                self.assertFalse(judgement.passed, (metric, index))
+                self.assertEqual(len(judgement.failures), 1)
+                self.assertIn("not significant", judgement.failures[0])
+
+    def test_a_fails_on_a_negative_mean_even_when_significant_and_the_pool_stays_positive(self) -> None:
+        negative = paired_call((-1.0, 0.5), (2.0, 1.0))
+        self.assertTrue(negative["points"]["significant"])
+        judgement = self.a(negative, paired_call((9.0, 1.0), (3.0, 1.0)))
+        self.assertFalse(judgement.passed)
+        self.assertGreater(judgement.pooled["points"]["mean"], 0)
+        self.assertEqual(len(judgement.failures), 1)
+        self.assertIn("not above 0", judgement.failures[0])
+
+    def test_a_fails_on_a_pooled_mean_at_or_below_0_of_two_significant_rows_of_opposite_sign(self) -> None:
+        judgement = self.a(paired_call((2.0, 0.5), (2.0, 0.5)), paired_call((-2.0, 0.5), (2.0, 0.5)))
+        self.assertFalse(judgement.passed)
+        self.assertEqual(judgement.pooled["points"]["mean"], 0.0)
+        self.assertTrue(any("pooled points" in text for text in judgement.failures))
+        self.assertFalse(any("pooled wins" in text for text in judgement.failures))
+
+    def test_a_fails_when_the_points_are_fine_and_the_wins_are_not(self) -> None:
+        judgement = self.a(paired_call((3.0, 1.0), (0.5, 1.0)), paired_call((4.0, 1.0), (0.4, 1.0)))
+        self.assertFalse(judgement.passed)
+        self.assertTrue(all("wins" in text for text in judgement.failures))
+        self.assertGreater(judgement.pooled["points"]["mean"], 0)
+
+    B_BOTH = (own_call((2.0, 3.0), (27.0, 3.0)), own_call((3.0, 4.0), (28.0, 4.0)))  # pooled: 2.5 +- 2.5 and 27.5 +- 2.5, both exactly on the line
+
+    def test_b_passes_when_the_pooled_interval_just_reaches_the_line_and_fails_a_hair_above(self) -> None:
+        self.assertTrue(tune.judge_b(self.B_BOTH).passed)
+        above_points = (own_call((2.0, 3.0), (27.0, 3.0)), own_call((3.0001, 4.0), (28.0, 4.0)))
+        judgement = tune.judge_b(above_points)
+        self.assertFalse(judgement.passed)
+        self.assertEqual(len(judgement.failures), 1)
+        self.assertIn("points", judgement.failures[0])
+        above_wins = (own_call((2.0, 3.0), (27.0, 3.0)), own_call((3.0, 4.0), (28.0001, 4.0)))
+        judgement = tune.judge_b(above_wins)
+        self.assertFalse(judgement.passed)
+        self.assertEqual(len(judgement.failures), 1)
+        self.assertIn("wins", judgement.failures[0])
+
+    def test_b_passes_when_normal_is_well_below_the_line(self) -> None:
+        self.assertTrue(tune.judge_b((own_call((-9.0, 1.0), (20.0, 1.0)), own_call((-8.0, 1.0), (19.0, 1.0)))).passed)
+
+    C_EDGE = (paired_call((-2.0, 3.0), (-3.0, 3.0)), paired_call((-3.0, 4.0), (-2.0, 4.0)))  # pooled: -2.5 +- 2.5 and -2.5 +- 2.5
+
+    def test_c_passes_when_the_pooled_interval_just_reaches_0_and_fails_below(self) -> None:
+        self.assertTrue(tune.judge_c(self.C_EDGE).passed)
+        points_below = (paired_call((-2.0, 3.0), (-3.0, 3.0)), paired_call((-3.0001, 4.0), (-2.0, 4.0)))
+        judgement = tune.judge_c(points_below)
+        self.assertEqual((judgement.passed, len(judgement.failures)), (False, 1))
+        self.assertIn("points", judgement.failures[0])
+        wins_below = (paired_call((-2.0, 3.0), (-3.0, 3.0)), paired_call((-3.0, 4.0), (-2.0001, 4.0)))
+        judgement = tune.judge_c(wins_below)
+        self.assertEqual((judgement.passed, len(judgement.failures)), (False, 1))
+        self.assertIn("wins", judgement.failures[0])
+
+    def test_c_is_not_made_to_fail_by_a_range_that_is_significantly_negative_alone(self) -> None:
+        self.assertTrue(tune.judge_c((paired_call((-6.0, 1.0), (1.0, 1.0)), paired_call((8.0, 1.0), (1.0, 1.0)))).passed)
+
+    def verdict_of(self, a, b, c) -> tuple:
+        results = (tune.judge_a(a), tune.judge_b(b), tune.judge_c(c))
+        return tune.verdict(results)
+
+    def test_the_verdict_is_stronger_only_when_all_three_pass(self) -> None:
+        failed_a = (paired_call((3.0, 1.0), (0.1, 1.0)),) * 2
+        failed_b = (own_call((9.0, 1.0), (30.0, 1.0)),) * 2
+        failed_c = (paired_call((-9.0, 1.0), (-9.0, 1.0)),) * 2
+        self.assertEqual(self.verdict_of(JudgementTest.GOOD, (own_call((-1.0, 1.0), (24.0, 1.0)),) * 2, self.C_EDGE), (True, "stronger than Normal"))
+        self.assertEqual(self.verdict_of(failed_a, (own_call((-1.0, 1.0), (24.0, 1.0)),) * 2, self.C_EDGE), (False, "not stronger than Normal (A failed)"))
+        self.assertEqual(self.verdict_of(JudgementTest.GOOD, failed_b, self.C_EDGE), (False, "not stronger than Normal (B failed)"))
+        self.assertEqual(self.verdict_of(JudgementTest.GOOD, (own_call((-1.0, 1.0), (24.0, 1.0)),) * 2, failed_c),
+                         (False, "not stronger than Normal (C failed)"))
+        self.assertEqual(self.verdict_of(failed_a, failed_b, failed_c), (False, "not stronger than Normal (A, B, C failed)"))
+
+
+class StoredCallTest(unittest.TestCase):
+    DOCUMENT = {
+        "handsPerFocus": 4000,
+        "focus": [
+            {"pointsPerHand": {"half": 1.5, "mean": 0.25}, "winPercent": {"half": 0.5, "mean": 26.0}, "paired": None},
+            {"pointsPerHand": {"half": 9.0, "mean": 9.0}, "winPercent": {"half": 9.0, "mean": 9.0},
+             "paired": {"pointsPerHand": {"half": 2.0, "mean": 3.0, "significant": True, "hasInterval": True},
+                        "winPercent": {"half": 0.75, "mean": 1.0, "significant": False, "hasInterval": True}}},
+        ],
+    }
+
+    def test_a_and_c_keep_the_paired_rows_of_the_tuned_seat(self) -> None:
+        for judgement in (tune.JUDGEMENT_A, tune.JUDGEMENT_C):
+            stored = tune.stored_call(judgement, self.DOCUMENT, 12.3456)
+            self.assertEqual(stored, {"hands": 8000, "points": {"half": 2.0, "mean": 3.0, "significant": True}, "wallSeconds": 12.346,
+                                      "wins": {"half": 0.75, "mean": 1.0, "significant": False}})
+
+    def test_b_keeps_normals_own_rows(self) -> None:
+        document = {**self.DOCUMENT, "focus": self.DOCUMENT["focus"][:1]}
+        self.assertEqual(tune.stored_call(tune.JUDGEMENT_B, document, 2.0),
+                         {"hands": 4000, "points": {"half": 1.5, "mean": 0.25}, "wallSeconds": 2.0, "wins": {"half": 0.5, "mean": 26.0}})
+
+
+class WeightsSourceTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+
+    def test_a_finished_log_gives_the_last_new_mean_not_the_best_monitored_one(self) -> None:
+        log = finished_log(self.temp)
+        weights = tune.weights_of_finished_log(log)
+        self.assertEqual(weights[0], 5000 + tune.TRAINING_GENERATIONS - 1)  # the best monitored row is generation 0 (+9)
+        self.assertEqual(weights[1:], tune.start_weights()[1:])
+        self.assertEqual(tune.weights_of_finished_log(finished_log(self.temp, 3, "three.jsonl"), 3)[0], 5002)
+
+    def test_an_unfinished_or_a_longer_log_is_refused(self) -> None:
+        for count in (0, 3, tune.TRAINING_GENERATIONS - 1, tune.TRAINING_GENERATIONS + 1):
+            with self.assertRaises(tune.TuneRefused, msg=count) as caught:
+                tune.weights_of_finished_log(finished_log(self.temp, count, f"log{count}.jsonl"))
+            self.assertIn("generations", str(caught.exception))
+
+    def test_a_log_that_is_not_a_train_log_is_refused(self) -> None:
+        log = finished_log(self.temp)
+        lines = log.read_text(encoding="utf-8").splitlines(keepends=True)
+        header = json.loads(lines[0])
+        header["weightNames"] = header["weightNames"][:-1]
+        log.write_text(tune.log_line(header) + "".join(lines[1:]), encoding="utf-8")
+        with self.assertRaises(tune.TuneRefused):
+            tune.weights_of_finished_log(log)
+        log.write_text("".join(lines[1:]), encoding="utf-8")  # no header
+        with self.assertRaises(tune.TuneError):
+            tune.weights_of_finished_log(log)
+        with self.assertRaises(tune.TuneError):
+            tune.weights_of_finished_log(self.temp / "missing.jsonl")
+
+    def option(self, **changes) -> str:
+        values = {weight.name: weight.start for weight in tune.WEIGHTS}
+        values.update(changes)
+        return ",".join(f"{name}={value}" for name, value in values.items() if value is not None)
+
+    def test_the_weights_option_takes_every_name_once(self) -> None:
+        self.assertEqual(tune.weights_from_option(self.option()), tune.start_weights())
+        self.assertEqual(tune.weights_from_option(self.option(wShanten=0, wKeep=tune.WEIGHT_MAX))[:3], (0, tune.start_weights()[1], tune.WEIGHT_MAX))
+        shuffled = ",".join(reversed(self.option().split(",")))
+        self.assertEqual(tune.weights_from_option(shuffled), tune.start_weights())
+
+    def test_the_weights_option_refuses_a_missing_a_doubled_an_unknown_or_an_out_of_range_name(self) -> None:
+        refused = [self.option(wSafe=None), self.option() + ",wSafe=1", self.option() + ",wLuck=1", self.option(wSafe=tune.WEIGHT_MAX + 1),
+                   self.option(wSafe=-1), self.option(wSafe="x"), self.option(wSafe=""), "", "wSafe", self.option() + ",", self.option(wSafe="1.5")]
+        for text in refused:
+            with self.assertRaises(tune.TuneRefused, msg=text):
+                tune.weights_from_option(text)
+
+
+class LedgerTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+        self.spec = tune.weights_spec(tune.start_weights())
+
+    def test_a_missing_ledger_is_empty_and_a_round_trip_keeps_the_entries(self) -> None:
+        path = self.temp / "deeper" / "judged.json"
+        self.assertEqual(tune.read_ledger(path)["entries"], {})
+        key = tune.ledger_key(self.spec, "A", 100000, 1000)
+        entry = paired_call((1.0, 0.5), (0.25, 0.5))
+        tune.write_ledger(path, tune.with_entry(tune.read_ledger(path), key, entry))
+        self.assertEqual(tune.read_ledger(path)["entries"], {key: entry})
+        self.assertFalse(path.with_name(path.name + ".tmp").exists())
+
+    def test_the_key_differs_by_spec_call_and_range(self) -> None:
+        base = tune.ledger_key(self.spec, "A", 100000, 1000)
+        others = [tune.ledger_key(self.spec.replace("wKeep=1", "wKeep=2"), "A", 100000, 1000), tune.ledger_key(self.spec, "B", 100000, 1000),
+                  tune.ledger_key(self.spec, "A", 130000, 1000), tune.ledger_key(self.spec, "A", 100000, 999)]
+        self.assertEqual(len({base, *others}), 5)
+
+    def test_an_entry_is_never_replaced(self) -> None:
+        key = tune.ledger_key(self.spec, "A", 100000, 1000)
+        ledger = tune.with_entry(tune.empty_ledger(), key, {"hands": 1})
+        with self.assertRaises(tune.TuneError):
+            tune.with_entry(ledger, key, {"hands": 2})
+        self.assertEqual(ledger["entries"][key], {"hands": 1})
+        self.assertEqual(tune.empty_ledger()["entries"], {})  # `with_entry` made a new one
+
+    def test_a_ledger_of_another_format_or_version_is_refused(self) -> None:
+        path = self.temp / "judged.json"
+        for text in ('{"entries": {}, "format": "other", "version": 1}', '{"entries": {}, "format": "%s", "version": 2}' % tune.LEDGER_FORMAT):
+            path.write_text(text, encoding="utf-8")
+            with self.assertRaises(tune.TuneRefused):
+                tune.read_ledger(path)
+        for text in ("{broken", "[]", "{}"):
+            path.write_text(text, encoding="utf-8")
+            with self.assertRaises(tune.TuneError):
+                tune.read_ledger(path)
+
+    def test_a_half_written_temp_file_is_not_the_ledger(self) -> None:
+        path = self.temp / "judged.json"
+        path.with_name("judged.json.tmp").write_text('{"entries": {"x": 1', encoding="utf-8")
+        self.assertEqual(tune.read_ledger(path)["entries"], {})
+        key = tune.ledger_key(self.spec, "C", 130000, 1000)
+        tune.write_ledger(path, tune.with_entry(tune.empty_ledger(), key, {"hands": 3}))
+        self.assertEqual(tune.read_ledger(path)["entries"], {key: {"hands": 3}})
+        path.with_name("judged.json.tmp").write_text("{garbage", encoding="utf-8")
+        self.assertEqual(tune.read_ledger(path)["entries"], {key: {"hands": 3}})  # the old ledger stays readable beside a stale temp
+
+    @SKIP_ON_WINDOWS
+    def test_a_ledger_inside_a_git_work_tree_is_refused_and_not_written(self) -> None:
+        path = REPOSITORY / "logs" / "judged-test-never-created.json"
+        with self.assertRaises(tune.TuneRefused):
+            tune.write_ledger(path, tune.empty_ledger())
+        self.assertFalse(path.exists())
+        self.assertFalse(path.with_name(path.name + ".tmp").exists())
+
+
 @SKIP_ON_WINDOWS
 class TrainTest(unittest.TestCase):
     CANDIDATES = 12
