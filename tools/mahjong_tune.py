@@ -17,8 +17,14 @@ The log is a JSONL file, one line per record, written and flushed after each gen
 same bytes (but `wallSeconds`) as an uninterrupted one. `--generations` is the number of generations the log should hold; `--max-seconds`
 stops before a generation that would end after that many seconds since the command started (exit 0, the log is resumable).
 
-Exit code: 0 done (also when stopped by `--max-seconds`), 1 the arena failed or a file cannot be read, 2 a refused or wrong command line.
-Standard library only.
+    python3 tools/mahjong_tune.py judge [--from-log PATH | --weights name=value,...] [--generations 10] [--arena PATH] [--ledger PATH] [--jobs 0]
+
+`judge` plays the judged ranges of `docs/bot-weights.md` for one set of weights, six arena calls (the judgements A against Normal, B seats
+turned and C against random, each on both ranges), and prints the verdict of the rule. A call is stored in a ledger outside git the moment it
+returns and is never played again for the same weights: the verdict is a function of the ledger, so a second command prints the same bytes.
+
+Exit code: 0 done (also when stopped by `--max-seconds`; for `judge`, the verdict printed), 1 the arena failed or a file cannot be read, 2 a
+refused or wrong command line. Standard library only.
 """
 
 import argparse
@@ -660,6 +666,84 @@ def write_ledger(path: Path, ledger: dict) -> None:
     os.replace(temp, path)
 
 
+# ----- judge -----
+
+DEFAULT_JUDGE_LOG = DEFAULT_LOG.with_name("train3.jsonl")  # the training of stage 3 (docs/bot-weights.md)
+RANDOM_SPEC = "random"
+JUDGEMENT_TITLES = {JUDGEMENT_A: "against Normal", JUDGEMENT_B: "seats turned", JUDGEMENT_C: "against random"}
+JUDGE_FUNCTIONS = {JUDGEMENT_A: judge_a, JUDGEMENT_B: judge_b, JUDGEMENT_C: judge_c}
+
+
+@dataclass(frozen=True)
+class JudgeOptions:
+    weights: Weights
+    arena: Path
+    ledger: Path
+    jobs: int
+
+
+def judged_call(judgement: str, spec: str) -> tuple:
+    """`(focus players, the others)` of a judgement: A and C pair the tuned seat with Normal's on the same walls, B turns the seats."""
+    if judgement == JUDGEMENT_A:
+        return [NORMAL_SPEC, spec], NORMAL_SPEC
+    if judgement == JUDGEMENT_B:
+        return [NORMAL_SPEC], spec
+    return [NORMAL_SPEC, spec], RANDOM_SPEC
+
+
+def judged_calls() -> list:
+    """The six calls in the order they are played: A, B, C, each on the decision and then the confirmation range."""
+    return [(judgement, first) for judgement in JUDGEMENTS for first in JUDGED_FIRSTS]
+
+
+def call_line(judgement: str, first: int, entry: dict) -> str:
+    points, wins = entry["points"], entry["wins"]
+    if judgement == JUDGEMENT_B:
+        rows = f"Normal's points a hand {signed(points)}, wins % {wins['mean']:.2f} +- {wins['half']:.2f}"
+    else:
+        rows = (f"paired points a hand {signed(points)}{' (significant)' if points['significant'] else ''}, "
+                f"wins % {signed(wins)}{' (significant)' if wins['significant'] else ''}")
+    return f"{judgement} {JUDGEMENT_TITLES[judgement]}, first {first}: {rows}, {entry['hands']} hands, {entry['wallSeconds']:.1f} s"
+
+
+def judgement_text(result: Judgement) -> str:
+    pooled = f"pooled points {signed(result.pooled['points'])}, wins % {signed(result.pooled['wins'])}"
+    outcome = "passes" if result.passed else "fails: " + "; ".join(result.failures)
+    return f"{result.name} {JUDGEMENT_TITLES[result.name]}: {pooled}: {outcome}"
+
+
+def judge(options: JudgeOptions, play: Optional[Callable[..., dict]] = None, clock: Callable[[], float] = time.monotonic, out=None) -> int:
+    """Plays the calls the ledger lacks and prints the verdict. What is printed is made of the ledger alone."""
+    out = out or sys.stdout
+    play = play or run_arena
+    ledger_path = options.ledger.expanduser().resolve()
+    check_log_path(ledger_path)
+    ledger = read_ledger(ledger_path)
+    spec = weights_spec(options.weights)
+    print(f"weights: {spec}", file=out)
+    out.flush()
+    for judgement, first in judged_calls():
+        key = ledger_key(spec, judgement, first, JUDGED_SEEDS)
+        if key in ledger["entries"]:
+            continue
+        focus, others = judged_call(judgement, spec)
+        print(f"playing {judgement} on {first} ...", file=sys.stderr, flush=True)
+        began = clock()
+        document = play(options.arena, focus, others, first, JUDGED_SEEDS, options.jobs)
+        ledger = with_entry(ledger, key, stored_call(judgement, document, clock() - began))
+        write_ledger(ledger_path, ledger)
+    results = []
+    for judgement in JUDGEMENTS:
+        calls = [ledger["entries"][ledger_key(spec, judgement, first, JUDGED_SEEDS)] for first in JUDGED_FIRSTS]
+        for first, entry in zip(JUDGED_FIRSTS, calls):
+            print(call_line(judgement, first, entry), file=out)
+        results.append(JUDGE_FUNCTIONS[judgement](calls))
+    for result in results:
+        print(judgement_text(result), file=out)
+    print(f"verdict: {verdict(results)[1]}", file=out)
+    return EXIT_DONE
+
+
 # ----- the command line -----
 
 DEFAULT_GENERATIONS = 20
@@ -684,11 +768,34 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--train-first", type=int, default=TRAIN_FIRST_MIN, help=f"the first training seed (default and least {TRAIN_FIRST_MIN})")
     train_parser.add_argument("--explore-first", type=int, default=DEFAULT_EXPLORE_FIRST,
                               help=f"the first seed of the monitoring call (default {DEFAULT_EXPLORE_FIRST}, inside [{EXPLORE_RANGE[0]}, {EXPLORE_RANGE[1]}))")
+    judge_parser = commands.add_parser("judge", help="the three judgements of the verdict rule on the judged ranges, once per weights")
+    source = judge_parser.add_mutually_exclusive_group()
+    source.add_argument("--from-log", type=Path, default=None, help=f"a finished train log: its last generation's newMean (default {DEFAULT_JUDGE_LOG})")
+    source.add_argument("--weights", default=None, help="all ten weights, name=value,... (instead of a log)")
+    judge_parser.add_argument("--generations", type=int, default=TRAINING_GENERATIONS,
+                              help=f"the generations a finished log holds (default {TRAINING_GENERATIONS}); another count is refused")
+    judge_parser.add_argument("--arena", type=Path, default=DEFAULT_ARENA, help=f"BagiMahjongArena (default {DEFAULT_ARENA.relative_to(ROOT)})")
+    judge_parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER, help=f"the ledger of played calls, outside git (default {DEFAULT_LEDGER})")
+    judge_parser.add_argument("--jobs", type=int, default=0, help="the arena's --jobs (default 0: one per core)")
     return parser
+
+
+def judge_main(arguments: argparse.Namespace) -> int:
+    if arguments.weights is not None:
+        weights = weights_from_option(arguments.weights)
+    else:
+        weights = weights_of_finished_log((arguments.from_log or DEFAULT_JUDGE_LOG).expanduser(), arguments.generations)
+    return judge(JudgeOptions(weights=weights, arena=arguments.arena, ledger=arguments.ledger, jobs=arguments.jobs))
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     arguments = build_parser().parse_args(argv)
+    if arguments.command == "judge":
+        try:
+            return judge_main(arguments)
+        except TuneError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return error.exit_code
     if arguments.candidates < 2:
         print("error: --candidates is at least 2", file=sys.stderr)
         return EXIT_REFUSED

@@ -115,6 +115,38 @@ print(json.dumps({{"format": "bagi-arena-report", "version": 1, "first": first, 
                   "handsPerFocus": 4 * int(options["--seeds"]), "others": options["--others"], "focus": entries}}))
 """
 
+JUDGE_ARENA = """#!{python}
+import json, sys
+config = json.load(open({config!r}))
+argv = sys.argv[1:]
+with open({calls!r}, "a") as calls:
+    calls.write(json.dumps(argv) + "\\n")
+options = {{argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i].startswith("--")}}
+others = options["--others"]
+count = 1 if options["--focus"] == "normal" else 2
+judgement = "B" if count == 1 else ("A" if others == "normal" else "C")
+key = judgement + ":" + options["--first"]
+if key in config.get("failKeys", []):
+    print("the fake arena fails on purpose", file=sys.stderr)
+    sys.exit(1)
+row = config["calls"][key]
+seeds = int(options["--seeds"])
+
+def interval(values):
+    return {{"mean": values[0], "half": values[1], "hasInterval": True}}
+
+def paired(values):
+    return dict(interval(values), significant=values[2])
+
+entries = [dict(name="normal", pointsPerHand=interval(row["points"]) if judgement == "B" else interval([0, 0]),
+                winPercent=interval(row["wins"]) if judgement == "B" else interval([25, 0]), paired=None)]
+if count == 2:
+    entries.append(dict(name="tuned", pointsPerHand=interval([9, 9]), winPercent=interval([9, 9]),
+                        paired=dict(pointsPerHand=paired(row["points"]), winPercent=paired(row["wins"]))))
+print(json.dumps({{"format": "bagi-arena-report", "version": 1, "first": int(options["--first"]), "seeds": seeds, "handsPerFocus": 4 * seeds,
+                  "others": others, "focus": entries}}))
+"""
+
 DEFAULT_CONFIG = {"scale": 1.0, "noise": 0.05, "half": 0.1}
 
 
@@ -660,6 +692,180 @@ class LedgerTest(unittest.TestCase):
             tune.write_ledger(path, tune.empty_ledger())
         self.assertFalse(path.exists())
         self.assertFalse(path.with_name(path.name + ".tmp").exists())
+
+
+@SKIP_ON_WINDOWS
+class JudgeTest(unittest.TestCase):
+    """`judge` against a fake arena that answers each of the six calls with the toy row of the config (by judgement and first seed)."""
+
+    def setUp(self) -> None:
+        self.temp = Path(tempfile.mkdtemp(prefix="mahjong_tune_test_"))
+        self.addCleanup(shutil.rmtree, self.temp, ignore_errors=True)
+        self.weights = tuple(weight.start + 1 for weight in tune.WEIGHTS)
+        self.spec = tune.weights_spec(self.weights)
+        self.config_path, self.calls_path, self.ledger = self.temp / "config.json", self.temp / "calls.jsonl", self.temp / "judged.json"
+        self.arena = self.temp / "arena.py"
+        self.arena.write_text(JUDGE_ARENA.format(python=sys.executable, config=str(self.config_path), calls=str(self.calls_path)), encoding="utf-8")
+        self.arena.chmod(self.arena.stat().st_mode | stat.S_IXUSR)
+        self.set_outcome()
+
+    # rows are [mean, half, significant] for A and C, [mean, half] for B
+    STRONGER = {"A:100000": {"points": [3.0, 1.0, True], "wins": [2.0, 1.0, True]}, "A:130000": {"points": [4.0, 1.0, True], "wins": [3.0, 1.0, True]},
+                "B:100000": {"points": [-1.0, 1.0], "wins": [24.0, 1.0]}, "B:130000": {"points": [-2.0, 1.0], "wins": [23.0, 1.0]},
+                "C:100000": {"points": [5.0, 1.0, True], "wins": [4.0, 1.0, True]}, "C:130000": {"points": [6.0, 1.0, True], "wins": [5.0, 1.0, True]}}
+
+    def set_outcome(self, changes: dict = None, **config) -> None:
+        calls = {**self.STRONGER, **(changes or {})}
+        self.config_path.write_text(json.dumps({"calls": calls, **config}), encoding="utf-8")
+
+    def judge(self, *extra: str, weights: str = None) -> tuple:
+        source = ["--weights", weights or ",".join(f"{weight.name}={value}" for weight, value in zip(tune.WEIGHTS, self.weights))]
+        return run_main("judge", *source, "--arena", str(self.arena), "--ledger", str(self.ledger), "--jobs", "1", *extra)
+
+    def calls(self) -> list:
+        if not self.calls_path.exists():
+            return []
+        result = []
+        for line in self.calls_path.read_text(encoding="utf-8").splitlines():
+            argv = json.loads(line)
+            result.append({argv[i]: argv[i + 1] for i in range(0, len(argv) - 1, 2) if argv[i].startswith("--")} | {"json": argv[-1] == "--json"})
+        return result
+
+    def test_six_calls_and_the_verdict_stronger(self) -> None:
+        code, out, err = self.judge()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(self.calls()), 6)
+        lines = out.splitlines()
+        self.assertEqual(lines[0], f"weights: {self.spec}")
+        self.assertEqual(lines[-1], "verdict: stronger than Normal")
+        self.assertEqual(sum(1 for line in lines if " passes" in line), 3)
+        self.assertEqual(sum(1 for line in lines if line.startswith(("A ", "B ", "C ")) and "first" in line), 6)
+        self.assertIn("pooled points +3.50 +- 0.71", out)
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 6)
+
+    def test_every_call_is_the_one_the_rule_describes(self) -> None:
+        self.judge()
+        normal, other = "normal", self.spec
+        expected = []
+        for focus, others in (([normal, other], normal), ([normal], other), ([normal, other], "random")):
+            for first in (100000, 130000):
+                expected.append({"--focus": ",".join(focus), "--others": others, "--first": str(first), "--seeds": "1000", "--jobs": "1", "json": True})
+        self.assertEqual(self.calls(), expected)
+        self.assertIn(",", self.calls()[2]["--others"])  # a spec with commas is one value of --others
+
+    def test_a_weaker_outcome_names_what_failed_and_still_plays_all_six(self) -> None:
+        self.set_outcome({"B:100000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]}, "B:130000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]}})
+        code, out, _ = self.judge()
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.calls()), 6)
+        self.assertIn("B seats turned: pooled points +9.00 +- 0.71, wins % +30.00 +- 0.71: fails: ", out)
+        self.assertEqual(out.splitlines()[-1], "verdict: not stronger than Normal (B failed)")
+
+    def test_a_failed_a_does_not_skip_b_and_c_and_c_can_pass_beside_it(self) -> None:
+        self.set_outcome({"A:100000": {"points": [3.0, 5.0, False], "wins": [2.0, 1.0, True]}})
+        code, out, _ = self.judge()
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.calls()), 6)
+        self.assertEqual(out.splitlines()[-1], "verdict: not stronger than Normal (A failed)")
+        self.assertIn(": pooled points +5.50 +- 0.71, wins % +4.50 +- 0.71: passes", out)
+        self.assertIn("A against Normal: ", out)
+
+    def test_all_three_can_fail(self) -> None:
+        bad = {"A:100000": {"points": [-3.0, 1.0, True], "wins": [-2.0, 1.0, True]}, "A:130000": {"points": [-3.0, 1.0, True], "wins": [-2.0, 1.0, True]},
+               "B:100000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]}, "B:130000": {"points": [9.0, 1.0], "wins": [30.0, 1.0]},
+               "C:100000": {"points": [-9.0, 1.0, True], "wins": [-9.0, 1.0, True]}, "C:130000": {"points": [-9.0, 1.0, True], "wins": [-9.0, 1.0, True]}}
+        self.set_outcome(bad)
+        _, out, _ = self.judge()
+        self.assertEqual(out.splitlines()[-1], "verdict: not stronger than Normal (A, B, C failed)")
+
+    def test_a_second_judge_plays_nothing_and_prints_the_same_bytes(self) -> None:
+        _, first, _ = self.judge()
+        ledger_before = self.ledger.read_bytes()
+        self.calls_path.unlink()
+        self.set_outcome({"A:100000": {"points": [-50.0, 1.0, True], "wins": [-50.0, 1.0, True]}})  # what the arena says now must not matter
+        code, second, _ = self.judge()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.calls(), [])
+        self.assertEqual(second, first)
+        self.assertEqual(self.ledger.read_bytes(), ledger_before)
+
+    def test_a_ledger_with_three_entries_plays_the_other_three(self) -> None:
+        self.set_outcome(failKeys=["B:130000"])
+        code, out, err = self.judge()
+        self.assertEqual(code, 1)
+        self.assertIn("the arena failed (exit 1)", err)
+        self.assertNotIn("verdict", out)
+        self.assertEqual(len(self.calls()), 4)  # A, A, B, and the B that failed
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 3)  # the failed call has no entry
+        self.calls_path.unlink()
+        self.set_outcome()
+        code, out, err = self.judge()
+        self.assertEqual(code, 0, err)
+        self.assertEqual([call["--first"] for call in self.calls()], ["130000", "100000", "130000"])
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 6)
+        self.assertEqual(out.splitlines()[-1], "verdict: stronger than Normal")
+
+    def test_another_spec_has_its_own_six(self) -> None:
+        self.judge()
+        other = ",".join(f"{weight.name}={weight.start + 2}" for weight in tune.WEIGHTS)
+        code, _, err = self.judge(weights=other)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(len(self.calls()), 12)
+        self.assertEqual(len(tune.read_ledger(self.ledger)["entries"]), 12)
+
+    def test_the_weights_of_a_finished_log_are_judged(self) -> None:
+        log = finished_log(self.temp)
+        code, out, err = run_main("judge", "--from-log", str(log), "--arena", str(self.arena), "--ledger", str(self.ledger), "--jobs", "1")
+        self.assertEqual(code, 0, err)
+        last = tune.weights_of_finished_log(log)
+        self.assertEqual(out.splitlines()[0], f"weights: {tune.weights_spec(last)}")
+        self.assertEqual(len(self.calls()), 6)
+
+    def test_an_unfinished_log_or_both_sources_or_a_bad_weights_option_are_refused_before_any_call(self) -> None:
+        unfinished = finished_log(self.temp, 4, "unfinished.jsonl")
+        for arguments in (("--from-log", str(unfinished)), ("--from-log", str(unfinished), "--weights", "wShanten=1"), ("--weights", "wShanten=1"),
+                          ("--weights", "wShanten=1,wShanten=2")):
+            code, _, err = run_main("judge", *arguments, "--arena", str(self.arena), "--ledger", str(self.ledger))
+            self.assertEqual(code, 2, arguments)
+            self.assertTrue(err, arguments)
+        self.assertEqual(self.calls(), [])
+        self.assertFalse(self.ledger.exists())
+
+    def test_the_ranges_are_not_options(self) -> None:
+        for option in (("--first", "4000"), ("--seeds", "5")):
+            code, _, err = self.judge(*option)
+            self.assertEqual(code, 2)
+            self.assertIn("unrecognized arguments", err)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_ledger_inside_a_git_work_tree_is_refused_before_any_call(self) -> None:
+        self.ledger = REPOSITORY / "logs" / "judged-test-never-created.json"
+        code, _, err = self.judge()
+        self.assertEqual(code, 2)
+        self.assertIn("git work tree", err)
+        self.assertEqual(self.calls(), [])
+        self.assertFalse(self.ledger.exists())
+
+    def test_a_ledger_of_another_version_is_refused_before_any_call(self) -> None:
+        self.ledger.write_text(json.dumps({"entries": {}, "format": tune.LEDGER_FORMAT, "version": 99}), encoding="utf-8")
+        code, _, err = self.judge()
+        self.assertEqual(code, 2)
+        self.assertIn("version", err)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_missing_arena_is_a_failure_with_nothing_stored(self) -> None:
+        code, _, err = run_main("judge", "--weights", ",".join(f"{weight.name}={weight.start}" for weight in tune.WEIGHTS),
+                                "--arena", str(self.temp / "nothing-here"), "--ledger", str(self.ledger))
+        self.assertEqual(code, 1)
+        self.assertIn("cannot run the arena", err)
+        self.assertFalse(self.ledger.exists())
+
+    def test_train_still_refuses_the_judged_ranges(self) -> None:
+        code, _, err = run_main("train", "--seed", "1", "--candidates", "4", "--seeds", "10", "--train-first", "100000",
+                                "--log", str(self.temp / "train.jsonl"), "--arena", str(self.arena))
+        self.assertEqual(code, 2)
+        self.assertIn("200000", err)
+        self.assertEqual(self.calls(), [])
 
 
 @SKIP_ON_WINDOWS
