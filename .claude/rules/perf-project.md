@@ -26,8 +26,8 @@ Read by the skills `perf` and `perf-investigate` and by the sentinel step of `to
       "fast": true,
       "command": ["{bin}/BagiMahjongArena", "--focus", "normal", "--others", "normal", "--seeds", "60", "--time"],
       "metrics": {
-        "normal_us": {"source": "regex", "pattern": "^normal\\s+\\d+\\s+([0-9.]+)\\s*$", "unit": "us/decision", "better": "lower"},
-        "others_us": {"source": "regex", "pattern": "^\\s+others \\(3 seats\\)\\s+\\d+\\s+([0-9.]+)\\s*$", "unit": "us/decision", "better": "lower"},
+        "normal_us": {"source": "regex", "pattern": "^normal\\s+\\d+\\s+([0-9.]+)\\s+[0-9.]+\\s*$", "unit": "us/decision", "better": "lower"},
+        "others_us": {"source": "regex", "pattern": "^\\s+others \\(3 seats\\)\\s+\\d+\\s+([0-9.]+)\\s+[0-9.]+\\s*$", "unit": "us/decision", "better": "lower"},
         "wall_s": {"source": "wall", "unit": "s", "better": "lower", "gate": false}
       }
     },
@@ -37,7 +37,7 @@ Read by the skills `perf` and `perf-investigate` and by the sentinel step of `to
       "fast": true,
       "command": ["{bin}/BagiMahjongArena", "--focus", "normal:searchWorlds=2,searchCandidates=3", "--others", "normal", "--seeds", "6", "--time"],
       "metrics": {
-        "search_us": {"source": "regex", "pattern": "^normal:\\S+\\s+\\d+\\s+([0-9.]+)\\s*$", "unit": "us/decision", "better": "lower"}
+        "search_us": {"source": "regex", "pattern": "^normal:\\S+\\s+\\d+\\s+([0-9.]+)\\s+[0-9.]+\\s*$", "unit": "us/decision", "better": "lower"}
       }
     },
     {
