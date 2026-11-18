@@ -25,10 +25,10 @@ namespace BECore::Mahjong {
             reader.FinishLoad();
         }
         for (const DeserializeError& error : reader.GetErrors()) {
-            const StringView path = error.path.ToStringView();
+            const StringView path = error.path;
             const String where = path.empty() ? String() : Format("{}: ", path);
             const String line = error.line != 0 ? Format(" (line {})", error.line) : String();
-            parse.errors.push_back(Format("Config '{}': {}{}{}", documentName, where, error.errorMessage.ToStringView(), line));
+            parse.errors.push_back(Format("Config '{}': {}{}{}", documentName, where, error.errorMessage, line));
         }
         return parse;
     }

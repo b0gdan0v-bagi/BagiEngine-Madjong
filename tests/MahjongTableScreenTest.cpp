@@ -482,8 +482,8 @@ namespace BECore::Mahjong::Tests {
         // The row ends with the hint button and then the wide `Declare` switch, so that the switch ends a line (the turn never needs more lines
         // than the claim window)
         ASSERT_GE(row->children.size(), 2u);
-        EXPECT_EQ(row->children[row->children.size() - 2]->name, PoolString::Intern("HintButton"));
-        EXPECT_EQ(row->children.back()->name, PoolString::Intern("Declare"));
+        EXPECT_EQ(row->children[row->children.size() - 2]->name, "HintButton"_intern);
+        EXPECT_EQ(row->children.back()->name, "Declare"_intern);
 
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
@@ -529,7 +529,7 @@ namespace BECore::Mahjong::Tests {
         const UIElement* rowHint = ResolvedElement("ActionsCompact", "HintButton");
         ASSERT_TRUE(tableHint != nullptr && rowHint != nullptr);
         ASSERT_TRUE(IsButton(tableHint) && IsButton(rowHint));
-        EXPECT_EQ(ButtonAction(rowHint), PoolString::Intern("MahjongHintAdvice"));
+        EXPECT_EQ(ButtonAction(rowHint), "MahjongHintAdvice"_intern);
         EXPECT_EQ(ButtonAction(rowHint), ButtonAction(tableHint));
         EXPECT_EQ(ElementText(rowHint), ElementText(tableHint));
         EXPECT_EQ(ElementText(rowHint), "{#hints.adviseButton}");
@@ -564,7 +564,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_NEAR(variants[i].when.maxWidth, threshold, 0.006f) << i << ": " << neededSafe << " / " << kCompactSafeShare;
             EXPECT_GE(variants[i].when.maxWidth, neededSafe / kCompactSafeShare) << i << ": rounded up, never down";
             ASSERT_EQ(variants[i].overrides.size(), 1u);
-            EXPECT_EQ(variants[i].overrides[0].element, PoolString::Intern("ActionRow"));
+            EXPECT_EQ(variants[i].overrides[0].element, "ActionRow"_intern);
             ASSERT_TRUE(variants[i].overrides[0].height.has_value());
             const float height = static_cast<float>(lines) * kActionButtonHeight + static_cast<float>(lines - 1) * kCompactSpacing;
             EXPECT_FLOAT_EQ(variants[i].overrides[0].height->value, height) << i;

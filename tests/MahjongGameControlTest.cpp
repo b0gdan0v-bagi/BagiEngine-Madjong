@@ -426,7 +426,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongGameControlTest, TheStateNamesTheThemeOfTheGame) {
         ASSERT_NO_FATAL_FAILURE(ResetWithEastAtSeat0());
         EXPECT_EQ(Str(Member(State(), "theme")), "classic");
-        ASSERT_TRUE(game->SetTheme(PoolString::Intern("navy")));
+        ASSERT_TRUE(game->SetTheme("navy"_intern));
         EXPECT_EQ(Str(Member(State(), "theme")), "navy");
     }
 

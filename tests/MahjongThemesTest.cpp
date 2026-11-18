@@ -91,7 +91,7 @@ namespace BECore::Mahjong::Tests {
         /// A table with one theme `broken` that is `source` (the current theme of it) but for `token`.
         UIThemes BrokenCopy(const UIThemes& source, const char* token, const Color& value) {
             UIThemes copy;
-            const PoolString id = PoolString::Intern("broken");
+            const PoolString id = "broken"_intern;
             for (const PoolString name : source.GetTokens()) {
                 copy.Set(id, name.ToStringView(), source.Find(name.ToStringView()).value_or(kMissingTokenColor));
             }
@@ -224,7 +224,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongThemesTest, TheChecksFindABrokenTheme) {
-        ASSERT_TRUE(themes.SetTheme(PoolString::Intern("navy")));
+        ASSERT_TRUE(themes.SetTheme("navy"_intern));
         const Color plate = Token(themes, "surface");
 
         const UIThemes text = BrokenCopy(themes, "text", plate);

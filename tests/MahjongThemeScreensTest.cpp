@@ -127,10 +127,10 @@ namespace BECore::Mahjong::Tests {
         /// A card of two plates, a text on each, with the colours named by tokens of `themes`.
         IntrusivePtr<UIElement> MakeCard(const char* plateToken, const char* inkToken) {
             auto card = New<UIElement>();
-            card->name = PoolString::Intern("Card");
+            card->name = "Card"_intern;
             card->color = UIColor::FromToken(PoolString::Intern(plateToken));
             auto caption = New<UIElement>();
-            caption->name = PoolString::Intern("Caption");
+            caption->name = "Caption"_intern;
             caption->AddComponent<UITextComponent>().textColor = UIColor::FromToken(PoolString::Intern(inkToken));
             card->children.push_back(caption);
             return card;
@@ -328,8 +328,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongThemeScreensChecksTest, ATextColourThatIsThePlatesColourIsFoundAndAnUnknownTokenIsMissing) {
         UIThemes themes;
-        const PoolString legible = PoolString::Intern("legible");
-        const PoolString washed = PoolString::Intern("washed");
+        const PoolString legible = "legible"_intern;
+        const PoolString washed = "washed"_intern;
         for (const PoolString theme : {legible, washed}) {
             themes.Set(theme, "felt", Color{18, 34, 68, 255});
             themes.Set(theme, "panel", Color{240, 240, 230, 255});
@@ -357,8 +357,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongThemeScreensChecksTest, ATranslucentPlateIsJudgedOverTheFeltAndAKnownPairOfClassicIsSkippedOnlyThere) {
         UIThemes themes;
-        const PoolString classic = PoolString::Intern("classic");
-        const PoolString other = PoolString::Intern("other");
+        const PoolString classic = "classic"_intern;
+        const PoolString other = "other"_intern;
         for (const PoolString theme : {classic, other}) {
             themes.Set(theme, "felt", Color{20, 30, 60, 255});
             themes.Set(theme, "glass", Color{0, 0, 0, 40});

@@ -21,6 +21,13 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// The names this file asks for: nodes and elements of the scene files, UI variables, theme tokens, config names.
+        struct Ids {
+            static constexpr auto surfaceRaised = "surfaceRaised"_intern;
+            static constexpr auto danger = "danger"_intern;
+            static constexpr auto hintsChoice = "hintsChoice"_intern;
+        };
+
         constexpr StringView kSetHintsAction = "MahjongSetHints";
         constexpr StringView kAdviceAction = "MahjongHintAdvice";
         // Names of the canvas of the node `Hints` (`WaitCell<i>` holds `WaitTile<i>` and `WaitCount<i>`) and of the variables the labels read
@@ -81,10 +88,10 @@ namespace BECore::Mahjong {
         void SetRowFill(UIElement& row, CardRowKind kind) {
             switch (kind) {
                 case CardRowKind::Best:
-                    SetColorToken(row, row.color, "surfaceRaised"_intern);
+                    SetColorToken(row, row.color, Ids::surfaceRaised);
                     return;
                 case CardRowKind::Yours:
-                    SetColorToken(row, row.color, "danger"_intern);
+                    SetColorToken(row, row.color, Ids::danger);
                     return;
                 case CardRowKind::Other:
                     break;
@@ -105,7 +112,7 @@ namespace BECore::Mahjong {
                 case CardTrend::None:
                     break;
             }
-            SetColorToken(steps, label.textColor, "text"_intern);
+            SetColorToken(steps, label.textColor, ColorTokenIds::text);
         }
 
         /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`). In a room the
@@ -495,7 +502,7 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::PublishChoice(const MahjongGame& game) {
         const StringView id = HintsModeText(game.GetHintsMode());
-        CoreManager::GetUIVars().Set("hintsChoice"_intern, id);
+        CoreManager::GetUIVars().Set(Ids::hintsChoice, id);
     }
 
     void MahjongHintsComponent::OnAction(const InputEvents::ActionEvent& event) {

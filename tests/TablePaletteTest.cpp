@@ -65,7 +65,7 @@ namespace BECore::Mahjong::Tests {
         UIThemes without;  // the same colours but for the felt
         for (const FieldToken& field : kFields) {
             if (StringView(field.token) != "felt") {
-                ASSERT_TRUE(without.Set(PoolString::Intern("one"), field.token, *themes.Find(field.token)));
+                ASSERT_TRUE(without.Set("one"_intern, field.token, *themes.Find(field.token)));
             }
         }
 
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Tests {
         FillTheme(themes, "two", 100);
         const TablePalette first = MakeTablePalette(themes);
 
-        ASSERT_TRUE(themes.SetTheme(PoolString::Intern("two")));
+        ASSERT_TRUE(themes.SetTheme("two"_intern));
         const TablePalette second = MakeTablePalette(themes);
         for (const FieldToken& field : kFields) {
             EXPECT_FALSE(SameColor(first.*field.field, second.*field.field)) << field.token;

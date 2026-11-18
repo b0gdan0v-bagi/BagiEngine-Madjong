@@ -27,6 +27,42 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// The names this file asks for: nodes and elements of the scene files, UI variables, theme tokens, config names.
+        struct Ids {
+            static constexpr auto newGameWord = "newGameWord"_intern;
+            static constexpr auto lastMove = "lastMove"_intern;
+            static constexpr auto panelRound = "panelRound"_intern;
+            static constexpr auto panelWall = "panelWall"_intern;
+            static constexpr auto MoveLine = "MoveLine"_intern;
+            static constexpr auto MatchOver = "MatchOver"_intern;
+            static constexpr auto handsChoice = "handsChoice"_intern;
+            static constexpr auto language = "language"_intern;
+            static constexpr auto speedChoice = "speedChoice"_intern;
+            static constexpr auto themeChoice = "themeChoice"_intern;
+            static constexpr auto Setup = "Setup"_intern;
+            static constexpr auto Continue = "Continue"_intern;
+            static constexpr auto Options = "Options"_intern;
+            static constexpr auto HandOver = "HandOver"_intern;
+            static constexpr auto WinTiles = "WinTiles"_intern;
+            static constexpr auto handOverHeadline = "handOverHeadline"_intern;
+            static constexpr auto handOverSummary = "handOverSummary"_intern;
+            static constexpr auto handOverButton = "handOverButton"_intern;
+            static constexpr auto handOverCoach = "handOverCoach"_intern;
+            static constexpr auto HandCoachRow = "HandCoachRow"_intern;
+            static constexpr auto HandOverAction = "HandOverAction"_intern;
+            static constexpr auto NextHand = "NextHand"_intern;
+            static constexpr auto HudMenu = "HudMenu"_intern;
+            static constexpr auto rulesTitle = "rulesTitle"_intern;
+            static constexpr auto rulesPager = "rulesPager"_intern;
+            static constexpr auto Rules = "Rules"_intern;
+            static constexpr auto RulesBack = "RulesBack"_intern;
+            static constexpr auto RulesNext = "RulesNext"_intern;
+            static constexpr auto RulesAction = "RulesAction"_intern;
+            static constexpr auto matchOverHeadline = "matchOverHeadline"_intern;
+            static constexpr auto matchOverCoach = "matchOverCoach"_intern;
+            static constexpr auto MatchCoachRow = "MatchCoachRow"_intern;
+        };
+
         constexpr StringView kSetSeatPrefix = "MahjongSetSeat";
         constexpr StringView kSetSeatLevelPrefix = "MahjongSetSeatLevel";
         constexpr StringView kSetHandsAction = "MahjongSetHands";
@@ -167,7 +203,7 @@ namespace BECore::Mahjong {
         _newGameWordRoom = room;
         _newGameWordStrings = stringsVersion;
         const String word = Tr(CoreManager::GetUIStrings(), room ? "hud.leaveRoom" : "hud.newGame");
-        CoreManager::GetUIVars().Set("newGameWord"_intern, StringView(word));
+        CoreManager::GetUIVars().Set(Ids::newGameWord, StringView(word));
     }
 
     String MahjongHudComponent::RoomLine(const MahjongGame& game, const UIStrings& strings) {
@@ -243,13 +279,13 @@ namespace BECore::Mahjong {
             const HandMove& move = hand.Moves().back();
             lastMove = MoveText(strings, move, hand.SeatWind(move.seat));
         }
-        vars.Set("lastMove"_intern, StringView(lastMove));
+        vars.Set(Ids::lastMove, StringView(lastMove));
         SetFacts(MakeHudFacts(match, session, roomLineUp));
 
         const auto plates = MakeSeatPlates(strings, session, match);
         const CenterPanelText panel = MakeCenterPanel(strings, session, match);
-        vars.Set("panelRound"_intern, StringView(panel.round));
-        vars.Set("panelWall"_intern, StringView(panel.wallText));
+        vars.Set(Ids::panelRound, StringView(panel.round));
+        vars.Set(Ids::panelWall, StringView(panel.wallText));
         for (int position = 0; position < kSeatCount; ++position) {
             const CenterPanelSeat& side = panel.seats[position];
             vars.Set(SeatVar("plateName", position), StringView(plates[position].name));
@@ -280,14 +316,14 @@ namespace BECore::Mahjong {
     void MahjongHudComponent::ShowMoveLine(bool show) {
         if (show != _moveLineShown) {
             _moveLineShown = show;
-            UICanvasComponent::SetElementVisibleByName(GetScene(), "MoveLine"_intern, show);
+            UICanvasComponent::SetElementVisibleByName(GetScene(), Ids::MoveLine, show);
         }
     }
 
     void MahjongHudComponent::ShowMatchOver(bool show) {
         if (show != _matchOverShown) {
             _matchOverShown = show;
-            UICanvasComponent::SetVisibleByName(GetScene(), "MatchOver"_intern, show);
+            UICanvasComponent::SetVisibleByName(GetScene(), Ids::MatchOver, show);
         }
     }
 
@@ -311,20 +347,20 @@ namespace BECore::Mahjong {
 
     void MahjongHudComponent::PublishHandsChoice() const {
         // A number the panel does not offer selects no segment
-        CoreManager::GetUIVars().Set("handsChoice"_intern, _pendingHands);
+        CoreManager::GetUIVars().Set(Ids::handsChoice, _pendingHands);
     }
 
     void MahjongHudComponent::PublishLanguage(const MahjongGame& game) const {
-        CoreManager::GetUIVars().Set("language"_intern, game.GetLanguage().ToStringView());
+        CoreManager::GetUIVars().Set(Ids::language, game.GetLanguage().ToStringView());
     }
 
     void MahjongHudComponent::PublishSpeedChoice(const MahjongGame& game) const {
         const StringView text = SpeedText(game.GetAnimationSpeed());
-        CoreManager::GetUIVars().Set("speedChoice"_intern, text);
+        CoreManager::GetUIVars().Set(Ids::speedChoice, text);
     }
 
     void MahjongHudComponent::PublishThemeChoice(const MahjongGame& game) const {
-        CoreManager::GetUIVars().Set("themeChoice"_intern, game.GetTheme().ToStringView());
+        CoreManager::GetUIVars().Set(Ids::themeChoice, game.GetTheme().ToStringView());
     }
 
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
@@ -339,12 +375,12 @@ namespace BECore::Mahjong {
         }
         if (open != _setupShown) {
             _setupShown = open;
-            UICanvasComponent::SetVisibleByName(GetScene(), "Setup"_intern, open);
+            UICanvasComponent::SetVisibleByName(GetScene(), Ids::Setup, open);
         }
         const bool offerContinue = open && game->CanContinue();
         if (offerContinue != _continueShown) {
             _continueShown = offerContinue;
-            UICanvasComponent::SetElementVisibleByName(GetScene(), "Continue"_intern, offerContinue);
+            UICanvasComponent::SetElementVisibleByName(GetScene(), Ids::Continue, offerContinue);
         }
     }
 
@@ -360,7 +396,7 @@ namespace BECore::Mahjong {
             PublishSpeedChoice(*game);
             PublishThemeChoice(*game);
         }
-        UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
+        UICanvasComponent::SetVisibleByName(GetScene(), Ids::Options, open);
     }
 
     void MahjongHudComponent::ShowScoreLines(int count) {
@@ -373,7 +409,7 @@ namespace BECore::Mahjong {
 
     void MahjongHudComponent::PublishWinningTiles(const Vector<Tile>& tiles) {
         Scene& scene = GetScene();
-        const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(scene, "HandOver"_intern);
+        const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(scene, Ids::HandOver);
         ASSERT(canvas != nullptr, "PublishWinningTiles: the node HandOver has no canvas");
         const int count = static_cast<int>(tiles.size());
         for (int i = 0; i < kMaxWinningTiles; ++i) {
@@ -389,7 +425,7 @@ namespace BECore::Mahjong {
             UICanvasComponent::SetElementVisibleByName(scene, NumberedName("WinTile", i), has);
             UICanvasComponent::SetElementVisibleByName(scene, NumberedName("WinTileMark", i), has && i + 1 == count);
         }
-        UICanvasComponent::SetElementVisibleByName(scene, "WinTiles"_intern, count > 0);
+        UICanvasComponent::SetElementVisibleByName(scene, Ids::WinTiles, count > 0);
     }
 
     void MahjongHudComponent::PublishHandOver(const MahjongGame& game) {
@@ -411,8 +447,8 @@ namespace BECore::Mahjong {
                                                   IsSeat(settlement.winner) ? &match.Hand().GetHand(settlement.winner) : nullptr);
 
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("handOverHeadline"_intern, StringView(table.headline));
-        vars.Set("handOverSummary"_intern, StringView(table.summary));
+        vars.Set(Ids::handOverHeadline, StringView(table.headline));
+        vars.Set(Ids::handOverSummary, StringView(table.summary));
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const ScoreRow& row = table.rows[seat];
             const StringView cells[] = {row.name, row.wind, row.hand, row.change, row.total};
@@ -428,7 +464,7 @@ namespace BECore::Mahjong {
         }
         ShowScoreLines(static_cast<int>(table.lines.size()));
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
-        vars.Set("handOverButton"_intern, StringView(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
+        vars.Set(Ids::handOverButton, StringView(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
         // In a room how many have read the plate (the coach is off there), else the coach's tally
         String tally;
         if (room != nullptr) {
@@ -440,8 +476,8 @@ namespace BECore::Mahjong {
             tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(context)), coach.MatchTallyOf(context.startCount)) : String();
             SetNextHandDisabled(false);
         }
-        vars.Set("handOverCoach"_intern, StringView(tally));
-        UICanvasComponent::SetElementVisibleByName(GetScene(), "HandCoachRow"_intern, !tally.empty());
+        vars.Set(Ids::handOverCoach, StringView(tally));
+        UICanvasComponent::SetElementVisibleByName(GetScene(), Ids::HandCoachRow, !tally.empty());
     }
 
     String MahjongHudComponent::ReadyText(const UIStrings& strings, const OnlineTable& table) {
@@ -464,8 +500,8 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::SetNextHandDisabled(bool disabled) {
-        const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(GetScene(), "HandOverAction"_intern);
-        UIElement* button = canvas ? canvas->GetRoot().FindByName("NextHand"_intern) : nullptr;
+        const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(GetScene(), Ids::HandOverAction);
+        UIElement* button = canvas ? canvas->GetRoot().FindByName(Ids::NextHand) : nullptr;
         if (UIInputClicker* clicker = button != nullptr ? button->GetComponent<UIInputClicker>() : nullptr) {
             clicker->disabled = disabled;
         }
@@ -473,8 +509,8 @@ namespace BECore::Mahjong {
 
     void MahjongHudComponent::ShowHandOver(bool shown) {
         Scene& scene = GetScene();
-        UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
-        UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
+        UICanvasComponent::SetVisibleByName(scene, Ids::HandOver, shown);
+        UICanvasComponent::SetVisibleByName(scene, Ids::HandOverAction, shown);
         if (!shown) {
             SetNextHandDisabled(false);  // a room's ready check is over with the plate
         }
@@ -484,7 +520,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::ShowHudMenu() {
-        UICanvasComponent::SetVisibleByName(GetScene(), "HudMenu"_intern, !_handOverShown && !_rulesShown);
+        UICanvasComponent::SetVisibleByName(GetScene(), Ids::HudMenu, !_handOverShown && !_rulesShown);
     }
 
     void MahjongHudComponent::PublishRulesPage() {
@@ -492,8 +528,8 @@ namespace BECore::Mahjong {
         const UIStrings& strings = CoreManager::GetUIStrings();
         const RulesPage page = FormatRulesPage(strings, _rulesPage);
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("rulesTitle"_intern, StringView(page.title));
-        vars.Set("rulesPager"_intern, StringView(RulesPagerText(strings, _rulesPage)));
+        vars.Set(Ids::rulesTitle, StringView(page.title));
+        vars.Set(Ids::rulesPager, StringView(RulesPagerText(strings, _rulesPage)));
         for (int i = 0; i < kRulesMaxLines; ++i) {
             const bool has = i < static_cast<int>(page.lines.size());
             vars.Set(NumberedName("rulesLine", i), has ? StringView(page.lines[static_cast<size_t>(i)]) : StringView());
@@ -507,7 +543,7 @@ namespace BECore::Mahjong {
         for (int row = 0; row < kRulesMaxItems / kRulesItemColumns; ++row) {
             UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesItemRow", row), row * kRulesItemColumns < static_cast<int>(page.items.size()));
         }
-        const IntrusivePtr<UICanvasComponent> rulesCanvas = CanvasOf(scene, "Rules"_intern);
+        const IntrusivePtr<UICanvasComponent> rulesCanvas = CanvasOf(scene, Ids::Rules);
         ASSERT(rulesCanvas != nullptr, "PublishRulesPage: the node Rules has no canvas");
         for (int row = 0; row < kRulesMaxTileRows; ++row) {
             const bool hasRow = row < static_cast<int>(page.tileRows.size());
@@ -527,8 +563,8 @@ namespace BECore::Mahjong {
                 UICanvasComponent::SetElementVisibleByName(scene, name, has);
             }
         }
-        UICanvasComponent::SetElementVisibleByName(scene, "RulesBack"_intern, _rulesPage > 0);
-        UICanvasComponent::SetElementVisibleByName(scene, "RulesNext"_intern, _rulesPage + 1 < RulesPageCount());
+        UICanvasComponent::SetElementVisibleByName(scene, Ids::RulesBack, _rulesPage > 0);
+        UICanvasComponent::SetElementVisibleByName(scene, Ids::RulesNext, _rulesPage + 1 < RulesPageCount());
     }
 
     void MahjongHudComponent::PublishRules(const MahjongGame* game) {
@@ -548,8 +584,8 @@ namespace BECore::Mahjong {
         if (open != _rulesShown) {
             _rulesShown = open;
             Scene& scene = GetScene();
-            UICanvasComponent::SetVisibleByName(scene, "Rules"_intern, open);
-            UICanvasComponent::SetVisibleByName(scene, "RulesAction"_intern, open);
+            UICanvasComponent::SetVisibleByName(scene, Ids::Rules, open);
+            UICanvasComponent::SetVisibleByName(scene, Ids::RulesAction, open);
             ShowHudMenu();
         }
     }
@@ -558,7 +594,7 @@ namespace BECore::Mahjong {
         const UIStrings& strings = CoreManager::GetUIStrings();
         const StandingsTable table = FormatStandings(strings, game.GetMatch(), SeatWho(game.GetSession()));
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("matchOverHeadline"_intern, StringView(table.headline));
+        vars.Set(Ids::matchOverHeadline, StringView(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
             const StandingRow& standing = table.rows[row];
             vars.Set(SeatVar("standingPlace", row), StringView(Format("{}", standing.place)));
@@ -567,8 +603,8 @@ namespace BECore::Mahjong {
             UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("StandingFirst", row), standing.first);
         }
         const String tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : String();
-        vars.Set("matchOverCoach"_intern, StringView(tally));
-        UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
+        vars.Set(Ids::matchOverCoach, StringView(tally));
+        UICanvasComponent::SetElementVisibleByName(GetScene(), Ids::MatchCoachRow, !tally.empty());
     }
 
     void MahjongHudComponent::PublishEndScreens(const MahjongGame* game) {

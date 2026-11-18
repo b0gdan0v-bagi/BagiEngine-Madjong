@@ -5,6 +5,11 @@
 
 namespace BECore::Mahjong {
 
+    /// The theme tokens more than one component sets by name (keys of `config/UIThemes.xml`).
+    struct ColorTokenIds {
+        static constexpr auto text = "text"_intern;
+    };
+
     /**
      * Gives `color`, a colour field of `owner` or of a component of it, the theme token `role` (a key of `config/UIThemes.xml`). It writes
      * only when the role changed, so a frame that changes nothing writes nothing; the new token is resolved at the next draw

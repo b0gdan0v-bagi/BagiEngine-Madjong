@@ -1,0 +1,3 @@
+# Allowlist of engine/CI/scripts/check_pool_strings.py. One row per line: <rule> | <target> | <reason>.
+# <rule> is literal, duplicate, loose or header. <target> is a path glob relative to the root, and for `duplicate` the text itself.
+# The list only shrinks: a row that matches nothing fails the check.

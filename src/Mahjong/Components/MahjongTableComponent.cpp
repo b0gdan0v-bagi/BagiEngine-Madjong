@@ -36,6 +36,26 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// The names this file asks for: nodes and elements of the scene files, UI variables, theme tokens, config names.
+        struct Ids {
+            static constexpr auto Actions = "Actions"_intern;
+            static constexpr auto ActionsCompact = "ActionsCompact"_intern;
+            static constexpr auto HintsButton = "HintsButton"_intern;
+            static constexpr auto TableLayout = "TableLayout"_intern;
+            static constexpr auto declareNext = "declareNext"_intern;
+            static constexpr auto actionHint = "actionHint"_intern;
+            static constexpr auto Hint = "Hint"_intern;
+            static constexpr auto handoffSeat = "handoffSeat"_intern;
+            static constexpr auto Handoff = "Handoff"_intern;
+            static constexpr auto selectedTileText = "selectedTileText"_intern;
+            static constexpr auto SelectedTile = "SelectedTile"_intern;
+            static constexpr auto tileHoverText = "tileHoverText"_intern;
+            static constexpr auto TileHoverPlate = "TileHoverPlate"_intern;
+            static constexpr auto tileHoverDanger = "tileHoverDanger"_intern;
+            static constexpr auto TileHover = "TileHover"_intern;
+            static constexpr auto TileHoverDanger = "TileHoverDanger"_intern;
+        };
+
         /// The height of the plate `TileHoverPlate` with the name alone and with the line of the danger bar under it (`MahjongTileHover.xml`)
         constexpr float kHoverPlateHeight = 48.0f;
         constexpr float kHoverPlateTallHeight = 92.0f;
@@ -74,14 +94,14 @@ namespace BECore::Mahjong {
 
         /// The two nodes of the action buttons (the names of the scene file).
         PoolString ActionsNode() {
-            return "Actions"_intern;
+            return Ids::Actions;
         }
         PoolString ActionsCompactNode() {
-            return "ActionsCompact"_intern;
+            return Ids::ActionsCompact;
         }
         /// The node of the hints' button: shown with `Actions`; `ActionsCompact` holds a `HintButton` of its own.
         PoolString HintsButtonNode() {
-            return "HintsButton"_intern;
+            return Ids::HintsButton;
         }
 
         /// The canvas on the node `nodeName`; null when the scene has none. `Actions` and `ActionsCompact` hold the same elements by name and
@@ -463,7 +483,7 @@ namespace BECore::Mahjong {
 
     bool MahjongTableComponent::OfferTableLayoutConfig() {
         ConfigManager& configs = CoreManager::GetConfigManager();
-        const PoolString name = "TableLayout"_intern;
+        const PoolString name = Ids::TableLayout;
         if (!configs.HasConfig(name)) {
             return false;
         }
@@ -496,7 +516,7 @@ namespace BECore::Mahjong {
             return;
         }
         std::error_code error;
-        const std::filesystem::path file = CoreManager::GetConfigManager().GetConfigFilePath("TableLayout"_intern);
+        const std::filesystem::path file = CoreManager::GetConfigManager().GetConfigFilePath(Ids::TableLayout);
         const std::filesystem::file_time_type stamp = std::filesystem::last_write_time(file, error);
         _layoutStamp = error ? std::nullopt : Optional<std::filesystem::file_time_type>(stamp);
     }
@@ -509,7 +529,7 @@ namespace BECore::Mahjong {
         }
         _layoutPolled = now;
         ConfigManager& configs = CoreManager::GetConfigManager();
-        const PoolString name = "TableLayout"_intern;
+        const PoolString name = Ids::TableLayout;
         if (!configs.HasConfig(name)) {
             return;
         }
@@ -647,29 +667,29 @@ namespace BECore::Mahjong {
             }
         }
         _published = buttons;
-        vars.Set("declareNext"_intern, _declareNext ? kDeclareOn : kDeclareOff);
+        vars.Set(Ids::declareNext, _declareNext ? kDeclareOn : kDeclareOff);
 
         // The label `Hint` shows exactly while a button is hovered; its sentence is looked up again when the language changes
         const UIStrings& strings = CoreManager::GetUIStrings();
         _hoveredButton = compact ? std::nullopt : HoveredButton(actionsCanvas, buttons);
         const StringView hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : StringView{};
-        const PoolString actionHint = "actionHint"_intern;
+        const PoolString actionHint = Ids::actionHint;
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;
             _hintStringsVersion = strings.GetVersion();
             const String hint = hintKey.empty() ? String() : Tr(strings, hintKey);
             vars.Set(actionHint, StringView(hint));
-            UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
+            UICanvasComponent::SetElementVisibleByName(scene, Ids::Hint, !hint.empty());
         }
 
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
         if (handoff) {
             const Seat actor = game->GetSession().Actor();
-            vars.Set("handoffSeat"_intern, StringView(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
+            vars.Set(Ids::handoffSeat, StringView(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
         }
         if (handoff != _handoffShown) {
             _handoffShown = handoff;
-            UICanvasComponent::SetVisibleByName(scene, "Handoff"_intern, handoff);
+            UICanvasComponent::SetVisibleByName(scene, Ids::Handoff, handoff);
         }
     }
 
@@ -1056,11 +1076,11 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongTable::PublishSelectedText");
         UIVars& vars = CoreManager::GetUIVars();
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const PoolString name = "selectedTileText"_intern;
+        const PoolString name = Ids::selectedTileText;
         // This component is the only owner of the label `SelectedTile` of the node `Hud`
         if (tile.IsValid() != _selectedLabelShown) {
             _selectedLabelShown = tile.IsValid();
-            UICanvasComponent::SetElementVisibleByName(GetScene(), "SelectedTile"_intern, _selectedLabelShown);
+            UICanvasComponent::SetElementVisibleByName(GetScene(), Ids::SelectedTile, _selectedLabelShown);
         }
         if (tile == _textTile && (!tile.IsValid() || strings.GetVersion() == _textStringsVersion) && vars.Has(name)) {
             return;
@@ -1099,10 +1119,10 @@ namespace BECore::Mahjong {
 
         UIVars& vars = CoreManager::GetUIVars();
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const PoolString name = "tileHoverText"_intern;
+        const PoolString name = Ids::tileHoverText;
         if (tile.IsValid() != _hoverShown) {
             _hoverShown = tile.IsValid();
-            UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, _hoverShown);
+            UICanvasComponent::SetElementVisibleByName(scene, Ids::TileHoverPlate, _hoverShown);
         }
         // A tile of the viewer's own hand says what the bar of the hints on it means (the hints draw it a frame ahead of this word at most)
         DangerMark danger = DangerMark::None;
@@ -1117,7 +1137,7 @@ namespace BECore::Mahjong {
             const String text = tile.IsValid() ? TileName(strings, tile) : String();
             vars.Set(name, StringView(text));
         }
-        const PoolString dangerName = "tileHoverDanger"_intern;
+        const PoolString dangerName = Ids::tileHoverDanger;
         const bool dangerMoved = danger != _hoverDanger;
         if (dangerMoved || wordsChanged || !vars.Has(dangerName)) {
             const String text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : String();
@@ -1130,8 +1150,8 @@ namespace BECore::Mahjong {
             return;
         }
         // The plate is laid out again each time it moves or grows; it is in place when the canvas of the node draws, later in this frame
-        const IntrusivePtr<UICanvasComponent> canvas = FindCanvasOf(scene, "TileHover"_intern);
-        UIElement* plate = FindElementIn(canvas, "TileHoverPlate"_intern);
+        const IntrusivePtr<UICanvasComponent> canvas = FindCanvasOf(scene, Ids::TileHover);
+        UIElement* plate = FindElementIn(canvas, Ids::TileHoverPlate);
         if (plate == nullptr) {
             return;
         }
@@ -1140,9 +1160,9 @@ namespace BECore::Mahjong {
             const bool worded = danger != DangerMark::None;
             if (worded != (_hoverDanger != DangerMark::None)) {
                 spec.height = UILength::Px(worded ? kHoverPlateTallHeight : kHoverPlateHeight);
-                UICanvasComponent::SetElementVisibleByName(scene, "TileHoverDanger"_intern, worded);
+                UICanvasComponent::SetElementVisibleByName(scene, Ids::TileHoverDanger, worded);
             }
-            if (UIElement* line = FindElementIn(canvas, "TileHoverDanger"_intern); UITextComponent* label = line != nullptr ? line->GetComponent<UITextComponent>() : nullptr) {
+            if (UIElement* line = FindElementIn(canvas, Ids::TileHoverDanger); UITextComponent* label = line != nullptr ? line->GetComponent<UITextComponent>() : nullptr) {
                 label->textColor = DangerMarkColor(danger);
             }
             _hoverDanger = danger;

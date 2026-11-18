@@ -144,6 +144,7 @@ The engine's rules for includes and types hold here. `#include "..."` only for a
 |-------|------------|
 | Includes check | `python3 engine/CI/scripts/check_includes.py --root .`; ctest `MahjongIncludesCheck` |
 | Types check | `python3 engine/CI/scripts/check_types.py --root . --baseline CI/types_baseline.txt`; ctest `MahjongTypesCheck`. Raw `std::` / `eastl::` types and allocating calls (the rule table is at the head of the script); a real boundary says `//-NoStd: <why>`. The baseline lists the hits other entries own and only shrinks: a new hit is fixed or marked, never added with `--update-baseline`; `--allow <folder>:<rule>[,<rule>]` allows rules in a folder |
+| Pool strings check | `python3 engine/CI/scripts/check_pool_strings.py --root . --allowlist CI/pool_strings_allowlist.txt`; ctest `MahjongPoolStringsCheck`. A text known in code is a named `_intern` constant (`struct Ids` of the `.cpp`, a shared header for a text of two files); an allowlist row carries a reason and a row that matches nothing fails |
 
 ## Launcher
 

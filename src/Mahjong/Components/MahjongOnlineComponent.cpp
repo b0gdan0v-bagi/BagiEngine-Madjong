@@ -19,6 +19,25 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// The names this file asks for: nodes and elements of the scene files, UI variables, theme tokens, config names.
+        struct Ids {
+            static constexpr auto onlineNotice = "onlineNotice"_intern;
+            static constexpr auto onlineStatus = "onlineStatus"_intern;
+            static constexpr auto onlineName = "onlineName"_intern;
+            static constexpr auto onlineCode = "onlineCode"_intern;
+            static constexpr auto onlineEntryValue = "onlineEntryValue"_intern;
+            static constexpr auto onlineEntryNote = "onlineEntryNote"_intern;
+            static constexpr auto onlineCopy = "onlineCopy"_intern;
+            static constexpr auto onlineHands = "onlineHands"_intern;
+            static constexpr auto onlineLevel = "onlineLevel"_intern;
+            static constexpr auto onlineOpen = "onlineOpen"_intern;
+            static constexpr auto onlineHints = "onlineHints"_intern;
+            static constexpr auto onlineHostLine = "onlineHostLine"_intern;
+            static constexpr auto onlineWaiting = "onlineWaiting"_intern;
+            static constexpr auto onlineRoom = "onlineRoom"_intern;
+            static constexpr auto onlineMore = "onlineMore"_intern;
+        };
+
         constexpr StringView kOpenAction = "MahjongOnline";
         constexpr StringView kCloseAction = "MahjongOnlineClose";
         constexpr StringView kHostAction = "MahjongOnlineHost";
@@ -604,23 +623,23 @@ namespace BECore::Mahjong {
     void MahjongOnlineComponent::PublishVariables(const OnlineClient& client, const UIStrings& strings) {
         UIVars& vars = CoreManager::GetUIVars();
         const OnlineLobby& lobby = client.Lobby();
-        vars.Set("onlineNotice"_intern, StringView(_screens.NoticeKey().empty() ? String() : OnlineNoticeText(strings, _screens.NoticeKey(), _screens.NoticeArg())));
-        vars.Set("onlineStatus"_intern, StringView(_screens.StatusKey().empty() ? String() : Tr(strings, _screens.StatusKey())));
-        vars.Set("onlineName"_intern, StringView(_screens.Name().Text()));
-        vars.Set("onlineCode"_intern, StringView(_screens.Code().Text()));
-        vars.Set("onlineEntryValue"_intern, StringView(_screens.Focused().Text()));
-        vars.Set("onlineEntryNote"_intern, StringView(_screens.PasteNoteKey().empty() ? String() : Tr(strings, _screens.PasteNoteKey())));
-        vars.Set("onlineCopy"_intern, StringView(Tr(strings, CopyKeyOf(_screens.CopyState()))));
-        vars.Set("onlineHands"_intern, _screens.Options().hands);
-        vars.Set("onlineLevel"_intern, _screens.Options().level);
-        vars.Set("onlineOpen"_intern, _screens.Options().isPublic ? kOpenValue : kCodeValue);
-        vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
+        vars.Set(Ids::onlineNotice, StringView(_screens.NoticeKey().empty() ? String() : OnlineNoticeText(strings, _screens.NoticeKey(), _screens.NoticeArg())));
+        vars.Set(Ids::onlineStatus, StringView(_screens.StatusKey().empty() ? String() : Tr(strings, _screens.StatusKey())));
+        vars.Set(Ids::onlineName, StringView(_screens.Name().Text()));
+        vars.Set(Ids::onlineCode, StringView(_screens.Code().Text()));
+        vars.Set(Ids::onlineEntryValue, StringView(_screens.Focused().Text()));
+        vars.Set(Ids::onlineEntryNote, StringView(_screens.PasteNoteKey().empty() ? String() : Tr(strings, _screens.PasteNoteKey())));
+        vars.Set(Ids::onlineCopy, StringView(Tr(strings, CopyKeyOf(_screens.CopyState()))));
+        vars.Set(Ids::onlineHands, _screens.Options().hands);
+        vars.Set(Ids::onlineLevel, _screens.Options().level);
+        vars.Set(Ids::onlineOpen, _screens.Options().isPublic ? kOpenValue : kCodeValue);
+        vars.Set(Ids::onlineHints, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
         const OnlineRoomOptions* hosted = client.HostedOptions();
-        vars.Set("onlineHostLine"_intern, StringView(hosted == nullptr ? String() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
+        vars.Set(Ids::onlineHostLine, StringView(hosted == nullptr ? String() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
         const Optional<bool> guestHints = lobby.hintsAllowed;
-        vars.Set("onlineWaiting"_intern, StringView(Tr(strings, !guestHints ? kOnlineWaitHostKey : (*guestHints ? kOnlineWaitHostHintsAllowedKey : kOnlineWaitHostHintsOffKey))));
+        vars.Set(Ids::onlineWaiting, StringView(Tr(strings, !guestHints ? kOnlineWaitHostKey : (*guestHints ? kOnlineWaitHostHintsAllowedKey : kOnlineWaitHostHintsOffKey))));
         const String& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();
-        vars.Set("onlineRoom"_intern, StringView(room));
+        vars.Set(Ids::onlineRoom, StringView(room));
         for (size_t seat = 0; seat < kSeatCount; ++seat) {
             const OnlineLobbySeat& at = lobby.seats[seat];
             vars.Set(_seatVars[seat], StringView(OnlineSeatText(strings, at.kind, at.name, at.mine, at.connected)));
@@ -690,7 +709,7 @@ namespace BECore::Mahjong {
             const bool has = row < static_cast<size_t>(_screens.RoomsOnPage()) && _screens.RoomIndex(static_cast<int>(row)) < listed.size();
             vars.Set(_listVars[row], has ? StringView(RoomRowText(strings, listed[_screens.RoomIndex(static_cast<int>(row))])) : StringView());
         }
-        vars.Set("onlineMore"_intern, StringView(Tr(strings, kRoomsPageKey, {{"n", Format("{}", _screens.RoomsPage() + 1)}, {"m", Format("{}", _screens.RoomsPageCount())}})));
+        vars.Set(Ids::onlineMore, StringView(Tr(strings, kRoomsPageKey, {{"n", Format("{}", _screens.RoomsPage() + 1)}, {"m", Format("{}", _screens.RoomsPageCount())}})));
     }
 
     void MahjongOnlineComponent::PublishNickname(const UIStrings& strings) {
@@ -705,8 +724,8 @@ namespace BECore::Mahjong {
         }
         _nicknameDirty = false;
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("onlineEntryValue"_intern, StringView(_nicknameEntry.Text()));
-        vars.Set("onlineEntryNote"_intern, StringView());
+        vars.Set(Ids::onlineEntryValue, StringView(_nicknameEntry.Text()));
+        vars.Set(Ids::onlineEntryNote, StringView());
         if (!padMoved) {
             return;
         }

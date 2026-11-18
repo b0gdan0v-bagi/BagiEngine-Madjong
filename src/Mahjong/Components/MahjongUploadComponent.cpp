@@ -19,6 +19,13 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// The names this file asks for: nodes and elements of the scene files, UI variables, theme tokens, config names.
+        struct Ids {
+            static constexpr auto uploadChoice = "uploadChoice"_intern;
+            static constexpr auto uploadNickname = "uploadNickname"_intern;
+            static constexpr auto textMuted = "textMuted"_intern;
+        };
+
         constexpr StringView kAcceptAction = "MahjongUploadAccept";
         constexpr StringView kDeclineAction = "MahjongUploadDecline";
         constexpr StringView kSetUploadAction = "MahjongSetUpload";
@@ -150,21 +157,21 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         switch (prefs.consent) {
             case UploadConsent::Granted:
-                vars.Set("uploadChoice"_intern, kOnValue);
+                vars.Set(Ids::uploadChoice, kOnValue);
                 break;
             case UploadConsent::Declined:
-                vars.Set("uploadChoice"_intern, kOffValue);
+                vars.Set(Ids::uploadChoice, kOffValue);
                 break;
             case UploadConsent::Unasked:
-                vars.Set("uploadChoice"_intern, StringView());
+                vars.Set(Ids::uploadChoice, StringView());
                 break;
         }
         const bool none = prefs.nickname.empty();
-        vars.Set("uploadNickname"_intern, StringView(none ? Tr(strings, kNicknameNoneKey) : prefs.nickname));
+        vars.Set(Ids::uploadNickname, StringView(none ? Tr(strings, kNicknameNoneKey) : prefs.nickname));
         const IntrusivePtr<UICanvasComponent> options = FindCanvasOf(GetScene(), PoolString::Intern(kOptionsNode));
         UIElement* field = options ? options->GetRoot().FindByName(PoolString::Intern(kNicknameField)) : nullptr;
         if (UITextComponent* label = field != nullptr ? field->GetComponent<UITextComponent>() : nullptr) {
-            SetColorToken(*field, label->textColor, none ? PoolString("textMuted"_intern) : PoolString("text"_intern));
+            SetColorToken(*field, label->textColor, none ? PoolString(Ids::textMuted) : PoolString(ColorTokenIds::text));
         }
     }
 

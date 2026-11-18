@@ -16,8 +16,8 @@ namespace BECore::Mahjong::Tests {
         class ColorTokensTest : public ::testing::Test {
         protected:
             void SetUp() override {
-                ASSERT_TRUE(themes.Set(PoolString::Intern("one"), "first", kFirst));
-                ASSERT_TRUE(themes.Set(PoolString::Intern("one"), "second", kSecond));
+                ASSERT_TRUE(themes.Set("one"_intern, "first", kFirst));
+                ASSERT_TRUE(themes.Set("one"_intern, "second", kSecond));
                 element = New<UIElement>();
             }
 
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Tests {
         element->ResolveTheme(themes);
 
         SetPlainColor(element->color, Color{1, 2, 3, 4});
-        ASSERT_TRUE(themes.Set(PoolString::Intern("one"), "first", kSecond));
+        ASSERT_TRUE(themes.Set("one"_intern, "first", kSecond));
         element->ResolveTheme(themes);
 
         EXPECT_TRUE(element->color.token.Empty());

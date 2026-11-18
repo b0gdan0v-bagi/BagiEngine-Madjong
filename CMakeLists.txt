@@ -124,6 +124,11 @@ if(ENGINE_BUILD_TESTS)
         # engine/CI/scripts/check_includes.py: the quoted include only for a .cpp and its own header, the rest <...> from an include root
         add_test(NAME MahjongIncludesCheck
             COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_includes.py --root ${CMAKE_CURRENT_SOURCE_DIR})
+
+        # engine/CI/scripts/check_pool_strings.py: a text known in code is a named `_intern` constant, one text in one place
+        add_test(NAME MahjongPoolStringsCheck
+            COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_pool_strings.py --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --allowlist ${CMAKE_CURRENT_SOURCE_DIR}/CI/pool_strings_allowlist.txt)
     endif()
 
     # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only
